@@ -1,0 +1,269 @@
+---
+/**
+ * Cigarette Hero Component
+ *
+ * The gut punch opener.
+ */
+import type { AirQualityMetrics } from '../lib/types';
+
+interface Props {
+  metrics: AirQualityMetrics;
+  cityName: string;
+  pm25: number;
+}
+
+const { metrics, cityName, pm25 } = Astro.props;
+const cigarettes = metrics.cigarettesPerDay;
+---
+
+<section class="cigarette-hero">
+  <p class="hero-intro">Today, by breathing the air in {cityName}, you will inhale the equivalent of</p>
+
+  <div class="hero-number-container">
+    <span class="hero-number">{cigarettes.toFixed(1)}</span>
+    <div class="hero-unit">
+      <span class="unit-text">cigarettes</span>
+      <span class="unit-period">per day</span>
+    </div>
+  </div>
+
+  <!-- Single large cigarette, burning -->
+  <div class="cigarette-art" aria-hidden="true">
+    <div class="smoke">
+      <span></span><span></span><span></span>
+    </div>
+    <div class="cig">
+      <div class="ember"></div>
+      <div class="ash"></div>
+      <div class="paper"></div>
+      <div class="filter"></div>
+    </div>
+  </div>
+
+  <p class="punchline">You didn't light a single one.</p>
+
+  <p class="explanation">
+    Based on Berkeley Earth research: 22 µg/m³ of PM2.5 exposure
+    equals the mortality risk of smoking one cigarette daily.
+  </p>
+
+  <div class="context-line">
+    <span class="context-city">{cityName}</span>
+    <span class="context-sep">•</span>
+    <span class="context-pm25">{pm25.toFixed(0)} µg/m³ PM2.5</span>
+    <span class="context-sep">•</span>
+    <span class="context-who">{metrics.whoViolation.toFixed(0)}× WHO limit</span>
+  </div>
+</section>
+
+<style>
+  .cigarette-hero {
+    text-align: center;
+    padding: 4rem 1.5rem 3rem;
+    background: linear-gradient(to bottom, #faf8f5 0%, var(--bg) 100%);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0;
+  }
+
+  .hero-intro {
+    font-size: 1.125rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero-number-container {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .hero-number {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(6rem, 20vw, 12rem);
+    font-weight: 400;
+    line-height: 0.85;
+    color: #c41e1e;
+    letter-spacing: -0.03em;
+  }
+
+  .hero-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding-bottom: 0.5rem;
+  }
+
+  .unit-text {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    font-style: italic;
+    color: var(--text-muted);
+    line-height: 1;
+  }
+
+  .unit-period {
+    font-size: 0.875rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* Cigarette Art */
+  .cigarette-art {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2.5rem;
+    height: 80px;
+  }
+
+  .cig {
+    display: flex;
+    align-items: center;
+    height: 16px;
+    transform: rotate(-5deg);
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+  }
+
+  .cig .ember {
+    width: 6px;
+    height: 16px;
+    background: linear-gradient(to right, #ff4500, #ff6b35, #ffaa00);
+    border-radius: 2px 0 0 2px;
+    box-shadow: 0 0 8px rgba(255, 69, 0, 0.8), 0 0 16px rgba(255, 69, 0, 0.4);
+    animation: glow 1.5s ease-in-out infinite alternate;
+  }
+
+  .cig .ash {
+    width: 20px;
+    height: 16px;
+    background: linear-gradient(to right, #888, #aaa, #999);
+    border-radius: 0;
+  }
+
+  .cig .paper {
+    width: 120px;
+    height: 16px;
+    background: linear-gradient(to bottom, #fefefe, #f5f2ed, #fefefe);
+    border-top: 1px solid rgba(0,0,0,0.05);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+  }
+
+  .cig .filter {
+    width: 35px;
+    height: 16px;
+    background: linear-gradient(to bottom, #e8d4a8, #d4b896, #c9a86c, #d4b896, #e8d4a8);
+    border-radius: 0 3px 3px 0;
+  }
+
+  /* Smoke animation */
+  .smoke {
+    position: absolute;
+    left: calc(50% - 100px);
+    top: 10px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .smoke span {
+    display: block;
+    width: 8px;
+    height: 8px;
+    background: rgba(150, 150, 150, 0.3);
+    border-radius: 50%;
+    animation: rise 3s ease-out infinite;
+  }
+
+  .smoke span:nth-child(1) { animation-delay: 0s; }
+  .smoke span:nth-child(2) { animation-delay: 0.5s; left: 5px; }
+  .smoke span:nth-child(3) { animation-delay: 1s; left: -3px; }
+
+  @keyframes rise {
+    0% {
+      opacity: 0.6;
+      transform: translateY(0) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-50px) scale(2.5) translateX(10px);
+    }
+  }
+
+  @keyframes glow {
+    from { box-shadow: 0 0 8px rgba(255, 69, 0, 0.8), 0 0 16px rgba(255, 69, 0, 0.4); }
+    to { box-shadow: 0 0 12px rgba(255, 69, 0, 1), 0 0 24px rgba(255, 69, 0, 0.6); }
+  }
+
+  .punchline {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 400;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.01em;
+  }
+
+  .explanation {
+    font-size: 0.8125rem;
+    color: var(--text-light);
+    max-width: 380px;
+    margin: 0 auto 1.5rem;
+    line-height: 1.5;
+  }
+
+  .context-line {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+
+  .context-sep {
+    color: var(--text-light);
+  }
+
+  .context-who {
+    color: #c41e1e;
+    font-weight: 500;
+  }
+
+  @media (max-width: 600px) {
+    .cigarette-hero {
+      padding: 3rem 1rem 2rem;
+    }
+
+    .hero-number-container {
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .hero-unit {
+      align-items: center;
+    }
+
+    .punchline {
+      font-size: 1.375rem;
+    }
+
+    .cig .paper {
+      width: 80px;
+    }
+
+    .context-line {
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .context-sep {
+      display: none;
+    }
+  }
+</style>

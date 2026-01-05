@@ -1,0 +1,864 @@
+---
+/**
+ * All-India Overview Page
+ *
+ * Shows a grid of all cities with their current air quality.
+ * Route: /
+ */
+import CityLayout from '../layouts/CityLayout.astro';
+import DeathCounter from '../components/DeathCounter.astro';
+import CityRankingChart from '../components/CityRankingChart.astro';
+import PopulationExposure from '../components/PopulationExposure.astro';
+
+import { ALL_CITIES, ALL_INDIA, CITIES_BY_POLLUTION } from '../lib/cities';
+import { fetchAllCitiesData } from '../lib/waqi';
+import { calculateAllMetrics, calculateAveragePm25 } from '../lib/calculations';
+import type { CitySnapshot } from '../lib/types';
+
+// Fetch data for all cities in parallel
+const citiesData: CitySnapshot[] = await fetchAllCitiesData(ALL_CITIES);
+
+// Calculate national average (from cities with data)
+const cityPm25Values = citiesData
+  .filter(c => c.avgPm25 !== null)
+  .map(c => c.avgPm25 as number);
+
+const nationalAvgPm25 = calculateAveragePm25(cityPm25Values);
+const nationalMetrics = nationalAvgPm25 ? calculateAllMetrics(nationalAvgPm25) : null;
+
+// Find worst and best cities
+const citiesWithData = citiesData.filter(c => c.avgPm25 !== null);
+const sortedByPm25 = [...citiesWithData].sort((a, b) => (b.avgPm25 || 0) - (a.avgPm25 || 0));
+const worstCity = sortedByPm25[0];
+const bestCity = sortedByPm25[sortedByPm25.length - 1];
+
+// Sardonic wisdom - played straight
+const sardonicQuotes = [
+  {
+    text: "Clean air is a state of mind.",
+    author: "Aristotle"
+  },
+  {
+    text: "You want pure air? Go to Papua New Guinea or Burkina Faso.",
+    author: "Local Neta"
+  },
+  {
+    text: "What makes you wheeze and cough as if you're dying, makes you stronger.",
+    author: "Abraham Lincoln"
+  },
+];
+
+// Page metadata
+const title = "How Fucked Are We — India Air Quality";
+const description = nationalMetrics
+  ? `India's major cities average ${nationalAvgPm25?.toFixed(1)} µg/m³ PM2.5 (${nationalMetrics.whoViolation.toFixed(1)}x WHO limit). ${ALL_INDIA.tagline}`
+  : `Air quality across India's major cities. ${ALL_INDIA.tagline}`;
+
+function getColorForPm25(pm25: number | null): string {
+  if (pm25 === null) return '#999';
+  if (pm25 <= 12) return '#6b8e6b';
+  if (pm25 <= 35) return '#a3a322';
+  if (pm25 <= 55) return '#c45a20';
+  return '#b91c1c';
+}
+---
+
+<CityLayout title={title} description={description}>
+  <!-- Hero Section -->
+  <header class="india-hero">
+    <h1>{ALL_INDIA.name}</h1>
+    <p class="tagline">{ALL_INDIA.tagline}</p>
+
+    {nationalMetrics && nationalAvgPm25 && (
+      <div class="national-stats">
+        <div class="stat primary">
+          <span class="stat-value" style={`color: ${nationalMetrics.severity.color}`}>
+            {nationalAvgPm25.toFixed(1)}
+          </span>
+          <span class="stat-label">Avg PM2.5 µg/m³</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">{nationalMetrics.whoViolation.toFixed(1)}x</span>
+          <span class="stat-label">WHO limit</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">{nationalMetrics.cigarettesPerDay.toFixed(1)}</span>
+          <span class="stat-label">cigs/day avg</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">{citiesWithData.length}/{ALL_CITIES.length}</span>
+          <span class="stat-label">cities reporting</span>
+        </div>
+      </div>
+    )}
+  </header>
+
+  <!-- Data Source Disclosure -->
+  <div class="data-source">
+    <div class="source-badge">
+      <span class="source-icon">📡</span>
+      <div class="source-text">
+        <strong>Live data from <a href="https://aqicn.org/map/india/" target="_blank" rel="noopener">World Air Quality Index</a></strong>
+        <span class="source-note">Updated hourly from CPCB monitoring stations</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Death Counter (National) -->
+  <DeathCounter showNational={true} />
+
+  <!-- Population at Risk -->
+  <PopulationExposure cities={citiesData} />
+
+  <!-- What is AQI Section -->
+  <section class="aqi-explainer">
+    <h2>The Air You're Breathing (Whether You Like It Or Not)</h2>
+
+    <div class="explainer-grid">
+      <div class="explainer-card">
+        <h3>What is PM2.5?</h3>
+        <p>
+          Particles so small (2.5 micrometers) they pass through your lungs
+          straight into your bloodstream. They reach your brain. Your heart. Every organ.
+          Invisible. Tasteless. Currently inside you.
+        </p>
+        <p class="card-kicker">
+          Think of it as unwanted guests who bypass security and make themselves at home.
+        </p>
+      </div>
+
+      <div class="explainer-card">
+        <h3>What's "safe" anyway?</h3>
+        <div class="safety-scale">
+          <div class="scale-item good">
+            <span class="scale-value">0-5</span>
+            <span class="scale-label">WHO guideline</span>
+            <span class="scale-note">What human lungs were designed for</span>
+          </div>
+          <div class="scale-item moderate">
+            <span class="scale-value">5-12</span>
+            <span class="scale-label">US EPA limit</span>
+            <span class="scale-note">"Acceptable" if you're American</span>
+          </div>
+          <div class="scale-item bad">
+            <span class="scale-value">12-35</span>
+            <span class="scale-label">Unhealthy</span>
+            <span class="scale-note">Children & elderly: stay inside</span>
+          </div>
+          <div class="scale-item terrible">
+            <span class="scale-value">35+</span>
+            <span class="scale-label">Dangerous</span>
+            <span class="scale-note">Everyone: reconsider life choices</span>
+          </div>
+        </div>
+        <p class="current-context">
+          India's cities average <strong>{nationalAvgPm25?.toFixed(0)} µg/m³</strong>.
+          Our official "acceptable" limit is 40 µg/m³. Convenient, no?
+        </p>
+      </div>
+
+      <div class="explainer-card">
+        <h3>Why care? You can't see it.</h3>
+        <p>
+          Every breath deposits particles your body can never fully clear.
+          They trigger inflammation. Age your arteries. Cross the blood-brain barrier.
+        </p>
+        <p>
+          The damage is cumulative, silent, and irreversible. By the time you notice,
+          years are already gone. Not someday. Now. While you're reading this.
+        </p>
+        <p class="card-kicker">
+          You've been breathing it in since you started this page.
+        </p>
+      </div>
+
+      <div class="explainer-card">
+        <h3>Your Options (All Bad)</h3>
+        <ul class="action-list">
+          <li><strong>Check the AQI daily.</strong> Like checking the weather, but for your lifespan.</li>
+          <li><strong>Buy N95 masks.</strong> Fashion accessory of the apocalypse. Cloth masks are just vibes.</li>
+          <li><strong>Get a HEPA purifier.</strong> Create a tiny bubble of first-world air in your bedroom.</li>
+          <li><strong>Move abroad.</strong> Just kidding. Or are we?</li>
+          <li><strong>Vote angry.</strong> Stubble burning didn't vote itself into policy.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sardonic Wisdom -->
+  <section class="wisdom-section">
+    <h2>Words of Wisdom</h2>
+    <p class="wisdom-intro">Inspirational quotes to help you cope</p>
+    <div class="wisdom-quotes">
+      {sardonicQuotes.map((quote) => (
+        <blockquote class="wisdom-quote">
+          <p class="quote-text">"{quote.text}"</p>
+          <footer class="quote-attribution">— {quote.author}</footer>
+        </blockquote>
+      ))}
+    </div>
+  </section>
+
+  <!-- Worst/Best Cities Banner -->
+  {worstCity && bestCity && worstCity !== bestCity && (
+    <div class="extremes-banner">
+      <div class="extreme worst">
+        <span class="extreme-label">Most Fucked</span>
+        <a href={`/${worstCity.city.slug}`} class="extreme-city">
+          {worstCity.city.name}
+          <span class="extreme-value">{worstCity.avgPm25?.toFixed(1)} µg/m³</span>
+        </a>
+      </div>
+      <div class="extreme best">
+        <span class="extreme-label">Least Fucked</span>
+        <a href={`/${bestCity.city.slug}`} class="extreme-city">
+          {bestCity.city.name}
+          <span class="extreme-value">{bestCity.avgPm25?.toFixed(1)} µg/m³</span>
+        </a>
+      </div>
+    </div>
+  )}
+
+  <!-- City Ranking Chart -->
+  <CityRankingChart cities={citiesData} />
+
+  <!-- City Grid -->
+  <section class="cities-section">
+    <h2>Major Cities</h2>
+    <p class="section-intro">Click any city for detailed air quality data and health impact analysis.</p>
+
+    <div class="cities-grid">
+      {citiesData.map((snapshot) => {
+        const hasPm25 = snapshot.avgPm25 !== null;
+        const color = getColorForPm25(snapshot.avgPm25);
+
+        return (
+          <a href={`/${snapshot.city.slug}`} class:list={['city-card', { 'no-data': !hasPm25 }]}>
+            <div class="card-header">
+              <span class="card-city">{snapshot.city.name}</span>
+              {snapshot.city.localName && (
+                <span class="card-local">{snapshot.city.localName}</span>
+              )}
+            </div>
+
+            {hasPm25 && snapshot.metrics ? (
+              <>
+                <div class="card-pm25" style={`color: ${color}`}>
+                  {snapshot.avgPm25?.toFixed(1)}
+                  <span class="pm25-unit">µg/m³</span>
+                </div>
+
+                <div class="card-metrics">
+                  <div class="card-metric">
+                    <span class="metric-value">{snapshot.metrics.fuckedIndex.toFixed(1)}</span>
+                    <span class="metric-label">Fucked Index</span>
+                  </div>
+                  <div class="card-metric">
+                    <span class="metric-value">{snapshot.metrics.cigarettesPerDay.toFixed(1)}</span>
+                    <span class="metric-label">cigs/day</span>
+                  </div>
+                </div>
+
+                <div class="card-status" style={`background: ${color}`}>
+                  {snapshot.metrics.severity.label}
+                </div>
+              </>
+            ) : (
+              <div class="card-no-data">
+                <span>Data unavailable</span>
+              </div>
+            )}
+
+            <div class="card-footer">
+              <span class="station-count">
+                {snapshot.validStationCount}/{snapshot.totalStationCount} stations
+              </span>
+              <span class="card-arrow">→</span>
+            </div>
+          </a>
+        );
+      })}
+    </div>
+  </section>
+
+  <!-- About Section -->
+  <section class="about-section">
+    <h2>About This Site</h2>
+    <div class="about-content">
+      <p>
+        <strong>howfuckedarewe.in</strong> presents air quality data in terms that matter:
+        cigarettes smoked, years of life lost, and whether other countries would consider
+        this an emergency.
+      </p>
+      <p>
+        We don't invent numbers. Every metric is sourced from peer-reviewed research
+        (Berkeley Earth, AQLI, WHO). We just present them without the usual optimistic spin.
+      </p>
+      <p>
+        <a href="/methodology">Read our methodology →</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- Ministry Stamp -->
+  <aside class="ministry-stamp">
+    <div class="stamp-content">
+      <div class="stamp-header">Ministry of Denial — All India Office</div>
+      <div class="stamp-body">
+        <p>"Comparing our air quality to international standards is unfair given our unique developmental context."</p>
+        <p class="stamp-note">— Standard Response Template, Form 12-A</p>
+      </div>
+    </div>
+  </aside>
+</CityLayout>
+
+<style>
+  .india-hero {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .india-hero h1 {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .tagline {
+    font-size: 1.125rem;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .national-stats {
+    display: flex;
+    justify-content: center;
+    gap: 2.5rem;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .stat.primary .stat-value {
+    font-size: 3rem;
+  }
+
+  .stat-value {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    margin-top: 0.25rem;
+  }
+
+  .data-source {
+    margin-bottom: 1.5rem;
+  }
+
+  .source-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: rgba(107, 142, 107, 0.08);
+    border: 1px solid rgba(107, 142, 107, 0.2);
+    border-radius: 6px;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .source-icon {
+    font-size: 1.25rem;
+  }
+
+  .source-text {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.875rem;
+  }
+
+  .source-text a {
+    color: var(--text);
+  }
+
+  .source-note {
+    font-size: 0.75rem;
+    color: var(--text-light);
+  }
+
+  .extremes-banner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .extreme {
+    padding: 1rem;
+    border-radius: 6px;
+    text-align: center;
+  }
+
+  .extreme.worst {
+    background: rgba(185, 28, 28, 0.05);
+    border: 1px solid rgba(185, 28, 28, 0.2);
+  }
+
+  .extreme.best {
+    background: rgba(107, 142, 107, 0.05);
+    border: 1px solid rgba(107, 142, 107, 0.2);
+  }
+
+  .extreme-label {
+    display: block;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+  }
+
+  .extreme-city {
+    display: block;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .extreme-city:hover {
+    text-decoration: underline;
+  }
+
+  .extreme-value {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  .cities-section {
+    margin-bottom: 3rem;
+  }
+
+  .cities-section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .section-intro {
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .cities-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+
+  .city-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    text-decoration: none;
+    color: var(--text);
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .city-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+    text-decoration: none;
+  }
+
+  .city-card.no-data {
+    opacity: 0.6;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.75rem;
+  }
+
+  .card-city {
+    font-weight: 600;
+    font-size: 1.125rem;
+  }
+
+  .card-local {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+  }
+
+  .card-pm25 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 2.5rem;
+    font-weight: 500;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+
+  .pm25-unit {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-left: 0.25rem;
+  }
+
+  .card-metrics {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .card-metric {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .metric-value {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .metric-label {
+    font-size: 0.625rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+  }
+
+  .card-status {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    align-self: flex-start;
+  }
+
+  .card-no-data {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-light);
+    font-style: italic;
+    padding: 2rem 0;
+  }
+
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .station-count {
+    font-size: 0.75rem;
+    color: var(--text-light);
+  }
+
+  .card-arrow {
+    color: var(--accent);
+    font-size: 1rem;
+  }
+
+  .about-section {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .about-section h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .about-content p {
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+    line-height: 1.7;
+  }
+
+  .about-content a {
+    font-weight: 500;
+  }
+
+  .ministry-stamp {
+    padding: 1.5rem;
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px dashed rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+  }
+
+  .stamp-content {
+    max-width: 500px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .stamp-header {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-light);
+    margin-bottom: 0.75rem;
+  }
+
+  .stamp-body p {
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .stamp-note {
+    font-size: 0.75rem !important;
+    margin-top: 0.5rem;
+    color: var(--text-light) !important;
+  }
+
+  /* AQI Explainer Section */
+  .aqi-explainer {
+    margin-bottom: 2.5rem;
+  }
+
+  .aqi-explainer h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1.25rem;
+    text-align: center;
+  }
+
+  .explainer-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .explainer-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+
+  .explainer-card h3 {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--text);
+  }
+
+  .explainer-card p {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 0.5rem;
+  }
+
+  .explainer-card p:last-child {
+    margin-bottom: 0;
+  }
+
+  .card-kicker {
+    font-style: italic;
+    color: var(--text-light);
+    font-size: 0.8125rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--border);
+    margin-top: 0.75rem !important;
+  }
+
+  .safety-scale {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .scale-item {
+    display: grid;
+    grid-template-columns: 60px 100px 1fr;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8125rem;
+  }
+
+  .scale-item.good { background: rgba(107, 142, 107, 0.1); }
+  .scale-item.moderate { background: rgba(163, 163, 34, 0.1); }
+  .scale-item.bad { background: rgba(196, 90, 32, 0.1); }
+  .scale-item.terrible { background: rgba(185, 28, 28, 0.1); }
+
+  .scale-value {
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .scale-label {
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+
+  .scale-note {
+    font-size: 0.75rem;
+    color: var(--text-light);
+  }
+
+  .current-context {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .current-context strong {
+    color: var(--accent);
+  }
+
+  .action-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .action-list li {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.5;
+  }
+
+  .action-list li:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .action-list strong {
+    color: var(--text);
+  }
+
+  /* Wisdom Section */
+  .wisdom-section {
+    margin-bottom: 2.5rem;
+    text-align: center;
+  }
+
+  .wisdom-section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .wisdom-intro {
+    font-size: 0.875rem;
+    color: var(--text-light);
+    font-style: italic;
+    margin-bottom: 1.5rem;
+  }
+
+  .wisdom-quotes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .wisdom-quote {
+    background: #faf8f5;
+    border-left: 3px solid var(--accent);
+    padding: 1.25rem;
+    margin: 0;
+    text-align: left;
+    border-radius: 0 6px 6px 0;
+  }
+
+  .quote-text {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1rem;
+    font-style: italic;
+    color: var(--text);
+    margin: 0 0 0.75rem 0;
+    line-height: 1.5;
+  }
+
+  .quote-attribution {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+  }
+
+  .quote-note {
+    color: var(--text-light);
+    font-style: italic;
+  }
+
+  @media (max-width: 800px) {
+    .wisdom-quotes {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .india-hero h1 {
+      font-size: 2rem;
+    }
+
+    .stat.primary .stat-value {
+      font-size: 2.5rem;
+    }
+
+    .national-stats {
+      gap: 1.5rem;
+    }
+
+    .explainer-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .scale-item {
+      grid-template-columns: 50px 80px 1fr;
+      font-size: 0.75rem;
+    }
+
+    .extremes-banner {
+      grid-template-columns: 1fr;
+    }
+
+    .cities-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .card-pm25 {
+      font-size: 2rem;
+    }
+  }
+</style>

@@ -1,0 +1,383 @@
+---
+/**
+ * Population Exposure Component
+ *
+ * "Millions at Risk" - visualizes population exposed to dangerous PM2.5.
+ * Uses city population data to show scale of the crisis.
+ */
+import type { CitySnapshot } from '../lib/types';
+
+interface Props {
+  cities: CitySnapshot[];
+}
+
+const { cities } = Astro.props;
+
+// WHO thresholds and their meanings
+const thresholds = [
+  { level: 5, label: 'WHO Guideline', color: '#22c55e', desc: 'Considered safe' },
+  { level: 15, label: 'WHO Interim 3', color: '#84cc16', desc: 'Minimal risk' },
+  { level: 25, label: 'WHO Interim 2', color: '#eab308', desc: 'Some risk' },
+  { level: 35, label: 'WHO Interim 1', color: '#f97316', desc: 'Unhealthy for sensitive' },
+  { level: 55, label: 'Unhealthy', color: '#ef4444', desc: 'Unhealthy for all' },
+  { level: 150, label: 'Very Unhealthy', color: '#dc2626', desc: 'Health emergency' },
+];
+
+// Calculate population above each threshold
+interface ThresholdData {
+  level: number;
+  label: string;
+  color: string;
+  desc: string;
+  population: number;
+  cityCount: number;
+  cities: string[];
+}
+
+const thresholdData: ThresholdData[] = thresholds.map(t => {
+  const citiesAbove = cities.filter(c => (c.avgPm25 || 0) > t.level);
+  const population = citiesAbove.reduce((sum, c) => sum + (c.city.population || 0), 0);
+  return {
+    ...t,
+    population,
+    cityCount: citiesAbove.length,
+    cities: citiesAbove.map(c => c.city.name).slice(0, 5),
+  };
+});
+
+// Total population tracked
+const totalPopulation = cities.reduce((sum, c) => sum + (c.city.population || 0), 0);
+
+// Format large numbers
+function formatPopulation(pop: number): string {
+  if (pop >= 10000000) {
+    return `${(pop / 10000000).toFixed(1)} Cr`;
+  }
+  if (pop >= 100000) {
+    return `${(pop / 100000).toFixed(1)} L`;
+  }
+  return `${(pop / 1000).toFixed(0)}K`;
+}
+
+function formatFullPopulation(pop: number): string {
+  if (pop >= 10000000) {
+    return `${(pop / 10000000).toFixed(1)} crore`;
+  }
+  if (pop >= 100000) {
+    return `${(pop / 100000).toFixed(1)} lakh`;
+  }
+  return pop.toLocaleString('en-IN');
+}
+
+// Get the most severe threshold breached by majority
+const majorityThreshold = thresholdData.find(t => t.population > totalPopulation * 0.5);
+
+// Sardonic headline
+function getHeadline(): string {
+  const aboveWHO = thresholdData[0];
+  const percentAbove = (aboveWHO.population / totalPopulation) * 100;
+
+  if (percentAbove > 95) {
+    return "Practically everyone is breathing poison.";
+  }
+  if (percentAbove > 80) {
+    return "Most of urban India is above 'safe' limits.";
+  }
+  if (percentAbove > 50) {
+    return "More than half are over WHO guidelines.";
+  }
+  return "A significant portion faces elevated risk.";
+}
+---
+
+<section class="population-exposure">
+  <div class="exposure-header">
+    <h2>Millions at Risk</h2>
+    <p class="exposure-intro">
+      Population breathing air above WHO thresholds right now.
+    </p>
+  </div>
+
+  <div class="headline-stat">
+    <span class="headline-number">{formatPopulation(thresholdData[0].population)}</span>
+    <span class="headline-label">people above WHO safe limit</span>
+  </div>
+
+  <p class="headline-message">{getHeadline()}</p>
+
+  <div class="threshold-bars">
+    {thresholdData.map((t, i) => {
+      const widthPercent = totalPopulation > 0
+        ? (t.population / totalPopulation) * 100
+        : 0;
+      const isSignificant = widthPercent > 5;
+
+      return (
+        <div class="threshold-row">
+          <div class="threshold-info">
+            <div class="threshold-header">
+              <span class="threshold-label">{t.label}</span>
+              <span class="threshold-level">{'>'}{t.level} µg/m³</span>
+            </div>
+            <span class="threshold-desc">{t.desc}</span>
+          </div>
+
+          <div class="bar-wrapper">
+            <div
+              class="bar"
+              style={`width: ${Math.max(widthPercent, 2)}%; background: ${t.color};`}
+            >
+              {isSignificant && (
+                <span class="bar-label">{formatPopulation(t.population)}</span>
+              )}
+            </div>
+            {!isSignificant && t.population > 0 && (
+              <span class="bar-label-outside">{formatPopulation(t.population)}</span>
+            )}
+          </div>
+
+          <div class="threshold-stats">
+            <span class="stat-cities">{t.cityCount} cities</span>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+
+  <div class="exposure-footer">
+    <div class="footer-stat">
+      <span class="footer-value">{formatFullPopulation(totalPopulation)}</span>
+      <span class="footer-label">total population tracked</span>
+    </div>
+    <div class="footer-stat">
+      <span class="footer-value">{cities.length}</span>
+      <span class="footer-label">cities monitored</span>
+    </div>
+  </div>
+
+  <p class="footnote">
+    Population data is approximate. Even these numbers undercount—
+    millions more in unmonitored areas breathe similar air.
+  </p>
+</section>
+
+<style>
+  .population-exposure {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .exposure-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .exposure-header h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .exposure-intro {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  .headline-stat {
+    text-align: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .headline-number {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 4rem;
+    font-weight: 400;
+    color: #c41e1e;
+    line-height: 1;
+    display: block;
+  }
+
+  .headline-label {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    display: block;
+    margin-top: 0.25rem;
+  }
+
+  .headline-message {
+    text-align: center;
+    font-size: 1rem;
+    font-style: italic;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .threshold-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .threshold-row {
+    display: grid;
+    grid-template-columns: 140px 1fr 70px;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .threshold-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .threshold-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .threshold-label {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--text);
+  }
+
+  .threshold-level {
+    font-size: 0.6875rem;
+    color: var(--text-light);
+    font-family: 'SF Mono', 'Monaco', monospace;
+  }
+
+  .threshold-desc {
+    font-size: 0.6875rem;
+    color: var(--text-light);
+  }
+
+  .bar-wrapper {
+    height: 32px;
+    background: var(--border);
+    border-radius: 6px;
+    overflow: visible;
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .bar {
+    height: 100%;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 0.5rem;
+    min-width: 8px;
+    transition: width 0.3s ease;
+  }
+
+  .bar-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
+  }
+
+  .bar-label-outside {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-left: 0.5rem;
+    white-space: nowrap;
+  }
+
+  .threshold-stats {
+    text-align: right;
+  }
+
+  .stat-cities {
+    font-size: 0.75rem;
+    color: var(--text-light);
+  }
+
+  .exposure-footer {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .footer-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .footer-value {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .footer-label {
+    font-size: 0.6875rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .footnote {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    text-align: center;
+    margin-top: 1rem;
+    font-style: italic;
+  }
+
+  @media (max-width: 700px) {
+    .threshold-row {
+      grid-template-columns: 100px 1fr;
+      gap: 0.5rem;
+    }
+
+    .threshold-stats {
+      display: none;
+    }
+
+    .threshold-label {
+      font-size: 0.75rem;
+    }
+
+    .threshold-level {
+      display: none;
+    }
+
+    .headline-number {
+      font-size: 3rem;
+    }
+
+    .exposure-footer {
+      gap: 2rem;
+    }
+  }
+
+  @media (max-width: 500px) {
+    .population-exposure {
+      padding: 1.5rem 1rem;
+    }
+
+    .threshold-row {
+      grid-template-columns: 80px 1fr;
+    }
+
+    .threshold-desc {
+      display: none;
+    }
+  }
+</style>

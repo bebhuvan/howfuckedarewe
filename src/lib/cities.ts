@@ -1,0 +1,222 @@
+/**
+ * City Configurations for howfuckedarewe.in
+ *
+ * Each city has:
+ * - Basic info (name, population, coordinates)
+ * - WAQI station IDs (verified January 2026)
+ * - Sardonic tagline
+ *
+ * To add a new city:
+ * 1. Search WAQI: https://api.waqi.info/search/?keyword=CITY&token=YOUR_TOKEN
+ * 2. Verify stations have PM2.5 data
+ * 3. Add configuration below
+ */
+
+import type { CityConfig } from './types';
+
+// ============================================================================
+// City Configurations
+// ============================================================================
+
+export const BANGALORE: CityConfig = {
+  slug: 'bangalore',
+  name: 'Bangalore',
+  localName: 'ಬೆಂಗಳೂರು',
+  state: 'Karnataka',
+  coordinates: { lat: 12.9716, lng: 77.5946 },
+  population: 13_000_000,
+  timezone: 'Asia/Kolkata',
+  tagline: 'Garden City? More like Gas Chamber City.',
+  stations: [
+    { id: 8190, name: 'BTM Layout', area: 'BTM Layout' },
+    { id: 11276, name: 'Jayanagar 5th Block', area: 'Jayanagar' },
+    { id: 11428, name: 'Hebbal', area: 'Hebbal' },
+    { id: 11293, name: 'Silk Board', area: 'Silk Board' },
+    { id: 11312, name: 'Bapuji Nagar', area: 'Bapuji Nagar' },
+    { id: 11270, name: 'Hombegowda Nagar', area: 'Hombegowda Nagar' },
+    { id: 12441, name: 'BWSSB Kadabesanahalli', area: 'Kadabesanahalli' },
+    { id: 8686, name: 'City Railway Station', area: 'Majestic' },
+    { id: 8687, name: 'Sanegurava Halli', area: 'Sanegurava Halli' },
+    { id: 3758, name: 'Peenya', area: 'Peenya' },
+  ],
+};
+
+export const DELHI: CityConfig = {
+  slug: 'delhi',
+  name: 'Delhi',
+  localName: 'दिल्ली',
+  state: 'Delhi NCR',
+  coordinates: { lat: 28.6139, lng: 77.2090 },
+  population: 32_000_000,
+  timezone: 'Asia/Kolkata',
+  tagline: 'The national capital of coughing.',
+  stations: [
+    { id: 2553, name: 'Anand Vihar', area: 'Anand Vihar' },
+    { id: 10118, name: 'ITI Shahdra', area: 'Jhilmil' },
+    { id: 10112, name: 'PGDAV College', area: 'Sriniwaspuri' },
+    { id: 2556, name: 'RK Puram', area: 'RK Puram' },
+    { id: 10124, name: 'Pusa', area: 'Pusa' },
+    { id: 10121, name: 'Sonia Vihar', area: 'Sonia Vihar' },
+    { id: 10705, name: 'JLN Stadium', area: 'JLN Stadium' },
+    { id: 10704, name: 'Mother Dairy Patparganj', area: 'Patparganj' },
+    { id: 10113, name: 'ITI Jahangirpuri', area: 'Jahangirpuri' },
+    { id: 10122, name: 'Lodhi Road', area: 'Lodhi Road' },
+    { id: 10114, name: 'DITE Wazirpur', area: 'Wazirpur' },
+    { id: 10115, name: 'Satyawati College', area: 'Ashok Vihar' },
+    { id: 3715, name: 'ITO', area: 'ITO' },
+    { id: 10111, name: 'Dhyan Chand Stadium', area: 'Central Delhi' },
+    { id: 2554, name: 'Mandir Marg', area: 'Mandir Marg' },
+    { id: 10125, name: 'Burari Crossing', area: 'Burari' },
+    { id: 8179, name: 'Shadipur', area: 'Shadipur' },
+  ],
+};
+
+export const MUMBAI: CityConfig = {
+  slug: 'mumbai',
+  name: 'Mumbai',
+  localName: 'मुंबई',
+  state: 'Maharashtra',
+  coordinates: { lat: 19.0760, lng: 72.8777 },
+  population: 21_000_000,
+  timezone: 'Asia/Kolkata',
+  tagline: 'City of Dreams. Respiratory nightmares included.',
+  stations: [
+    { id: 13715, name: 'Bandra Kurla Complex', area: 'BKC' },
+    { id: 11962, name: 'Colaba', area: 'Colaba' },
+    { id: 13707, name: 'Navy Nagar-Colaba', area: 'Colaba' },
+    { id: 13709, name: 'Mazgaon', area: 'Mazgaon' },
+    { id: 13706, name: 'Siddharth Nagar-Worli', area: 'Worli' },
+    { id: 12464, name: 'Sion', area: 'Sion' },
+    { id: 13712, name: 'Deonar', area: 'Deonar' },
+    { id: 12454, name: 'Kurla', area: 'Kurla' },
+    { id: 12456, name: 'Chhatrapati Shivaji Intl. Airport', area: 'Airport' },
+    { id: 12455, name: 'Vile Parle West', area: 'Vile Parle' },
+    { id: 13713, name: 'Chakala-Andheri East', area: 'Andheri' },
+    { id: 11898, name: 'Nerul', area: 'Navi Mumbai' },
+    { id: 12459, name: 'Powai', area: 'Powai' },
+    { id: 12461, name: 'Mahape', area: 'Navi Mumbai' },
+    { id: 13710, name: 'Khindipada-Bhandup West', area: 'Bhandup' },
+    { id: 13803, name: 'Malad West', area: 'Malad' },
+    { id: 13708, name: 'Mulund West', area: 'Mulund' },
+    { id: 13711, name: 'Kandivali East', area: 'Kandivali' },
+    { id: 13714, name: 'Borivali East MPCB', area: 'Borivali' },
+    { id: 12460, name: 'Borivali East', area: 'Borivali' },
+  ],
+};
+
+export const CHENNAI: CityConfig = {
+  slug: 'chennai',
+  name: 'Chennai',
+  localName: 'சென்னை',
+  state: 'Tamil Nadu',
+  coordinates: { lat: 13.0827, lng: 80.2707 },
+  population: 11_000_000,
+  timezone: 'Asia/Kolkata',
+  tagline: "Filter coffee won't filter this air.",
+  stations: [
+    { id: 13739, name: 'Kodungaiyur', area: 'Kodungaiyur' },
+    { id: 13738, name: 'Perungudi', area: 'Perungudi' },
+    { id: 13740, name: 'Arumbakkam', area: 'Arumbakkam' },
+    { id: 11859, name: 'Manali Village', area: 'Manali' },
+    { id: 11279, name: 'Velachery Res. Area', area: 'Velachery' },
+    { id: 8185, name: 'Manali', area: 'Manali' },
+    { id: 13737, name: 'Royapuram', area: 'Royapuram' },
+    { id: 14144, name: 'Gandhi Nagar Ennore', area: 'Ennore' },
+  ],
+};
+
+export const KOLKATA: CityConfig = {
+  slug: 'kolkata',
+  name: 'Kolkata',
+  localName: 'কলকাতা',
+  state: 'West Bengal',
+  coordinates: { lat: 22.5726, lng: 88.3639 },
+  population: 15_000_000,
+  timezone: 'Asia/Kolkata',
+  tagline: 'City of Joy? City of Wheezing.',
+  stations: [
+    { id: 12746, name: 'Ballygunge', area: 'Ballygunge' },
+    { id: 12458, name: 'Jadavpur', area: 'Jadavpur' },
+    { id: 9068, name: 'Victoria', area: 'Victoria' },
+    { id: 12457, name: 'Fort William', area: 'Fort William' },
+    { id: 9145, name: 'Rabindra Bharati University', area: 'Jorasanko' },
+    { id: 12467, name: 'Rabindra Sarobar', area: 'Rabindra Sarobar' },
+    { id: 12745, name: 'Bidhannagar', area: 'Salt Lake' },
+    { id: 11281, name: 'Ghusuri', area: 'Howrah' },
+    { id: 11320, name: 'Padmapukur', area: 'Howrah' },
+    { id: 12450, name: 'Belur Math', area: 'Belur' },
+  ],
+};
+
+export const HYDERABAD: CityConfig = {
+  slug: 'hyderabad',
+  name: 'Hyderabad',
+  localName: 'హైదరాబాద్',
+  state: 'Telangana',
+  coordinates: { lat: 17.3850, lng: 78.4867 },
+  population: 10_000_000,
+  timezone: 'Asia/Kolkata',
+  tagline: 'Biryani tastes better when you can breathe.',
+  stations: [
+    { id: 8700, name: 'Zoo Park', area: 'Nehru Zoological Park' },
+    { id: 11224, name: 'Bollaram', area: 'Bollaram' },
+    { id: 11225, name: 'ICRISAT', area: 'Patancheru' },
+    { id: 11226, name: 'IDA Pashamylaram', area: 'Pashamylaram' },
+    { id: 11227, name: 'Sanathnagar', area: 'Sanathnagar' },
+    { id: 11228, name: 'Central University', area: 'Gachibowli' },
+    { id: 11229, name: 'Kompally', area: 'Kompally' },
+    { id: 11230, name: 'Nacharam', area: 'Nacharam' },
+    { id: 11231, name: 'Charminar', area: 'Charminar' },
+  ],
+};
+
+// ============================================================================
+// City Collections
+// ============================================================================
+
+/**
+ * All supported cities
+ */
+export const ALL_CITIES: CityConfig[] = [
+  DELHI,      // 17 stations
+  MUMBAI,     // 20 stations
+  KOLKATA,    // 10 stations
+  BANGALORE,  // 10 stations
+  CHENNAI,    // 8 stations
+];
+
+/**
+ * Cities ordered by typical pollution levels (worst first)
+ */
+export const CITIES_BY_POLLUTION: CityConfig[] = [
+  DELHI,
+  KOLKATA,
+  MUMBAI,
+  CHENNAI,
+  BANGALORE,
+];
+
+/**
+ * Get city by slug
+ */
+export function getCityBySlug(slug: string): CityConfig | undefined {
+  return ALL_CITIES.find((city) => city.slug === slug);
+}
+
+/**
+ * Get all city slugs (for static path generation)
+ */
+export function getAllCitySlugs(): string[] {
+  return ALL_CITIES.map((city) => city.slug);
+}
+
+// ============================================================================
+// All-India Meta Config
+// ============================================================================
+
+export const ALL_INDIA = {
+  slug: 'india',
+  name: 'All India',
+  population: 1_400_000_000,
+  tagline: "1.4 billion people. One shared atmosphere. No one's getting out alive.",
+} as const;

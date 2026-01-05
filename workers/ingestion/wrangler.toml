@@ -1,0 +1,29 @@
+# Ingestion Worker Configuration
+# Fetches air quality data from WAQI and stores in D1
+
+name = "aqi-ingestion"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Scheduled triggers - run every hour at minute 0
+[triggers]
+crons = ["0 * * * *"]
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "aqi-historical"
+database_id = "" # Fill in after creating database
+
+# Environment variables (secrets should be set via `wrangler secret put`)
+[vars]
+# Non-sensitive config can go here
+
+# For local development
+[env.dev]
+name = "aqi-ingestion-dev"
+
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "aqi-historical-dev"
+database_id = "" # Fill in after creating dev database

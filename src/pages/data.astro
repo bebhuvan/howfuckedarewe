@@ -1,0 +1,332 @@
+---
+/**
+ * Data & Research Page
+ *
+ * Global context for India's air pollution crisis.
+ * Embedded OWID charts for interactive exploration.
+ */
+import CityLayout from '../layouts/CityLayout.astro';
+import OWIDChart from '../components/OWIDChart.astro';
+
+const title = "Data & Research — The Global Picture";
+const description = "Interactive charts showing India's air pollution in global context. Deaths, trends, and comparisons.";
+---
+
+<CityLayout title={title} description={description}>
+  <header class="page-header">
+    <h1>The Global Picture</h1>
+    <p class="intro">
+      India's air isn't uniquely toxic. But the scale of harm is unprecedented.
+      These charts put the numbers in context.
+    </p>
+  </header>
+
+  <section class="chart-section">
+    <h2>Deaths from Outdoor Air Pollution</h2>
+    <p class="section-intro">
+      India leads the world in air pollution deaths. Not because our air is always the worst,
+      but because 1.4 billion people are breathing it.
+    </p>
+
+    <OWIDChart
+      slug="absolute-number-of-deaths-from-outdoor-air-pollution"
+      tab="line"
+      countries={['IND', 'CHN', 'OWID_ASI', 'OWID_EUR', 'OWID_AFR', 'OWID_NAM']}
+      title="Annual Deaths by Region (1990-2021)"
+      caption="India alone accounts for more deaths than Europe, Africa, and North America combined."
+      height={550}
+    />
+
+    <OWIDChart
+      slug="absolute-number-of-deaths-from-outdoor-air-pollution"
+      tab="map"
+      title="Deaths by Country (Latest Year)"
+      caption="The darker the red, the higher the death toll."
+      height={500}
+    />
+  </section>
+
+  <section class="chart-section">
+    <h2>Death Rate Per Capita</h2>
+    <p class="section-intro">
+      Raw numbers favor large populations. Per capita rates show the relative risk
+      of living in different places.
+    </p>
+
+    <OWIDChart
+      slug="death-rate-from-air-pollution-per-100000"
+      tab="line"
+      countries={['IND', 'CHN', 'USA', 'DEU', 'JPN', 'GBR', 'NGA']}
+      title="Death Rate per 100,000 People"
+      caption="India's rate is 5x higher than Germany's."
+      height={500}
+    />
+  </section>
+
+  <section class="chart-section">
+    <h2>PM2.5 Exposure Levels</h2>
+    <p class="section-intro">
+      The pollution levels people actually breathe, population-weighted.
+      WHO guideline is 5 µg/m³. India averages ~50.
+    </p>
+
+    <OWIDChart
+      slug="pm25-air-pollution"
+      tab="line"
+      countries={['IND', 'CHN', 'USA', 'DEU', 'BGD', 'PAK', 'NPL']}
+      title="Average PM2.5 Exposure (µg/m³)"
+      caption="India's neighbors face similar levels. The entire subcontinent is choking."
+      height={500}
+    />
+
+    <OWIDChart
+      slug="pm25-air-pollution"
+      tab="map"
+      title="PM2.5 Exposure by Country"
+      height={500}
+    />
+  </section>
+
+  <section class="chart-section">
+    <h2>Outdoor vs Household Pollution</h2>
+    <p class="section-intro">
+      In India, both outdoor (ambient) and household air pollution kill.
+      Cooking with solid fuels indoors is still common in rural areas.
+    </p>
+
+    <OWIDChart
+      slug="death-rates-from-air-pollution"
+      tab="line"
+      countries={['IND', 'CHN', 'USA', 'NGA', 'BGD']}
+      title="Death Rate: Outdoor + Household Combined"
+      height={500}
+    />
+  </section>
+
+  <section class="chart-section">
+    <h2>Income Level Comparisons</h2>
+    <p class="section-intro">
+      Air pollution is a disease of development—and the failure to develop cleanly.
+    </p>
+
+    <OWIDChart
+      slug="absolute-number-of-deaths-from-outdoor-air-pollution"
+      tab="line"
+      countries={['IND', 'High Income (WB)', 'Low Income (WB)', 'Lower Middle Income (WB)', 'Upper Middle Income (WB)']}
+      title="Deaths by World Bank Income Group"
+      caption="India alone rivals entire income groups. Low and middle income countries bear the burden."
+      height={500}
+    />
+  </section>
+
+  <section class="chart-section">
+    <h2>Pollution vs Prosperity</h2>
+    <p class="section-intro">
+      Rich countries once had terrible air too. Most cleaned it up. India has the pollution
+      of a poor country with the economy of a middle-income one.
+    </p>
+
+    <OWIDChart
+      slug="outdoor-pollution-rate-vs-gdp"
+      countries={['IND', 'CHN', 'USA', 'DEU', 'BGD', 'PAK', 'BRA', 'NGA']}
+      title="Death Rate vs GDP Per Capita"
+      caption="India is an outlier: higher death rate than countries with similar or lower income."
+      height={550}
+    />
+
+    <OWIDChart
+      slug="pm25-exposure-gdp"
+      countries={['IND', 'CHN', 'USA', 'DEU', 'BGD', 'PAK', 'JPN', 'GBR']}
+      title="PM2.5 Exposure vs GDP Per Capita"
+      caption="The richest countries breathe the cleanest air. India's neighbors are in the same cloud."
+      height={550}
+    />
+  </section>
+
+  <section class="chart-section">
+    <h2>The Historical Comparison</h2>
+    <p class="section-intro">
+      London in the 1950s was infamous for its "pea-souper" smogs. Today's Delhi is worse.
+    </p>
+
+    <OWIDChart
+      slug="air-pollution-london-vs-delhi"
+      title="London vs Delhi: A Century of Air"
+      caption="London cleaned up. Delhi got worse. The Great Smog of 1952 killed 12,000 Londoners—and led to change."
+      height={500}
+    />
+  </section>
+
+  <section class="chart-section">
+    <h2>Change Over Time (1990 vs 2021)</h2>
+    <p class="section-intro">
+      Most of the world has made progress. India's absolute death toll has increased.
+    </p>
+
+    <OWIDChart
+      slug="outdoor-pollution-deaths-1990-2017"
+      countries={['IND', 'CHN', 'USA', 'DEU', 'BGD', 'PAK', 'BRA', 'GBR']}
+      title="Deaths in 1990 vs 2021"
+      caption="Countries above the diagonal line got worse. India is well above."
+      height={550}
+    />
+
+    <OWIDChart
+      slug="annual-deaths-from-outdoor-air-pollution-by-region"
+      countries={['IND', 'OWID_ASI', 'OWID_EUR', 'OWID_AFR', 'OWID_NAM', 'OWID_SAM']}
+      title="Deaths by World Region Over Time"
+      caption="Asia's toll has grown while other regions stabilized or declined."
+      height={500}
+    />
+  </section>
+
+  <section class="chart-section">
+    <h2>Who Bears the Burden?</h2>
+    <p class="section-intro">
+      Air pollution kills across all ages, but the very young and old are hit hardest.
+    </p>
+
+    <OWIDChart
+      slug="number-outdoor-pollution-deaths-by-age"
+      tab="line"
+      countries={['IND']}
+      title="India: Deaths by Age Group"
+      caption="Infants and the elderly are most vulnerable."
+      height={500}
+    />
+
+    <OWIDChart
+      slug="share-deaths-outdoor-pollution"
+      tab="line"
+      countries={['IND', 'CHN', 'USA', 'DEU', 'BGD', 'PAK', 'NPL']}
+      title="Share of All Deaths From Outdoor Air Pollution"
+      caption="In India, nearly 1 in 10 deaths is caused by the air itself."
+      height={500}
+    />
+  </section>
+
+  <section class="chart-section">
+    <h2>The Dose-Response Relationship</h2>
+    <p class="section-intro">
+      Higher PM2.5 means more deaths. There's no safe threshold.
+    </p>
+
+    <OWIDChart
+      slug="death-rate-from-pm25-vs-pm25-concentration"
+      countries={['IND', 'CHN', 'USA', 'DEU', 'BGD', 'PAK', 'NPL', 'GBR']}
+      title="Death Rate vs PM2.5 Concentration"
+      caption="The relationship is clear: more pollution, more death. India is in the danger zone."
+      height={550}
+    />
+  </section>
+
+  <section class="explore-more">
+    <h2>Explore More</h2>
+    <p>
+      All charts from <a href="https://ourworldindata.org/outdoor-air-pollution" target="_blank" rel="noopener">Our World in Data</a>.
+      Data sourced from the Global Burden of Disease study (IHME).
+    </p>
+    <div class="explore-links">
+      <a href="https://ourworldindata.org/outdoor-air-pollution" target="_blank" rel="noopener" class="explore-link">
+        Outdoor Air Pollution →
+      </a>
+      <a href="https://ourworldindata.org/indoor-air-pollution" target="_blank" rel="noopener" class="explore-link">
+        Indoor Air Pollution →
+      </a>
+      <a href="https://ourworldindata.org/air-pollution" target="_blank" rel="noopener" class="explore-link">
+        Air Pollution Overview →
+      </a>
+    </div>
+  </section>
+</CityLayout>
+
+<style>
+  .page-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .page-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .intro {
+    font-size: 1.125rem;
+    color: var(--text-muted);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .chart-section {
+    margin-bottom: 4rem;
+  }
+
+  .chart-section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .section-intro {
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+    max-width: 700px;
+  }
+
+  .explore-more {
+    background: #faf8f5;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .explore-more h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .explore-more > p {
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+  }
+
+  .explore-links {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .explore-link {
+    display: inline-block;
+    padding: 0.75rem 1.25rem;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text);
+    transition: all 0.15s ease;
+  }
+
+  .explore-link:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  @media (max-width: 600px) {
+    .page-header h1 {
+      font-size: 2rem;
+    }
+
+    .chart-section {
+      margin-bottom: 3rem;
+    }
+  }
+</style>

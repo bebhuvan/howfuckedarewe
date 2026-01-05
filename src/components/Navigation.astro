@@ -1,0 +1,237 @@
+---
+/**
+ * Navigation Component
+ *
+ * Site header with logo, city selector, and main navigation.
+ */
+import { ALL_CITIES, ALL_INDIA } from '../lib/cities';
+
+interface Props {
+  currentSlug?: string;  // Current city slug (undefined for All India)
+}
+
+const { currentSlug } = Astro.props;
+
+// Check if we're on a special page
+const currentPath = Astro.url.pathname;
+const isLeaderboard = currentPath === '/leaderboard';
+const isWhatNow = currentPath === '/what-now';
+const isData = currentPath === '/data';
+const isMethodology = currentPath === '/methodology';
+---
+
+<nav class="site-nav">
+  <!-- Site Branding -->
+  <div class="nav-brand">
+    <a href="/" class="brand-link">
+      <span class="brand-name">howfuckedarewe</span>
+      <span class="brand-tld">.in</span>
+    </a>
+    <span class="brand-tagline">India's air, unfiltered</span>
+  </div>
+
+  <!-- Main Navigation -->
+  <div class="nav-main">
+    <!-- City Selector -->
+    <div class="nav-cities-wrap">
+      <a
+        href="/"
+        class:list={['nav-link', { active: !currentSlug && !isLeaderboard && !isWhatNow && !isData && !isMethodology }]}
+      >
+        {ALL_INDIA.name}
+      </a>
+      <div class="nav-cities">
+        {ALL_CITIES.map((city) => (
+          <a
+            href={`/${city.slug}`}
+            class:list={['nav-link', { active: currentSlug === city.slug }]}
+          >
+            {city.name}
+          </a>
+        ))}
+      </div>
+    </div>
+
+    <!-- Special Pages -->
+    <div class="nav-pages">
+      <a href="/leaderboard" class:list={['nav-link', 'nav-link-special', { active: isLeaderboard }]}>
+        Leaderboard
+      </a>
+      <a href="/data" class:list={['nav-link', 'nav-link-special', { active: isData }]}>
+        Data
+      </a>
+      <a href="/what-now" class:list={['nav-link', 'nav-link-special', { active: isWhatNow }]}>
+        What Now?
+      </a>
+    </div>
+  </div>
+</nav>
+
+<style>
+  .site-nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(250, 250, 250, 0.98);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  /* Brand Section */
+  .nav-brand {
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .brand-link {
+    text-decoration: none;
+    display: flex;
+    align-items: baseline;
+  }
+
+  .brand-link:hover {
+    text-decoration: none;
+  }
+
+  .brand-name {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .brand-tld {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #b91c1c;
+  }
+
+  .brand-tagline {
+    font-size: 0.6875rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* Main Navigation */
+  .nav-main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .nav-cities-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    flex: 1;
+  }
+
+  .nav-cities-wrap::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-cities {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .nav-pages {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .nav-link {
+    padding: 0.4rem 0.875rem;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #666;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+
+  .nav-link:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #333;
+    text-decoration: none;
+  }
+
+  .nav-link.active {
+    background: #b91c1c;
+    color: white;
+  }
+
+  .nav-link-special {
+    background: rgba(185, 28, 28, 0.08);
+    color: #b91c1c;
+    font-weight: 600;
+  }
+
+  .nav-link-special:hover {
+    background: rgba(185, 28, 28, 0.15);
+    color: #991b1b;
+  }
+
+  .nav-link-special.active {
+    background: #b91c1c;
+    color: white;
+  }
+
+  @media (max-width: 768px) {
+    .nav-brand {
+      padding: 0.5rem 1rem;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.125rem;
+    }
+
+    .brand-name,
+    .brand-tld {
+      font-size: 1.125rem;
+    }
+
+    .brand-tagline {
+      font-size: 0.625rem;
+    }
+
+    .nav-main {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.5rem;
+      padding: 0.5rem;
+    }
+
+    .nav-cities-wrap {
+      order: 2;
+    }
+
+    .nav-pages {
+      order: 1;
+      justify-content: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+
+    .nav-link {
+      padding: 0.35rem 0.625rem;
+      font-size: 0.75rem;
+    }
+  }
+</style>

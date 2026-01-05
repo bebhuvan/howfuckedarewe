@@ -1,0 +1,343 @@
+---
+/**
+ * Scheduled Damage Component
+ *
+ * Your forecast of harm. Each day is a bar. Each bar is damage.
+ * "Zero safe days this week."
+ */
+import type { ForecastDay } from '../lib/types';
+import { WHO } from '../lib/constants';
+
+interface Props {
+  forecast: ForecastDay[];
+}
+
+const { forecast } = Astro.props;
+
+// Calculate weekly totals
+const weeklyPm25 = forecast.reduce((sum, d) => sum + d.pm25Concentration, 0);
+const weeklyAvgPm25 = weeklyPm25 / forecast.length;
+const weeklyCigarettes = forecast.reduce((sum, d) => sum + d.metrics.cigarettesPerDay, 0);
+const safeDays = forecast.filter(d => d.pm25Concentration <= WHO.PM25_ANNUAL).length;
+
+// Find max for scaling
+const maxPm25 = Math.max(...forecast.map(d => d.pm25Concentration));
+
+// Bright color scale for visual clarity
+function getBarColor(pm25: number): string {
+  if (pm25 <= 12) return '#22c55e'; // Green - good
+  if (pm25 <= 35) return '#eab308'; // Yellow - moderate
+  if (pm25 <= 55) return '#f97316'; // Orange - unhealthy
+  return '#dc2626'; // Red - severe
+}
+
+function getSeverityLabel(pm25: number): string {
+  if (pm25 <= 12) return 'Good';
+  if (pm25 <= 35) return 'Moderate';
+  if (pm25 <= 55) return 'Unhealthy';
+  return 'Hazardous';
+}
+
+function getSeverityClass(pm25: number): string {
+  if (pm25 <= 12) return 'good';
+  if (pm25 <= 35) return 'moderate';
+  if (pm25 <= 55) return 'unhealthy';
+  return 'severe';
+}
+---
+
+<section class="scheduled-damage">
+  <div class="section-header">
+    <h2>Your Scheduled Damage</h2>
+    <p class="section-intro">
+      <span class="full-text">The next 7 days. Each column is a day of your life you won't get back.</span>
+      <span class="mobile-text">The next 4 days. Each column is damage.</span>
+    </p>
+  </div>
+
+  <div class="forecast-chart">
+    {forecast.map((day, i) => {
+      const heightPercent = (day.pm25Concentration / maxPm25) * 100;
+      const isToday = i === 0;
+      const barColor = getBarColor(day.pm25Concentration);
+      const severityClass = getSeverityClass(day.pm25Concentration);
+
+      return (
+        <div class:list={['forecast-day', { today: isToday }]}>
+          <div class="day-label">
+            {isToday ? 'TODAY' : day.dayLabel.toUpperCase()}
+            <span class="day-date">{day.dateLabel}</span>
+          </div>
+
+          <div class="bar-container">
+            <div
+              class="bar"
+              style={`height: ${heightPercent}%; background: ${barColor};`}
+            >
+              <span class="bar-value">{day.pm25Concentration.toFixed(0)}</span>
+            </div>
+          </div>
+
+          <div class="day-stats">
+            <div class="stat-cigs">{day.metrics.cigarettesPerDay.toFixed(1)}</div>
+            <div class="stat-label">cigs</div>
+          </div>
+
+          <div class:list={['day-severity', severityClass]}>
+            {getSeverityLabel(day.pm25Concentration)}
+          </div>
+        </div>
+      );
+    })}
+  </div>
+
+  <div class="weekly-summary">
+    <div class="summary-stat">
+      <span class="summary-value">{weeklyCigarettes.toFixed(0)}</span>
+      <span class="summary-label">cigarettes this week just by breathing</span>
+    </div>
+
+    <div class="summary-note">
+      {safeDays === 0 ? (
+        <span class="zero-safe">Zero safe days this week. Your lungs will accumulate damage every single day.</span>
+      ) : safeDays === 7 ? (
+        <span class="all-safe">All 7 days within safe limits. A rare week. Enjoy it.</span>
+      ) : (
+        <span>{safeDays} day{safeDays > 1 ? 's' : ''} within safe limits. The other {7 - safeDays}? Damage.</span>
+      )}
+    </div>
+
+    <p class="forecast-note">Forecast from a single monitoring station. Actual conditions may vary by area.</p>
+  </div>
+</section>
+
+<style>
+  .scheduled-damage {
+    background: #faf8f5;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .section-header h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .section-intro {
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+  }
+
+  .section-intro .mobile-text {
+    display: none;
+  }
+
+  .forecast-chart {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .forecast-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .forecast-day.today {
+    background: white;
+    margin: -0.5rem;
+    padding: 0.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .day-label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .day-date {
+    display: block;
+    font-weight: 400;
+    color: var(--text-light);
+  }
+
+  .bar-container {
+    width: 100%;
+    height: 120px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .bar {
+    width: 60%;
+    min-height: 20px;
+    border-radius: 4px 4px 0 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 0.25rem;
+    transition: height 0.3s ease;
+  }
+
+  .bar-value {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+  }
+
+  .day-stats {
+    text-align: center;
+  }
+
+  .stat-cigs {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .stat-label {
+    font-size: 0.625rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+  }
+
+  .day-severity {
+    font-size: 0.5625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-light);
+  }
+
+  .day-severity.good {
+    color: #16a34a;
+  }
+
+  .day-severity.moderate {
+    color: #ca8a04;
+  }
+
+  .day-severity.unhealthy {
+    color: #ea580c;
+  }
+
+  .day-severity.severe {
+    color: #dc2626;
+  }
+
+  .weekly-summary {
+    text-align: center;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .summary-stat {
+    margin-bottom: 0.75rem;
+  }
+
+  .summary-value {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 3rem;
+    font-weight: 400;
+    color: #c41e1e;
+  }
+
+  .summary-label {
+    display: block;
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+  }
+
+  .summary-note {
+    font-size: 0.875rem;
+    color: var(--text-light);
+    font-style: italic;
+  }
+
+  .zero-safe {
+    color: #c41e1e;
+  }
+
+  .all-safe {
+    color: #6b8e6b;
+  }
+
+  .forecast-note {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    text-align: center;
+    margin-top: 1rem;
+    font-style: italic;
+  }
+
+  @media (max-width: 700px) {
+    .scheduled-damage {
+      padding: 1.5rem 1rem;
+    }
+
+    .forecast-chart {
+      gap: 0.25rem;
+    }
+
+    .bar-container {
+      height: 80px;
+    }
+
+    .bar {
+      width: 80%;
+    }
+
+    .day-label {
+      font-size: 0.5625rem;
+    }
+
+    .stat-cigs {
+      font-size: 1rem;
+    }
+
+    .summary-value {
+      font-size: 2.5rem;
+    }
+
+    .forecast-day.today {
+      margin: -0.25rem;
+      padding: 0.25rem;
+    }
+  }
+
+  @media (max-width: 500px) {
+    .forecast-chart {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .forecast-day:nth-child(n+5) {
+      display: none;
+    }
+
+    /* Hide original text and show mobile-friendly version */
+    .section-intro .full-text {
+      display: none;
+    }
+
+    .section-intro .mobile-text {
+      display: inline;
+    }
+  }
+</style>

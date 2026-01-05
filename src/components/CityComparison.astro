@@ -1,0 +1,280 @@
+---
+/**
+ * City Comparison Component
+ *
+ * Shows what this AQI level would trigger in other cities.
+ * Compares using PM2.5 concentration to avoid AQI scale confusion.
+ */
+interface Props {
+  pm25: number;  // Current PM2.5 in µg/m³
+}
+
+const { pm25 } = Astro.props;
+
+// International PM2.5 thresholds that trigger health warnings
+// These are all PM2.5 concentrations in µg/m³ to avoid mixing different AQI scales
+const comparisons = [
+  {
+    city: 'London',
+    country: 'UK',
+    threshold: 35,  // UK DAQI "Moderate" starts at ~35 µg/m³
+    action: 'Health advice issued',
+    source: 'UK DEFRA DAQI'
+  },
+  {
+    city: 'Tokyo',
+    country: 'Japan',
+    threshold: 35,  // Japan provisional target
+    action: 'Sensitive groups warned',
+    source: 'Japan MOE'
+  },
+  {
+    city: 'Sydney',
+    country: 'Australia',
+    threshold: 25,  // Australia NEPM standard
+    action: 'Outdoor activities discouraged',
+    source: 'NSW EPA'
+  },
+  {
+    city: 'San Francisco',
+    country: 'USA',
+    threshold: 35,  // US EPA "Unhealthy for Sensitive" at 35.4 µg/m³
+    action: 'Unhealthy for sensitive groups',
+    source: 'US EPA'
+  },
+  {
+    city: 'Beijing',
+    country: 'China',
+    threshold: 75,  // China Class II (35-75 is Good)
+    action: 'Light pollution warning',
+    source: 'China MEE'
+  },
+];
+
+// Filter to show comparisons where current PM2.5 exceeds their threshold
+const triggeredAlerts = comparisons.filter(c => pm25 >= c.threshold);
+---
+
+<section class="city-comparison">
+  <h2>What Would Happen Elsewhere</h2>
+
+  <div class="comparison-intro">
+    <p>
+      At <strong>{pm25.toFixed(1)} µg/m³ PM2.5</strong>, here's what would be triggered in other cities:
+    </p>
+  </div>
+
+  <div class="comparison-grid">
+    {comparisons.map((city) => {
+      const triggered = pm25 >= city.threshold;
+      const ratio = pm25 / city.threshold;
+
+      return (
+        <div class:list={['comparison-card', { triggered, 'way-over': ratio > 2 }]}>
+          <div class="city-info">
+            <span class="city-name">{city.city}</span>
+            <span class="city-country">{city.country}</span>
+          </div>
+
+          <div class="threshold-info">
+            <span class="threshold-label">Warning at</span>
+            <span class="threshold-value">{city.threshold} µg/m³</span>
+          </div>
+
+          {triggered ? (
+            <div class="alert-triggered">
+              <span class="alert-icon">!</span>
+              <span class="alert-text">{city.action}</span>
+            </div>
+          ) : (
+            <div class="alert-safe">
+              <span class="safe-text">No alert triggered</span>
+            </div>
+          )}
+
+          {triggered && ratio > 1 && (
+            <div class="ratio-badge">
+              {ratio.toFixed(1)}x their threshold
+            </div>
+          )}
+
+          <div class="source">{city.source}</div>
+        </div>
+      );
+    })}
+  </div>
+
+  {triggeredAlerts.length > 0 && (
+    <div class="comparison-summary">
+      Your current air quality would trigger health warnings in
+      <strong>{triggeredAlerts.length} of {comparisons.length}</strong> comparison cities.
+    </div>
+  )}
+
+  <p class="comparison-note">
+    Note: All comparisons use PM2.5 concentration (µg/m³), not AQI values,
+    since different countries use different AQI scales.
+  </p>
+</section>
+
+<style>
+  .city-comparison {
+    margin-bottom: 2rem;
+  }
+
+  h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  .comparison-intro {
+    margin-bottom: 1rem;
+  }
+
+  .comparison-intro p {
+    font-size: 0.9375rem;
+    color: #666;
+  }
+
+  .comparison-intro strong {
+    color: #b91c1c;
+  }
+
+  .comparison-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .comparison-card {
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 6px;
+    padding: 1rem;
+    position: relative;
+  }
+
+  .comparison-card.triggered {
+    border-color: rgba(185, 28, 28, 0.3);
+    background: rgba(185, 28, 28, 0.02);
+  }
+
+  .comparison-card.way-over {
+    border-color: #b91c1c;
+    background: rgba(185, 28, 28, 0.05);
+  }
+
+  .city-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.75rem;
+  }
+
+  .city-name {
+    font-weight: 600;
+    color: #333;
+  }
+
+  .city-country {
+    font-size: 0.75rem;
+    color: #999;
+  }
+
+  .threshold-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  .threshold-label {
+    font-size: 0.75rem;
+    color: #666;
+  }
+
+  .threshold-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .alert-triggered {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #b91c1c;
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+
+  .alert-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    background: #b91c1c;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .alert-safe {
+    font-size: 0.8125rem;
+    color: #6b8e6b;
+  }
+
+  .ratio-badge {
+    margin-top: 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #b91c1c;
+    background: rgba(185, 28, 28, 0.1);
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    display: inline-block;
+  }
+
+  .source {
+    margin-top: 0.5rem;
+    font-size: 0.625rem;
+    color: #999;
+  }
+
+  .comparison-summary {
+    background: rgba(185, 28, 28, 0.05);
+    border: 1px solid rgba(185, 28, 28, 0.2);
+    border-radius: 6px;
+    padding: 1rem;
+    font-size: 0.9375rem;
+    color: #666;
+    text-align: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .comparison-summary strong {
+    color: #b91c1c;
+  }
+
+  .comparison-note {
+    font-size: 0.75rem;
+    color: #999;
+    text-align: center;
+    font-style: italic;
+  }
+
+  @media (max-width: 600px) {
+    .comparison-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

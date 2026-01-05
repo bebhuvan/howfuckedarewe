@@ -1,0 +1,429 @@
+---
+/**
+ * Historical Trends Component
+ *
+ * Shows PM2.5 trends over the last 24 hours and 7 days.
+ * Uses D1 historical data when available.
+ */
+import type { DailyAggregateRow, CitySnapshotRow } from '../lib/db';
+
+interface Props {
+  hourlyData: CitySnapshotRow[];
+  dailyData: DailyAggregateRow[];
+  cityName: string;
+}
+
+const { hourlyData, dailyData, cityName } = Astro.props;
+
+// Skip if no data
+const hasHourlyData = hourlyData.length > 0;
+const hasDailyData = dailyData.length > 0;
+
+// Process hourly data for chart
+const hourlyPoints = hourlyData.map((d) => ({
+  hour: new Date(d.recorded_at).getHours(),
+  pm25: d.avg_pm25 || 0,
+  time: new Date(d.recorded_at).toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }),
+}));
+
+// Process daily data
+const dailyPoints = dailyData.map((d) => ({
+  date: d.date,
+  pm25: d.avg_pm25 || 0,
+  label: new Date(d.date).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+  }),
+}));
+
+// Calculate stats
+const avgHourly =
+  hourlyPoints.length > 0
+    ? hourlyPoints.reduce((sum, p) => sum + p.pm25, 0) / hourlyPoints.length
+    : 0;
+const maxHourly =
+  hourlyPoints.length > 0 ? Math.max(...hourlyPoints.map((p) => p.pm25)) : 0;
+const minHourly =
+  hourlyPoints.length > 0 ? Math.min(...hourlyPoints.map((p) => p.pm25)) : 0;
+
+const avgDaily =
+  dailyPoints.length > 0
+    ? dailyPoints.reduce((sum, p) => sum + p.pm25, 0) / dailyPoints.length
+    : 0;
+
+// Color function
+function getColor(pm25: number): string {
+  if (pm25 <= 12) return '#22c55e';
+  if (pm25 <= 35) return '#eab308';
+  if (pm25 <= 55) return '#f97316';
+  return '#dc2626';
+}
+
+// Trend indicator
+function getTrend(): { direction: 'up' | 'down' | 'stable'; percent: number } {
+  if (hourlyPoints.length < 2) return { direction: 'stable', percent: 0 };
+
+  const recent = hourlyPoints.slice(-6);
+  const older = hourlyPoints.slice(0, 6);
+
+  const recentAvg = recent.reduce((s, p) => s + p.pm25, 0) / recent.length;
+  const olderAvg = older.reduce((s, p) => s + p.pm25, 0) / older.length;
+
+  const change = ((recentAvg - olderAvg) / olderAvg) * 100;
+
+  if (Math.abs(change) < 5) return { direction: 'stable', percent: 0 };
+  return {
+    direction: change > 0 ? 'up' : 'down',
+    percent: Math.abs(change),
+  };
+}
+
+const trend = getTrend();
+---
+
+{(hasHourlyData || hasDailyData) && (
+  <section class="historical-trends">
+    <div class="trends-header">
+      <h3>Air Quality Trends</h3>
+      <p class="trends-intro">Historical data from our monitoring</p>
+    </div>
+
+    {hasHourlyData && (
+      <div class="trend-section">
+        <div class="section-header">
+          <h4>Last 24 Hours</h4>
+          <div class="trend-indicator" data-direction={trend.direction}>
+            {trend.direction === 'up' && (
+              <span class="trend-arrow">↑</span>
+            )}
+            {trend.direction === 'down' && (
+              <span class="trend-arrow">↓</span>
+            )}
+            {trend.direction !== 'stable' && (
+              <span class="trend-percent">{trend.percent.toFixed(0)}%</span>
+            )}
+            {trend.direction === 'stable' && (
+              <span class="trend-stable">Stable</span>
+            )}
+          </div>
+        </div>
+
+        <div class="hourly-chart">
+          <div class="chart-bars">
+            {hourlyPoints.map((point) => {
+              const height = Math.max(5, (point.pm25 / maxHourly) * 100);
+              const color = getColor(point.pm25);
+              return (
+                <div class="bar-wrapper" title={`${point.time}: ${point.pm25.toFixed(0)} µg/m³`}>
+                  <div
+                    class="bar"
+                    style={`height: ${height}%; background: ${color};`}
+                  ></div>
+                  <span class="bar-label">{point.hour}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div class="chart-reference">
+            <div class="reference-line who" style="bottom: calc(5 / {maxHourly} * 100%)">
+              <span>WHO</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hourly-stats">
+          <div class="stat">
+            <span class="stat-label">Average</span>
+            <span class="stat-value" style={`color: ${getColor(avgHourly)}`}>
+              {avgHourly.toFixed(0)}
+            </span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Peak</span>
+            <span class="stat-value" style={`color: ${getColor(maxHourly)}`}>
+              {maxHourly.toFixed(0)}
+            </span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Low</span>
+            <span class="stat-value" style={`color: ${getColor(minHourly)}`}>
+              {minHourly.toFixed(0)}
+            </span>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {hasDailyData && (
+      <div class="trend-section">
+        <div class="section-header">
+          <h4>Last 7 Days</h4>
+        </div>
+
+        <div class="daily-chart">
+          {dailyPoints.slice(-7).map((point) => {
+            const color = getColor(point.pm25);
+            return (
+              <div class="daily-item">
+                <span class="daily-label">{point.label}</span>
+                <div class="daily-bar-wrapper">
+                  <div
+                    class="daily-bar"
+                    style={`width: ${Math.min(100, (point.pm25 / 150) * 100)}%; background: ${color};`}
+                  >
+                    <span class="daily-value">{point.pm25.toFixed(0)}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <p class="daily-avg">
+          7-day average: <strong style={`color: ${getColor(avgDaily)}`}>{avgDaily.toFixed(0)} µg/m³</strong>
+        </p>
+      </div>
+    )}
+
+    <p class="trends-note">
+      Historical data updates hourly. Gaps indicate missing readings.
+    </p>
+  </section>
+)}
+
+<style>
+  .historical-trends {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .trends-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .trends-header h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .trends-intro {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  .trend-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .trend-section:last-of-type {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .section-header h4 {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .trend-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .trend-indicator[data-direction='up'] {
+    color: #dc2626;
+  }
+
+  .trend-indicator[data-direction='down'] {
+    color: #22c55e;
+  }
+
+  .trend-arrow {
+    font-size: 1rem;
+  }
+
+  .trend-stable {
+    color: var(--text-light);
+  }
+
+  .hourly-chart {
+    position: relative;
+    height: 100px;
+    margin-bottom: 1rem;
+  }
+
+  .chart-bars {
+    display: flex;
+    align-items: flex-end;
+    height: 80px;
+    gap: 2px;
+  }
+
+  .bar-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+  }
+
+  .bar {
+    width: 100%;
+    min-height: 4px;
+    border-radius: 2px 2px 0 0;
+    transition: height 0.2s ease;
+  }
+
+  .bar-label {
+    font-size: 0.5rem;
+    color: var(--text-light);
+    margin-top: 2px;
+  }
+
+  .chart-reference {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
+    pointer-events: none;
+  }
+
+  .reference-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-top: 1px dashed #22c55e;
+  }
+
+  .reference-line span {
+    position: absolute;
+    right: 0;
+    top: -8px;
+    font-size: 0.5rem;
+    color: #22c55e;
+    font-weight: 600;
+  }
+
+  .hourly-stats {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .stat-label {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    color: var(--text-light);
+  }
+
+  .stat-value {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.5rem;
+    font-weight: 500;
+  }
+
+  .daily-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .daily-item {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .daily-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: right;
+  }
+
+  .daily-bar-wrapper {
+    height: 24px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .daily-bar {
+    height: 100%;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 0.5rem;
+    min-width: 40px;
+  }
+
+  .daily-value {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+
+  .daily-avg {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    text-align: center;
+    margin: 1rem 0 0 0;
+  }
+
+  .trends-note {
+    font-size: 0.6875rem;
+    color: var(--text-light);
+    text-align: center;
+    margin: 0;
+    font-style: italic;
+  }
+
+  @media (max-width: 500px) {
+    .historical-trends {
+      padding: 1rem;
+    }
+
+    .hourly-stats {
+      gap: 1.5rem;
+    }
+
+    .bar-label {
+      display: none;
+    }
+
+    .bar-wrapper:nth-child(2n) .bar-label {
+      display: block;
+    }
+  }
+</style>

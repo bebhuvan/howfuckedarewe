@@ -1,0 +1,190 @@
+---
+/**
+ * Data Quality Badge Component
+ *
+ * Shows users when data might be unreliable.
+ * Because honesty is the best policy, even when the data sucks.
+ */
+import type { DataQualityReport } from '../lib/types';
+
+interface Props {
+  report?: DataQualityReport;
+  compact?: boolean;  // Show just the badge, no details
+}
+
+const { report, compact = false } = Astro.props;
+
+// Default to unavailable if no report
+const status = report?.overallStatus ?? 'unavailable';
+
+const statusConfig = {
+  healthy: {
+    label: 'Data OK',
+    icon: '',
+    color: '#16a34a',
+    bg: '#dcfce7',
+    description: 'All stations reporting normally',
+  },
+  degraded: {
+    label: 'Some Issues',
+    icon: '',
+    color: '#ca8a04',
+    bg: '#fef9c3',
+    description: `${report?.stationsStale ?? 0} stale, ${report?.stationsAnomalous ?? 0} anomalous`,
+  },
+  critical: {
+    label: 'Data Unreliable',
+    icon: '',
+    color: '#dc2626',
+    bg: '#fee2e2',
+    description: 'Significant data quality issues detected',
+  },
+  unavailable: {
+    label: 'No Data',
+    icon: '',
+    color: '#6b7280',
+    bg: '#f3f4f6',
+    description: 'Unable to retrieve air quality data',
+  },
+};
+
+const config = statusConfig[status];
+
+// Build detail lines for expanded view
+const details: string[] = [];
+if (report) {
+  details.push(`${report.stationsValid}/${report.stationsChecked} stations reporting`);
+
+  if (report.stationsStale > 0) {
+    details.push(`${report.stationsStale} with stale data`);
+  }
+
+  if (report.anomalies.length > 0) {
+    details.push(`${report.anomalies.length} anomalous reading${report.anomalies.length > 1 ? 's' : ''}`);
+  }
+
+  if (report.errors.length > 0) {
+    details.push(`${report.errors.length} error${report.errors.length > 1 ? 's' : ''}`);
+  }
+}
+---
+
+{compact ? (
+  <span
+    class="quality-badge compact"
+    style={`--badge-color: ${config.color}; --badge-bg: ${config.bg}`}
+    title={config.description}
+  >
+    <span class="badge-icon">{config.icon}</span>
+    <span class="badge-label">{config.label}</span>
+  </span>
+) : (
+  <div
+    class="quality-badge expanded"
+    style={`--badge-color: ${config.color}; --badge-bg: ${config.bg}`}
+  >
+    <div class="badge-header">
+      <span class="badge-icon">{config.icon}</span>
+      <span class="badge-label">{config.label}</span>
+    </div>
+    {details.length > 0 && (
+      <div class="badge-details">
+        {details.map(detail => (
+          <span class="detail-item">{detail}</span>
+        ))}
+      </div>
+    )}
+    {report?.anomalies && report.anomalies.length > 0 && status !== 'healthy' && (
+      <div class="badge-anomalies">
+        {report.anomalies.slice(0, 2).map(a => (
+          <span class="anomaly-item" title={a.description}>
+            {a.stationName}: {a.type}
+          </span>
+        ))}
+        {report.anomalies.length > 2 && (
+          <span class="anomaly-more">+{report.anomalies.length - 2} more</span>
+        )}
+      </div>
+    )}
+  </div>
+)}
+
+<style>
+  .quality-badge {
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 0.75rem;
+  }
+
+  .quality-badge.compact {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    background: var(--badge-bg);
+    color: var(--badge-color);
+    font-weight: 500;
+    cursor: help;
+  }
+
+  .quality-badge.expanded {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: 6px;
+    background: var(--badge-bg);
+    border: 1px solid color-mix(in srgb, var(--badge-color) 20%, transparent);
+  }
+
+  .badge-header {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--badge-color);
+    font-weight: 600;
+  }
+
+  .badge-icon {
+    font-size: 0.875rem;
+  }
+
+  .badge-label {
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .badge-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem 0.75rem;
+    color: var(--badge-color);
+    opacity: 0.85;
+  }
+
+  .detail-item {
+    white-space: nowrap;
+  }
+
+  .badge-anomalies {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+    padding-top: 0.375rem;
+    border-top: 1px dashed color-mix(in srgb, var(--badge-color) 30%, transparent);
+  }
+
+  .anomaly-item {
+    font-size: 0.6875rem;
+    color: var(--badge-color);
+    opacity: 0.75;
+    cursor: help;
+  }
+
+  .anomaly-more {
+    font-size: 0.6875rem;
+    color: var(--badge-color);
+    opacity: 0.6;
+  }
+</style>

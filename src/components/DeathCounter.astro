@@ -1,0 +1,188 @@
+---
+/**
+ * Death Counter Component
+ *
+ * Real-time counter showing estimated deaths from air pollution.
+ * Based on WHO/Lancet data.
+ */
+import { INDIA_MORTALITY } from '../lib/constants';
+
+interface Props {
+  annualDeaths?: number;  // If provided, use city-specific estimate
+  cityName?: string;
+  showNational?: boolean;
+}
+
+const { annualDeaths, cityName, showNational = true } = Astro.props;
+
+// Deaths per second (national)
+const nationalDeathsPerSecond = INDIA_MORTALITY.ANNUAL_DEATHS / (365 * 24 * 60 * 60);
+
+// Deaths per second (city-specific, if provided)
+const cityDeathsPerSecond = annualDeaths ? annualDeaths / (365 * 24 * 60 * 60) : null;
+
+// Estimated deaths since midnight (for initial display)
+const now = new Date();
+const secondsSinceMidnight = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+const deathsToday = Math.floor(nationalDeathsPerSecond * secondsSinceMidnight);
+---
+
+<section class="death-counter">
+  <div class="counter-content">
+    <div class="counter-label">Indians lost to air pollution today</div>
+    <div class="counter-value" id="death-counter" data-rate={nationalDeathsPerSecond} data-start={deathsToday}>
+      {deathsToday.toLocaleString()}
+    </div>
+    <div class="counter-subtext">
+      Based on {(INDIA_MORTALITY.ANNUAL_DEATHS / 1000000).toFixed(1)} million deaths/year (State of Global Air 2024)
+    </div>
+
+    {cityDeathsPerSecond && cityName && (
+      <div class="city-counter">
+        <span class="city-label">In {cityName}:</span>
+        <span class="city-value" id="city-death-counter" data-rate={cityDeathsPerSecond}>
+          ~{Math.floor(cityDeathsPerSecond * secondsSinceMidnight).toLocaleString()}
+        </span>
+        <span class="city-note">today (estimated)</span>
+      </div>
+    )}
+  </div>
+
+  <div class="counter-breakdown">
+    <div class="breakdown-item">
+      <span class="breakdown-value">{INDIA_MORTALITY.UNDER_5_DAILY.toLocaleString()}</span>
+      <span class="breakdown-label">children under 5 daily</span>
+    </div>
+    <div class="breakdown-item">
+      <span class="breakdown-value">{Math.round(nationalDeathsPerSecond * 60).toLocaleString()}</span>
+      <span class="breakdown-label">die every minute</span>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Real-time counter animation
+  const counter = document.getElementById('death-counter');
+  const cityCounter = document.getElementById('city-death-counter');
+
+  if (counter) {
+    const rate = parseFloat(counter.dataset.rate || '0');
+    let count = parseInt(counter.dataset.start || '0', 10);
+
+    setInterval(() => {
+      count += rate;
+      counter.textContent = Math.floor(count).toLocaleString();
+    }, 1000);
+  }
+
+  if (cityCounter) {
+    const rate = parseFloat(cityCounter.dataset.rate || '0');
+    let count = 0;
+
+    // Get seconds since midnight
+    const now = new Date();
+    const secondsSinceMidnight = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+    count = rate * secondsSinceMidnight;
+
+    setInterval(() => {
+      count += rate;
+      cityCounter.textContent = `~${Math.floor(count).toLocaleString()}`;
+    }, 1000);
+  }
+</script>
+
+<style>
+  .death-counter {
+    background: #1a1a1a;
+    color: white;
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  .counter-label {
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 0.5rem;
+  }
+
+  .counter-value {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 3.5rem;
+    font-weight: 500;
+    color: #ef4444;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .counter-subtext {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 1.5rem;
+  }
+
+  .city-counter {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .city-label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .city-value {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.5rem;
+    color: #ef4444;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .city-note {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .counter-breakdown {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .breakdown-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .breakdown-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: white;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .breakdown-label {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  @media (max-width: 600px) {
+    .counter-value {
+      font-size: 2.5rem;
+    }
+
+    .counter-breakdown {
+      flex-direction: column;
+      gap: 1rem;
+    }
+  }
+</style>

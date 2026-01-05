@@ -1,0 +1,235 @@
+---
+/**
+ * City Variance Component
+ *
+ * Shows the PM2.5 range across the city - the "lung lottery."
+ * Visualizes min/max with a gradient bar.
+ */
+
+interface Props {
+  minPm25: number;
+  maxPm25: number;
+  avgPm25: number;
+  cityName: string;
+}
+
+const { minPm25, maxPm25, avgPm25, cityName } = Astro.props;
+
+// Calculate spread
+const spread = maxPm25 - minPm25;
+const spreadPercent = ((spread / avgPm25) * 100).toFixed(0);
+
+// Position of average on the bar (0-100%)
+const avgPosition = ((avgPm25 - minPm25) / spread) * 100;
+
+// Color based on severity
+function getColor(pm25: number): string {
+  if (pm25 <= 12) return '#22c55e';
+  if (pm25 <= 35) return '#eab308';
+  if (pm25 <= 55) return '#f97316';
+  return '#dc2626';
+}
+
+const minColor = getColor(minPm25);
+const maxColor = getColor(maxPm25);
+
+// Sardonic message based on spread
+function getMessage(): string {
+  if (spread < 20) return "Equally distributed misery.";
+  if (spread < 50) return "Location matters. Choose your poison.";
+  if (spread < 100) return "Some neighborhoods got lucky. Yours probably didn't.";
+  return "Air quality roulette. Hope you picked the right address.";
+}
+---
+
+<section class="city-variance">
+  <div class="variance-header">
+    <h3>The Lung Lottery</h3>
+    <p class="variance-intro">PM2.5 varies {spreadPercent}% across {cityName}</p>
+  </div>
+
+  <div class="variance-visual">
+    <div class="range-bar">
+      <div
+        class="range-fill"
+        style={`background: linear-gradient(to right, ${minColor}, ${maxColor});`}
+      ></div>
+      <div
+        class="avg-marker"
+        style={`left: ${avgPosition}%;`}
+        title={`City average: ${avgPm25} µg/m³`}
+      >
+        <span class="avg-label">avg</span>
+      </div>
+    </div>
+
+    <div class="range-values">
+      <div class="range-end min">
+        <span class="range-value" style={`color: ${minColor}`}>{minPm25.toFixed(0)}</span>
+        <span class="range-label">Best area</span>
+      </div>
+      <div class="range-end max">
+        <span class="range-value" style={`color: ${maxColor}`}>{maxPm25.toFixed(0)}</span>
+        <span class="range-label">Worst area</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="variance-message">{getMessage()}</p>
+
+  <div class="variance-context">
+    <div class="context-item">
+      <span class="context-value">{spread.toFixed(0)}</span>
+      <span class="context-label">µg/m³ difference</span>
+    </div>
+    <div class="context-item">
+      <span class="context-value">{(maxPm25 / minPm25).toFixed(1)}x</span>
+      <span class="context-label">worst vs best</span>
+    </div>
+  </div>
+</section>
+
+<style>
+  .city-variance {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .variance-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .variance-header h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .variance-intro {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+
+  .variance-visual {
+    margin-bottom: 1rem;
+  }
+
+  .range-bar {
+    position: relative;
+    height: 24px;
+    background: var(--border);
+    border-radius: 12px;
+    overflow: visible;
+    margin-bottom: 0.75rem;
+  }
+
+  .range-fill {
+    height: 100%;
+    border-radius: 12px;
+    width: 100%;
+  }
+
+  .avg-marker {
+    position: absolute;
+    top: -8px;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .avg-marker::before {
+    content: '';
+    width: 4px;
+    height: 40px;
+    background: var(--text);
+    border-radius: 2px;
+  }
+
+  .avg-label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-top: 2px;
+  }
+
+  .range-values {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .range-end {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .range-end.max {
+    text-align: right;
+  }
+
+  .range-value {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .range-label {
+    font-size: 0.6875rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .variance-message {
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 6px;
+  }
+
+  .variance-context {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .context-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .context-value {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .context-label {
+    font-size: 0.6875rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 500px) {
+    .range-value {
+      font-size: 1.5rem;
+    }
+
+    .variance-context {
+      gap: 1.5rem;
+    }
+  }
+</style>

@@ -1,0 +1,143 @@
+---
+/**
+ * Data Quality Indicator Component
+ *
+ * Shows the quality/freshness of the data being displayed.
+ */
+import type { CitySnapshot } from '../lib/types';
+import { formatTimestamp } from '../lib/waqi';
+
+interface Props {
+  snapshot: CitySnapshot;
+}
+
+const { snapshot } = Astro.props;
+
+const qualityConfig = {
+  good: {
+    label: 'Good',
+    color: '#6b8e6b',
+    description: 'Data from most stations is fresh'
+  },
+  partial: {
+    label: 'Partial',
+    color: '#a3a322',
+    description: 'Some stations missing or stale'
+  },
+  poor: {
+    label: 'Poor',
+    color: '#c45a20',
+    description: 'Limited station data available'
+  },
+  unavailable: {
+    label: 'Unavailable',
+    color: '#b91c1c',
+    description: 'No valid PM2.5 data'
+  }
+};
+
+const quality = qualityConfig[snapshot.dataQuality];
+const staleStations = snapshot.stations.filter(s => s.isStale).length;
+---
+
+<div class="data-quality">
+  <div class="quality-badge" style={`background: ${quality.color}`}>
+    <span class="quality-label">{quality.label}</span>
+  </div>
+
+  <div class="quality-details">
+    <div class="quality-stat">
+      <span class="stat-value">{snapshot.validStationCount}/{snapshot.totalStationCount}</span>
+      <span class="stat-label">stations with PM2.5</span>
+    </div>
+
+    {staleStations > 0 && (
+      <div class="quality-stat stale">
+        <span class="stat-value">{staleStations}</span>
+        <span class="stat-label">stale</span>
+      </div>
+    )}
+
+    <div class="quality-stat timestamp">
+      <span class="stat-label">Updated</span>
+      <span class="stat-value">{formatTimestamp(snapshot.timestamp, snapshot.city.timezone)}</span>
+    </div>
+  </div>
+
+  {snapshot.dataQuality !== 'good' && (
+    <p class="quality-note">{quality.description}</p>
+  )}
+</div>
+
+<style>
+  .data-quality {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .quality-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .quality-details {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+  }
+
+  .quality-stat {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .quality-stat.stale .stat-value {
+    color: #b91c1c;
+  }
+
+  .stat-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .stat-label {
+    font-size: 0.6875rem;
+    color: #999;
+    text-transform: uppercase;
+  }
+
+  .timestamp {
+    flex-direction: row;
+    gap: 0.5rem;
+    align-items: baseline;
+  }
+
+  .timestamp .stat-value {
+    font-weight: 500;
+  }
+
+  .quality-note {
+    width: 100%;
+    font-size: 0.75rem;
+    color: #666;
+    margin: 0.5rem 0 0 0;
+    font-style: italic;
+  }
+
+  @media (max-width: 600px) {
+    .quality-details {
+      gap: 1rem;
+    }
+  }
+</style>

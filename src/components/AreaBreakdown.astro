@@ -1,0 +1,216 @@
+---
+/**
+ * Area Breakdown Component
+ *
+ * Station by station. Area by area. Cigarettes per day.
+ * Find out how fucked your specific neighborhood is.
+ */
+import type { StationReading } from '../lib/types';
+
+interface Props {
+  stations: StationReading[];
+  cityName: string;
+}
+
+const { stations, cityName } = Astro.props;
+
+// Sort by cigarettes (highest first)
+const sortedStations = [...stations]
+  .filter(s => s.metrics !== null)
+  .sort((a, b) => (b.metrics?.cigarettesPerDay || 0) - (a.metrics?.cigarettesPerDay || 0));
+
+const worstStation = sortedStations[0];
+const bestStation = sortedStations[sortedStations.length - 1];
+---
+
+<section class="area-breakdown">
+  <div class="section-header">
+    <h2>Area by area</h2>
+    <p class="section-intro">
+      Not all of {cityName} is equally fucked.
+      {worstStation && bestStation && worstStation !== bestStation && (
+        <span class="worst-best">
+          <strong>{worstStation.area}</strong> is breathing {worstStation.metrics?.cigarettesPerDay.toFixed(1)} cigs/day.
+          <strong>{bestStation.area}</strong> gets away with {bestStation.metrics?.cigarettesPerDay.toFixed(1)}.
+        </span>
+      )}
+    </p>
+  </div>
+
+  <div class="stations-grid">
+    {sortedStations.map((station, index) => {
+      const isWorst = index === 0;
+      const isBest = index === sortedStations.length - 1 && sortedStations.length > 1;
+
+      return (
+        <div class:list={['station-card', { worst: isWorst, best: isBest }]}>
+          {isWorst && <span class="station-badge worst">Most Fucked</span>}
+          {isBest && <span class="station-badge best">Least Fucked</span>}
+
+          <div class="station-info">
+            <h3 class="station-name">{station.area}</h3>
+            <span class="station-aqi">AQI {station.aqi}</span>
+          </div>
+
+          <div class="station-cigarettes">
+            <span class="cig-value">{station.metrics?.cigarettesPerDay.toFixed(1)}</span>
+            <span class="cig-label">cigarettes/day</span>
+          </div>
+
+          {station.pm25Concentration && (
+            <div class="station-pm25">
+              {station.pm25Concentration.toFixed(0)} µg/m³
+            </div>
+          )}
+        </div>
+      );
+    })}
+  </div>
+
+  {stations.filter(s => s.metrics === null).length > 0 && (
+    <p class="offline-note">
+      {stations.filter(s => s.metrics === null).length} stations offline or not reporting PM2.5.
+    </p>
+  )}
+</section>
+
+<style>
+  .area-breakdown {
+    margin-bottom: 3rem;
+  }
+
+  .section-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .section-header h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .section-intro {
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+  }
+
+  .worst-best {
+    display: block;
+    margin-top: 0.25rem;
+  }
+
+  .stations-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .station-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 0.5rem;
+    position: relative;
+  }
+
+  .station-card.worst {
+    border-color: rgba(196, 30, 30, 0.3);
+    background: rgba(196, 30, 30, 0.02);
+  }
+
+  .station-card.best {
+    border-color: rgba(107, 142, 107, 0.3);
+    background: rgba(107, 142, 107, 0.02);
+  }
+
+  .station-badge {
+    position: absolute;
+    top: -0.5rem;
+    right: 1rem;
+    font-size: 0.5625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+  }
+
+  .station-badge.worst {
+    background: #c41e1e;
+    color: white;
+  }
+
+  .station-badge.best {
+    background: #6b8e6b;
+    color: white;
+  }
+
+  .station-info {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .station-name {
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text);
+  }
+
+  .station-aqi {
+    font-size: 0.75rem;
+    color: var(--text-light);
+  }
+
+  .station-cigarettes {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .cig-value {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 400;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .cig-label {
+    font-size: 0.625rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+  }
+
+  .station-pm25 {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+  }
+
+  .offline-note {
+    margin-top: 1rem;
+    font-size: 0.8125rem;
+    color: var(--text-light);
+    font-style: italic;
+    text-align: center;
+  }
+
+  @media (max-width: 600px) {
+    .stations-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .cig-value {
+      font-size: 1.5rem;
+    }
+  }
+</style>

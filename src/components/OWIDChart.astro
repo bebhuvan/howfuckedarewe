@@ -1,0 +1,115 @@
+---
+/**
+ * OWID Chart Embed Component
+ *
+ * Embeds interactive charts from Our World in Data.
+ * Charts auto-update with new data releases.
+ *
+ * Usage:
+ *   <OWIDChart slug="deaths-from-outdoor-air-pollution" />
+ *   <OWIDChart slug="absolute-number-of-deaths-from-outdoor-air-pollution" tab="line" countries={['IND', 'CHN']} />
+ */
+
+interface Props {
+  /** Chart slug from OWID URL (e.g., "deaths-from-outdoor-air-pollution") */
+  slug: string;
+  /** Display tab: "map", "chart", "line", "table" */
+  tab?: 'map' | 'chart' | 'line' | 'table';
+  /** Country/region codes to highlight */
+  countries?: string[];
+  /** Chart height in pixels */
+  height?: number;
+  /** Optional title override */
+  title?: string;
+  /** Optional caption */
+  caption?: string;
+}
+
+const {
+  slug,
+  tab,
+  countries,
+  height = 600,
+  title,
+  caption,
+} = Astro.props;
+
+// Build the embed URL
+// OWID uses specific encoding: + for spaces, ~ for country separator
+// We build the query string manually to avoid double-encoding
+let embedUrl = `https://ourworldindata.org/grapher/${slug}`;
+const queryParts: string[] = [];
+
+if (tab) {
+  queryParts.push(`tab=${tab}`);
+}
+
+if (countries && countries.length > 0) {
+  // OWID expects: country=IND~CHN~USA or country=High+Income+(WB)~Low+Income+(WB)
+  // Spaces become +, parentheses stay as-is or get encoded
+  const countryParam = countries
+    .map(c => c.replace(/ /g, '+'))
+    .join('~');
+  queryParts.push(`country=${countryParam}`);
+}
+
+if (queryParts.length > 0) {
+  embedUrl += `?${queryParts.join('&')}`;
+}
+---
+
+<figure class="owid-chart">
+  {title && <figcaption class="chart-title">{title}</figcaption>}
+
+  <iframe
+    src={embedUrl}
+    loading="lazy"
+    style={`width: 100%; height: ${height}px; border: 0px none;`}
+    allow="web-share; clipboard-write"
+    title={title || `Our World in Data: ${slug}`}
+  ></iframe>
+
+  {caption && <p class="chart-caption">{caption}</p>}
+
+  <p class="chart-source">
+    Data: <a href={embedUrl} target="_blank" rel="noopener">Our World in Data</a>
+    (CC BY License)
+  </p>
+</figure>
+
+<style>
+  .owid-chart {
+    margin: 2rem 0;
+    padding: 0;
+  }
+
+  .chart-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+    color: var(--text);
+  }
+
+  .chart-caption {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin: 0.75rem 0 0 0;
+    font-style: italic;
+  }
+
+  .chart-source {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin: 0.5rem 0 0 0;
+  }
+
+  .chart-source a {
+    color: var(--text-muted);
+  }
+
+  iframe {
+    border-radius: 4px;
+    background: white;
+  }
+</style>

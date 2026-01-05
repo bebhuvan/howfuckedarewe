@@ -1,0 +1,324 @@
+---
+/**
+ * City Ranking Chart Component
+ *
+ * Visual bar chart showing all cities ranked by PM2.5.
+ * Makes the comparison instantly scannable.
+ */
+import type { CitySnapshot } from '../lib/types';
+
+interface Props {
+  cities: CitySnapshot[];
+}
+
+const { cities } = Astro.props;
+
+// Filter and sort cities by PM2.5
+const rankedCities = cities
+  .filter(c => c.avgPm25 !== null)
+  .sort((a, b) => (b.avgPm25 || 0) - (a.avgPm25 || 0));
+
+// Find max for scaling
+const maxPm25 = Math.max(...rankedCities.map(c => c.avgPm25 || 0));
+
+// WHO guideline for reference line
+const WHO_GUIDELINE = 5;
+const whoPosition = (WHO_GUIDELINE / maxPm25) * 100;
+
+// Color based on severity
+function getColor(pm25: number): string {
+  if (pm25 <= 12) return '#22c55e';
+  if (pm25 <= 35) return '#eab308';
+  if (pm25 <= 55) return '#f97316';
+  return '#dc2626';
+}
+
+// Get rank suffix
+function getRankSuffix(rank: number): string {
+  if (rank === 1) return 'st';
+  if (rank === 2) return 'nd';
+  if (rank === 3) return 'rd';
+  return 'th';
+}
+---
+
+<section class="city-ranking">
+  <div class="ranking-header">
+    <h2>City Rankings</h2>
+    <p class="ranking-intro">Sorted by PM2.5 concentration. Higher is worse.</p>
+  </div>
+
+  <div class="ranking-chart">
+    <!-- WHO Reference Line -->
+    <div class="who-line" style={`left: ${whoPosition}%`}>
+      <span class="who-label">WHO Limit (5)</span>
+    </div>
+
+    {rankedCities.map((city, index) => {
+      const pm25 = city.avgPm25 || 0;
+      const barWidth = (pm25 / maxPm25) * 100;
+      const color = getColor(pm25);
+      const rank = index + 1;
+
+      return (
+        <a href={`/${city.city.slug}`} class="ranking-row">
+          <div class="rank-badge">
+            <span class="rank-number">{rank}</span>
+            <span class="rank-suffix">{getRankSuffix(rank)}</span>
+          </div>
+
+          <div class="city-info" data-pm25={`${pm25.toFixed(0)} µg/m³`}>
+            <span class="city-name">{city.city.name}</span>
+            {city.city.localName && (
+              <span class="city-local">{city.city.localName}</span>
+            )}
+          </div>
+
+          <div class="bar-container">
+            <div
+              class="bar"
+              style={`width: ${barWidth}%; background: ${color};`}
+            >
+              <span class="bar-value">{pm25.toFixed(0)}</span>
+            </div>
+          </div>
+
+          <div class="city-metrics">
+            <span class="metric-cigs">{city.metrics?.cigarettesPerDay.toFixed(1)} cigs</span>
+            <span class="metric-who">{city.metrics?.whoViolation.toFixed(0)}x WHO</span>
+          </div>
+        </a>
+      );
+    })}
+  </div>
+
+  <div class="ranking-footer">
+    <div class="legend">
+      <div class="legend-item">
+        <span class="legend-color" style="background: #22c55e"></span>
+        <span>Good (&lt;12)</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-color" style="background: #eab308"></span>
+        <span>Moderate (12-35)</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-color" style="background: #f97316"></span>
+        <span>Unhealthy (35-55)</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-color" style="background: #dc2626"></span>
+        <span>Hazardous (&gt;55)</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .city-ranking {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .ranking-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .ranking-header h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .ranking-intro {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  .ranking-chart {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .who-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #22c55e;
+    z-index: 1;
+    opacity: 0.5;
+  }
+
+  .who-label {
+    position: absolute;
+    top: -1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #16a34a;
+    white-space: nowrap;
+  }
+
+  .ranking-row {
+    display: grid;
+    grid-template-columns: 50px 120px 1fr 100px;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.5rem 0;
+    text-decoration: none;
+    color: var(--text);
+    border-radius: 6px;
+    transition: background 0.15s ease;
+  }
+
+  .ranking-row:hover {
+    background: rgba(0, 0, 0, 0.02);
+    text-decoration: none;
+  }
+
+  .rank-badge {
+    display: flex;
+    align-items: baseline;
+    gap: 0.125rem;
+  }
+
+  .rank-number {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .rank-suffix {
+    font-size: 0.75rem;
+    color: var(--text-light);
+  }
+
+  .city-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .city-name {
+    font-weight: 600;
+    font-size: 0.9375rem;
+  }
+
+  .city-local {
+    font-size: 0.75rem;
+    color: var(--text-light);
+  }
+
+  .bar-container {
+    height: 28px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .bar {
+    height: 100%;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 0.5rem;
+    min-width: 40px;
+    transition: width 0.3s ease;
+  }
+
+  .bar-value {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+
+  .city-metrics {
+    display: flex;
+    flex-direction: column;
+    text-align: right;
+  }
+
+  .metric-cigs {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .metric-who {
+    font-size: 0.6875rem;
+    color: var(--text-light);
+  }
+
+  .ranking-footer {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .legend {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--text-light);
+  }
+
+  .legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+  }
+
+  @media (max-width: 700px) {
+    .ranking-row {
+      grid-template-columns: 40px 90px 1fr;
+      gap: 0.75rem;
+    }
+
+    .city-metrics {
+      display: none;
+    }
+
+    .who-label {
+      display: none;
+    }
+  }
+
+  @media (max-width: 500px) {
+    .city-ranking {
+      padding: 1.5rem 1rem;
+    }
+
+    .ranking-row {
+      grid-template-columns: 35px 1fr;
+    }
+
+    .bar-container {
+      display: none;
+    }
+
+    .city-info::after {
+      content: attr(data-pm25);
+      font-weight: 600;
+      color: var(--accent);
+    }
+  }
+</style>

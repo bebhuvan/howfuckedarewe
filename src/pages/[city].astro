@@ -1,0 +1,309 @@
+---
+/**
+ * City Page — The Full Picture
+ *
+ * A visceral, sardonic look at what you're breathing.
+ */
+import CityLayout from '../layouts/CityLayout.astro';
+import CigaretteHero from '../components/CigaretteHero.astro';
+import DamageCard from '../components/DamageCard.astro';
+import FuckedMeter from '../components/FuckedMeter.astro';
+import LiveDeathCounter from '../components/LiveDeathCounter.astro';
+import LivePollutantCocktail from '../components/LivePollutantCocktail.astro';
+import LungDamage from '../components/LungDamage.astro';
+import ScheduledDamage from '../components/ScheduledDamage.astro';
+import AreaBreakdown from '../components/AreaBreakdown.astro';
+import DataQualityBadge from '../components/DataQualityBadge.astro';
+import CityVariance from '../components/CityVariance.astro';
+import GlobalComparison from '../components/GlobalComparison.astro';
+import DominantPollutant from '../components/DominantPollutant.astro';
+
+import { ALL_CITIES, getCityBySlug } from '../lib/cities';
+import { fetchCityData } from '../lib/waqi';
+import { estimateAnnualDeaths } from '../lib/calculations';
+import type { CityConfig, CitySnapshot } from '../lib/types';
+
+// Prerender all city pages at build time for faster loads
+export const prerender = true;
+
+// Generate static paths for all cities
+export function getStaticPaths() {
+  return ALL_CITIES.map((city) => ({
+    params: { city: city.slug },
+    props: { cityConfig: city },
+  }));
+}
+
+interface Props {
+  cityConfig: CityConfig;
+}
+
+const { cityConfig } = Astro.props;
+
+// Fetch live data from WAQI
+const snapshot: CitySnapshot = await fetchCityData(cityConfig);
+
+// Page metadata
+const title = `${cityConfig.name} Air Quality — How Fucked Are We`;
+const description = snapshot.metrics
+  ? `${cityConfig.name} PM2.5 is ${snapshot.avgPm25} µg/m³ (${snapshot.metrics.whoViolation.toFixed(1)}x WHO limit). ${cityConfig.tagline}`
+  : `Air quality data for ${cityConfig.name}. ${cityConfig.tagline}`;
+
+// Estimate city-specific deaths (if we have data)
+const annualDeaths = snapshot.avgPm25
+  ? estimateAnnualDeaths(snapshot.avgPm25, cityConfig.population)
+  : null;
+
+// Calculate min/max PM2.5 from stations for variance component
+const stationPm25Values = snapshot.stations
+  .filter(s => s.pm25 !== null && s.pm25 !== undefined)
+  .map(s => s.pm25 as number);
+const minPm25 = stationPm25Values.length > 0 ? Math.min(...stationPm25Values) : null;
+const maxPm25 = stationPm25Values.length > 0 ? Math.max(...stationPm25Values) : null;
+
+// Format timestamp
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    minute: '2-digit',
+    day: 'numeric',
+    month: 'short',
+  });
+}
+---
+
+<CityLayout title={title} description={description} currentSlug={cityConfig.slug}>
+  {snapshot.metrics && snapshot.avgPm25 ? (
+    <>
+      <!-- The Gut Punch -->
+      <CigaretteHero
+        metrics={snapshot.metrics}
+        cityName={cityConfig.name}
+        pm25={snapshot.avgPm25}
+      />
+
+      <!-- The Arithmetic -->
+      <DamageCard metrics={snapshot.metrics} />
+
+      <!-- The Fucked Index -->
+      <FuckedMeter metrics={snapshot.metrics} cityName={cityConfig.name} />
+
+      <!-- The Death Toll -->
+      <LiveDeathCounter
+        cityName={cityConfig.name}
+        cityDeathsPerYear={annualDeaths ?? undefined}
+      />
+
+      <!-- What's In The Air (Live Data) -->
+      <LivePollutantCocktail
+        pollutants={snapshot.pollutants}
+        dominantPollutant={snapshot.dominantPollutant}
+      />
+
+      <!-- Today's Villain -->
+      <DominantPollutant
+        pollutant={snapshot.dominantPollutant}
+        cityName={cityConfig.name}
+      />
+
+      <!-- The Lung Visual -->
+      <LungDamage />
+
+      <!-- Your Scheduled Damage -->
+      {snapshot.forecast.length > 0 && (
+        <ScheduledDamage forecast={snapshot.forecast} />
+      )}
+
+      <!-- Global Context -->
+      <GlobalComparison
+        pm25={snapshot.avgPm25}
+        cityName={cityConfig.name}
+      />
+
+      <!-- Area Breakdown -->
+      <AreaBreakdown stations={snapshot.stations} cityName={cityConfig.name} />
+
+      <!-- City Variance (Lung Lottery) -->
+      {minPm25 !== null && maxPm25 !== null && snapshot.avgPm25 && minPm25 !== maxPm25 && (
+        <CityVariance
+          minPm25={minPm25}
+          maxPm25={maxPm25}
+          avgPm25={snapshot.avgPm25}
+          cityName={cityConfig.name}
+        />
+      )}
+
+      <!-- Data Quality Note -->
+      <div class="data-note">
+        <div class="data-note-row">
+          <p>
+            <strong>{snapshot.validStationCount}</strong> of {snapshot.totalStationCount} stations reporting
+            <span class="sep">•</span>
+            Last updated: {formatTime(snapshot.timestamp)}
+            <span class="sep">•</span>
+            <a href="https://aqicn.org/city/india/{cityConfig.slug}/" target="_blank" rel="noopener">
+              View on WAQI →
+            </a>
+          </p>
+          {snapshot.qualityReport && snapshot.qualityReport.overallStatus !== 'healthy' && (
+            <DataQualityBadge report={snapshot.qualityReport} compact />
+          )}
+        </div>
+        {snapshot.qualityReport && snapshot.qualityReport.anomalies.length > 0 && (
+          <p class="data-anomaly-note">
+            Some station readings may be unreliable due to sensor issues
+          </p>
+        )}
+      </div>
+
+      <!-- Ministry Stamp -->
+      <aside class="ministry-stamp">
+        <div class="stamp-content">
+          <div class="stamp-header">Ministry of Denial — {cityConfig.state} Division</div>
+          <div class="stamp-body">
+            <p>"Air quality has improved significantly compared to last decade's worst readings."</p>
+            <p class="stamp-note">— Press Release Template, Auto-Generated</p>
+          </div>
+        </div>
+      </aside>
+    </>
+  ) : (
+    <div class="no-data">
+      <h1>{cityConfig.name}</h1>
+      <p class="tagline">{cityConfig.tagline}</p>
+
+      <div class="no-data-content">
+        <h2>Data Currently Unavailable</h2>
+        <p>
+          We couldn't fetch PM2.5 data for {cityConfig.name} right now.
+          The monitoring stations may be offline or experiencing issues.
+        </p>
+        <p class="no-data-note">
+          This is either a temporary glitch or the sensors have given up,
+          much like the rest of us.
+        </p>
+      </div>
+    </div>
+  )}
+</CityLayout>
+
+<style>
+  .data-note {
+    text-align: center;
+    padding: 1rem;
+    font-size: 0.8125rem;
+    color: var(--text-light);
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+
+  .data-note-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .data-note p {
+    margin: 0;
+  }
+
+  .data-note .sep {
+    margin: 0 0.5rem;
+    opacity: 0.5;
+  }
+
+  .data-note a {
+    color: var(--text-muted);
+  }
+
+  .data-anomaly-note {
+    margin-top: 0.5rem !important;
+    font-size: 0.75rem;
+    color: #ca8a04;
+    font-style: italic;
+  }
+
+  .ministry-stamp {
+    margin-top: 3rem;
+    padding: 1.5rem;
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px dashed rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+  }
+
+  .stamp-content {
+    max-width: 500px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .stamp-header {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-light);
+    margin-bottom: 0.75rem;
+  }
+
+  .stamp-body p {
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin: 0;
+  }
+
+  .stamp-note {
+    font-size: 0.75rem !important;
+    margin-top: 0.5rem !important;
+    color: var(--text-light) !important;
+  }
+
+  .no-data {
+    text-align: center;
+    padding: 3rem 1rem;
+  }
+
+  .no-data h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .no-data .tagline {
+    font-size: 1.125rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-bottom: 3rem;
+  }
+
+  .no-data-content {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  .no-data-content h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--text);
+  }
+
+  .no-data-content p {
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+  }
+
+  .no-data-note {
+    font-style: italic;
+    font-size: 0.9375rem !important;
+    color: var(--text-light) !important;
+  }
+</style>

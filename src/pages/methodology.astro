@@ -1,0 +1,602 @@
+---
+// Methodology & Sources page
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content="The science, data sources, and methodology behind howfuckedarewe.in" />
+    <title>Methodology & Sources — How Fucked Are We</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  </head>
+
+  <body>
+    <main>
+      <header>
+        <a href="/" class="back-link">← Back to main site</a>
+        <h1>Methodology & Sources</h1>
+        <p class="intro">Our claims are grounded in peer-reviewed research. Some metrics are illustrative comparisons (like cigarette equivalence). Here's exactly where the numbers come from.</p>
+      </header>
+
+      <section class="methodology-section">
+        <h2>Data Sources</h2>
+
+        <div class="source-card">
+          <h3>Real-time Air Quality Data</h3>
+          <p class="claim">We pull data from CPCB monitoring stations in Delhi, Mumbai, Kolkata, Bangalore, and Chennai via the World Air Quality Index Project (WAQI) API.</p>
+          <div class="source-details">
+            <p><strong>Source:</strong> World Air Quality Index Project (WAQI)</p>
+            <p><strong>Original data:</strong> Primarily CPCB (Central Pollution Control Board), plus other government and research stations aggregated by WAQI</p>
+            <p><strong>Current coverage:</strong> ~65 stations across 5 cities</p>
+            <p><strong>Update frequency:</strong> Hourly</p>
+            <a href="https://aqicn.org/" target="_blank" rel="noopener">WAQI Data →</a>
+          </div>
+        </div>
+
+        <div class="source-card">
+          <h3>AQI Standard Used</h3>
+          <p class="claim">We use the US EPA AQI standard because WAQI normalizes all global data to this scale.</p>
+          <div class="source-details">
+            <p><strong>Note:</strong> India uses its own National Air Quality Index (NAQI) with different breakpoints. WAQI converts all data to US EPA standard for consistency.</p>
+            <a href="https://aqicn.org/faq/2015-09-06/ozone-aqi-using-concentrations-in-ppb-or-ppm/" target="_blank" rel="noopener">WAQI AQI Conversion FAQ →</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="methodology-section">
+        <h2>Key Calculations</h2>
+
+        <div class="source-card">
+          <h3>Cigarette Equivalence</h3>
+          <p class="claim">"Breathing air with 22 µg/m³ of PM2.5 carries the same <em>mortality risk</em> as smoking 1 cigarette per day."</p>
+          <div class="source-details">
+            <p><strong>Source:</strong> Berkeley Earth analysis by Richard Muller and Elizabeth Muller</p>
+            <p><strong>What this means:</strong> This is a <em>mortality risk equivalence</em>, not a chemical equivalence. PM2.5 and cigarette smoke are completely different—different carcinogens, different exposure pathways. What's equivalent is the increased risk of death: ~1.4% increase per cigarette/day ≈ ~1.4% increase per 22 µg/m³ PM2.5.</p>
+            <p><strong>Calculation:</strong> PM2.5 concentration (µg/m³) ÷ 22 = cigarettes/day mortality-risk equivalent</p>
+            <p><strong>Why we use it:</strong> It's a vivid way to communicate risk, not a scientific statement about exposure.</p>
+            <a href="http://berkeleyearth.org/air-pollution-and-cigarette-equivalence/" target="_blank" rel="noopener">Berkeley Earth: Air Pollution and Cigarette Equivalence →</a>
+          </div>
+        </div>
+
+        <div class="source-card">
+          <h3>Life Expectancy Reduction</h3>
+          <p class="claim">"Every 10 µg/m³ of PM2.5 above WHO guidelines reduces life expectancy by ~0.98 years."</p>
+          <div class="source-details">
+            <p><strong>Source:</strong> Air Quality Life Index (AQLI), University of Chicago Energy Policy Institute</p>
+            <p><strong>Methodology:</strong> Based on analysis of China's Huai River heating policy natural experiment and subsequent global extrapolation. The policy created a sharp discontinuity in pollution levels, allowing causal estimation of PM2.5's effect on mortality.</p>
+            <p><strong>Calculation:</strong> ((PM2.5 concentration - 5) ÷ 10) × 0.98 = years of life lost over lifetime</p>
+            <p><strong>Key assumption:</strong> 70-year lifetime exposure at current concentration levels.</p>
+            <p><strong>About "hours lost per day":</strong> This is a <em>lifetime equivalent</em> spread across each day, not actual hours lost today. If PM2.5 stays at X µg/m³ for your entire life, you'd lose Y years total—we convert that to a daily figure for illustration.</p>
+            <a href="https://aqli.epic.uchicago.edu/the-index/" target="_blank" rel="noopener">AQLI Methodology →</a>
+            <a href="https://www.pnas.org/doi/10.1073/pnas.1616784114" target="_blank" rel="noopener">Original PNAS Paper (Ebenstein et al., 2017) →</a>
+          </div>
+        </div>
+
+        <div class="source-card">
+          <h3>WHO Guideline: 5 µg/m³</h3>
+          <p class="claim">"WHO recommends annual PM2.5 levels not exceed 5 µg/m³."</p>
+          <div class="source-details">
+            <p><strong>Source:</strong> WHO Global Air Quality Guidelines, 2021</p>
+            <p><strong>Previous guideline:</strong> 10 µg/m³ (2005)</p>
+            <p><strong>Why it changed:</strong> Updated evidence showed health effects at lower concentrations than previously understood. There is no known safe threshold.</p>
+            <a href="https://www.who.int/publications/i/item/9789240034228" target="_blank" rel="noopener">WHO Air Quality Guidelines 2021 →</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="methodology-section">
+        <h2>Health Claims</h2>
+
+        <div class="source-card">
+          <h3>Children Receive Higher Dose Per Body Weight</h3>
+          <p class="claim">"Children absorb ~40% more PM2.5 per kilogram of body weight."</p>
+          <div class="source-details">
+            <p><strong>Source:</strong> Multiple studies confirm children receive higher doses:</p>
+            <ul>
+              <li>Children breathe 20-30 times per minute vs 12-20 for adults</li>
+              <li>Higher ventilation rate relative to body size</li>
+              <li>Study found children exposed to 122%-175% of adult PM2.5 levels in urban walking scenarios</li>
+            </ul>
+            <p><strong>Our multiplier (1.4x):</strong> Conservative estimate within the documented range.</p>
+            <a href="https://www.sciencedirect.com/science/article/abs/pii/S221209552200116X" target="_blank" rel="noopener">PM2.5 exposure differences between children and adults →</a>
+            <a href="https://ww2.arb.ca.gov/resources/inhalable-particulate-matter-and-health" target="_blank" rel="noopener">California Air Resources Board: Particulate Matter and Health →</a>
+          </div>
+        </div>
+
+        <div class="source-card">
+          <h3>PM2.5 Enters the Bloodstream and Brain</h3>
+          <p class="claim">"PM2.5 particles pass through your lungs into your blood. They reach your brain."</p>
+          <div class="source-details">
+            <p><strong>Sources:</strong></p>
+            <ul>
+              <li>Particles &lt;2.5µm can cross the alveolar-capillary barrier</li>
+              <li>Ultrafine particles detected in brain tissue via two pathways: blood-brain barrier crossing and direct olfactory nerve transport</li>
+              <li>Landmark Oberdörster et al. (2004) study demonstrated translocation of inhaled ultrafine particles to the brain in animal models</li>
+            </ul>
+            <p><strong>Timing:</strong> Translocation occurs within hours to days, not minutes.</p>
+            <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC9491465/" target="_blank" rel="noopener">A review of PM2.5-induced brain damage (PMC) →</a>
+            <a href="https://ehp.niehs.nih.gov/doi/10.1289/ehp.7054" target="_blank" rel="noopener">Oberdörster et al.: Translocation of Inhaled Ultrafine Particles to the Brain →</a>
+          </div>
+        </div>
+
+        <div class="source-card">
+          <h3>Particle Retention in Lungs</h3>
+          <p class="claim">"Black carbon lodges in lung tissue."</p>
+          <div class="source-details">
+            <p><strong>Source:</strong> Autopsy studies show particulate matter accumulation in lung tissue, particularly black carbon.</p>
+            <p><strong>Nuance:</strong> Not all particles stay "forever." The body has clearance mechanisms (mucociliary clearance, macrophage uptake). However:</p>
+            <ul>
+              <li>Clearance is incomplete, especially for ultrafine particles</li>
+              <li>Some particles translocate to lymph nodes and other organs</li>
+              <li>Chronic exposure overwhelms clearance capacity</li>
+            </ul>
+            <p><strong>Accuracy:</strong> Some particles are cleared, but chronic exposure overwhelms the body's clearance capacity. Many particles persist.</p>
+            <a href="https://www.nejm.org/doi/full/10.1056/NEJM199312093292401" target="_blank" rel="noopener">Dockery et al.: An Association between Air Pollution and Mortality (Six Cities Study) →</a>
+          </div>
+        </div>
+
+        <div class="source-card">
+          <h3>Benzene Carcinogenicity</h3>
+          <p class="claim">"Benzene causes leukemia. There is no safe level."</p>
+          <div class="source-details">
+            <p><strong>Source:</strong> IARC (International Agency for Research on Cancer) classifies benzene as Group 1 carcinogen (carcinogenic to humans).</p>
+            <p><strong>WHO position:</strong> "No safe level of exposure can be recommended."</p>
+            <a href="https://www.who.int/publications/i/item/9789240000278" target="_blank" rel="noopener">WHO Air Quality Guidelines for Europe: Benzene →</a>
+            <a href="https://monographs.iarc.fr/list-of-classifications" target="_blank" rel="noopener">IARC Carcinogen Classifications →</a>
+          </div>
+        </div>
+
+        <div class="source-card">
+          <h3>Lead and IQ</h3>
+          <p class="claim">"Lead exposure lowers IQ in children."</p>
+          <div class="source-details">
+            <p><strong>Source:</strong> Lead exposure is well-documented to reduce IQ. Meta-analyses show ~2-3 IQ points lost per 10 µg/dL increase in blood lead.</p>
+            <p><strong>Mechanism:</strong> Lead disrupts neurodevelopment, particularly in developing brains. There is no known safe threshold for lead exposure in children.</p>
+            <p><strong>Air pollution link:</strong> Lead can be present in PM2.5, particularly near industrial areas and from legacy contamination.</p>
+            <a href="https://pubmed.ncbi.nlm.nih.gov/15862083/" target="_blank" rel="noopener">Lanphear et al.: Low-Level Environmental Lead Exposure and Children's Intellectual Function →</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="methodology-section">
+        <h2>Death Statistics</h2>
+
+        <div class="source-card">
+          <h3>2.1 Million Deaths/Year in India</h3>
+          <p class="claim">"2.1 million people die from air pollution annually in India."</p>
+          <div class="source-details">
+            <p><strong>Source:</strong> State of Global Air 2024 Report (IHME/Health Effects Institute)</p>
+            <p><strong>Data year:</strong> 2021</p>
+            <p><strong>What's included:</strong> This figure includes <em>both</em> ambient (outdoor) and household air pollution. Household air pollution from cooking fuels is still a major factor in India, especially in rural areas.</p>
+            <p><strong>Context:</strong> India and China together account for 55% of global air pollution deaths.</p>
+            <p><strong>Our calculation:</strong> 2,100,000 ÷ 365 ÷ 24 ÷ 60 ÷ 60 = 0.067 deaths per second</p>
+            <a href="https://www.stateofglobalair.org/" target="_blank" rel="noopener">State of Global Air 2024 →</a>
+          </div>
+        </div>
+
+        <div class="source-card">
+          <h3>464 Children Under 5 Die Daily</h3>
+          <p class="claim">"464 children under 5 die every day in India from air pollution."</p>
+          <div class="source-details">
+            <p><strong>Source:</strong> State of Global Air 2024 Report</p>
+            <p><strong>Annual total:</strong> ~169,360 children under 5 per year</p>
+            <p><strong>What's included:</strong> Ambient + household air pollution (same as adult figure).</p>
+            <p><strong>Global context:</strong> Air pollution is the second leading risk factor for death among children under 5, after malnutrition. Globally, more than 700,000 children under 5 die from air pollution annually.</p>
+            <a href="https://www.stateofglobalair.org/resources/report/state-global-air-report-2024" target="_blank" rel="noopener">State of Global Air 2024 Report →</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="methodology-section">
+        <h2>City Comparison Thresholds</h2>
+
+        <div class="source-card">
+          <h3>What Triggers Alerts Elsewhere</h3>
+          <p class="claim">The levels that would cause warnings in other countries.</p>
+          <div class="source-details">
+            <table class="threshold-table">
+              <thead>
+                <tr>
+                  <th>City</th>
+                  <th>PM2.5 Threshold</th>
+                  <th>Action</th>
+                  <th>Source</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>London, UK</td>
+                  <td>~35 µg/m³</td>
+                  <td>Health advice issued</td>
+                  <td>UK DEFRA DAQI</td>
+                </tr>
+                <tr>
+                  <td>Tokyo, Japan</td>
+                  <td>35 µg/m³</td>
+                  <td>Vulnerable groups warned</td>
+                  <td>Japan MOE</td>
+                </tr>
+                <tr>
+                  <td>Sydney, Australia</td>
+                  <td>~25 µg/m³</td>
+                  <td>Reduce outdoor activity</td>
+                  <td>NSW EPA</td>
+                </tr>
+                <tr>
+                  <td>Los Angeles, USA</td>
+                  <td>35 µg/m³</td>
+                  <td>Unhealthy for sensitive groups</td>
+                  <td>US EPA</td>
+                </tr>
+              </tbody>
+            </table>
+            <p><strong>Note:</strong> Each country uses different scales and breakpoints. We've converted to approximate PM2.5 concentrations for comparison. India's "Moderate" category extends to 60 µg/m³—nearly double these thresholds.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="methodology-section">
+        <h2>Data Validation</h2>
+
+        <div class="source-card">
+          <h3>How We Verify Data Quality</h3>
+          <p class="claim">Sensors lie. APIs fail. We validate everything.</p>
+          <div class="source-details">
+            <p>Our validation system runs multiple checks on every data point:</p>
+
+            <p><strong>API Response Validation</strong></p>
+            <ul>
+              <li>Verify WAQI response structure is valid JSON with expected fields</li>
+              <li>Check for error codes (999 = WAQI error, "-" = no data)</li>
+              <li>Validate timestamp presence and format</li>
+            </ul>
+
+            <p><strong>Value Bounds Checking</strong></p>
+            <ul>
+              <li>PM2.5 must be 0-1000 µg/m³ (values above 1000 are likely sensor errors)</li>
+              <li>AQI must be 0-500 on US EPA scale</li>
+              <li>Flag suspiciously low values (&lt;5 µg/m³ is rare in India)</li>
+              <li>Flag exact zeros (sensors rarely read exactly 0)</li>
+            </ul>
+
+            <p><strong>Anomaly Detection</strong></p>
+            <ul>
+              <li><strong>Outlier detection:</strong> If a station reads &gt;3x or &lt;0.2x the city median, flag it</li>
+              <li><strong>Flatline detection:</strong> Exactly 0 readings suggest sensor malfunction</li>
+              <li><strong>Round number detection:</strong> Suspiciously round values (e.g., 100, 200) may be placeholders</li>
+            </ul>
+
+            <p><strong>Freshness Checks</strong></p>
+            <ul>
+              <li>Data older than 2 hours is marked as stale</li>
+              <li>Stale stations are included but flagged in quality reports</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="source-card">
+          <h3>Data Quality Indicators</h3>
+          <div class="source-details">
+            <p>Each city gets a data quality status:</p>
+            <table class="threshold-table">
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Criteria</th>
+                  <th>Meaning</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="status-healthy">Healthy</span></td>
+                  <td>≥70% stations valid, no anomalies</td>
+                  <td>Data is reliable</td>
+                </tr>
+                <tr>
+                  <td><span class="status-degraded">Degraded</span></td>
+                  <td>≥30% stations valid, or has anomalies/stale data</td>
+                  <td>Use with caution</td>
+                </tr>
+                <tr>
+                  <td><span class="status-critical">Critical</span></td>
+                  <td>&lt;30% stations valid, or validation errors</td>
+                  <td>Data may be unreliable</td>
+                </tr>
+                <tr>
+                  <td><span class="status-unavailable">Unavailable</span></td>
+                  <td>No valid PM2.5 data from any station</td>
+                  <td>Cannot calculate metrics</td>
+                </tr>
+              </tbody>
+            </table>
+            <p style="margin-top: 1rem;"><strong>Note:</strong> We show a warning badge on city pages when data quality is not "healthy."</p>
+          </div>
+        </div>
+
+        <div class="source-card">
+          <h3>What We Log</h3>
+          <div class="source-details">
+            <p>During each build, we generate quality reports that include:</p>
+            <ul>
+              <li>Number of stations checked vs. valid</li>
+              <li>Count of stale, failed, and anomalous readings</li>
+              <li>Specific anomaly details (which station, what type, expected range)</li>
+              <li>Validation errors and warnings</li>
+            </ul>
+            <p><strong>Example output:</strong></p>
+            <pre class="code-block">[Mumbai] Data Quality Report - DEGRADED
+  Stations: 19/20 valid
+  Stale: 1, Anomalous: 1
+  Anomalies:
+    - [Kandivali East] outlier: Station reading (8.64)
+      is 0.16x lower than city median (55.5)</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="methodology-section">
+        <h2>Known Limitations</h2>
+
+        <div class="source-card limitations">
+          <h3>What We Don't Account For</h3>
+          <ul>
+            <li><strong>Indoor vs outdoor exposure:</strong> Most people spend ~90% of time indoors. Indoor air quality varies widely based on ventilation, air purifiers, cooking methods.</li>
+            <li><strong>Personal activity:</strong> Exercise increases particle deposition. We assume average activity levels.</li>
+            <li><strong>Spatial variation:</strong> AQI can vary significantly within a city. Our city average may not reflect your specific location.</li>
+            <li><strong>Individual susceptibility:</strong> People with pre-existing conditions, the elderly, and children face higher risks than our "average" calculations suggest.</li>
+            <li><strong>Historical exposure:</strong> Cumulative lifetime exposure matters. Our calculations assume current exposure levels continue.</li>
+            <li><strong>Pollutant interactions:</strong> PM2.5 is not the only pollutant. Ozone, NO2, SO2 have independent health effects.</li>
+            <li><strong>Temporal mismatch:</strong> We compare current (real-time or daily) readings against WHO/EPA <em>annual</em> guidelines. This is conservative: a single bad day doesn't equal a bad year. However, in Indian cities, readings consistently exceed annual limits, so the comparison remains valid for chronic exposure.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="methodology-section">
+        <h2>Updates & Corrections</h2>
+        <div class="source-card">
+          <p>We commit to correcting any errors. If you find an issue with our methodology or sources, contact us.</p>
+          <p><strong>Last reviewed:</strong> January 2026</p>
+        </div>
+      </section>
+
+      <section class="methodology-section">
+        <h2>About This Site</h2>
+        <div class="source-card disclaimer">
+          <h3>How This Was Built</h3>
+          <p>This site was vibecoded with Claude (Anthropic). The data pipeline, calculations, validation logic, and copy were developed through human-AI collaboration.</p>
+          <p><strong>What that means:</strong> A human directed the architecture and reviewed all claims, but Claude wrote the code and helped craft the messaging. We believe in transparency about AI involvement.</p>
+          <p><strong>Data responsibility:</strong> The underlying data comes from WAQI/CPCB. The calculations follow published methodologies (Berkeley Earth, AQLI). Errors in implementation are ours to fix.</p>
+          <p><strong>Open for scrutiny:</strong> If you spot an error—methodological, factual, or in the code—let us know. We'd rather be corrected than wrong.</p>
+        </div>
+      </section>
+
+      <footer>
+        <a href="/" class="back-link">← Back to main site</a>
+        <p class="footer-note">howfuckedarewe.in</p>
+      </footer>
+    </main>
+  </body>
+</html>
+
+<style>
+  :root {
+    --bg: #fafafa;
+    --text: #1a1a1a;
+    --text-muted: #5a5a5a;
+    --accent: #b91c1c;
+    --border: rgba(0,0,0,0.08);
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    font-size: 17px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  main {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+  }
+
+  header {
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .back-link {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    display: inline-block;
+    margin-bottom: 1.5rem;
+  }
+
+  .back-link:hover {
+    color: var(--accent);
+  }
+
+  h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 2.5rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+  }
+
+  .intro {
+    font-size: 1.125rem;
+    color: var(--text-muted);
+    max-width: 600px;
+  }
+
+  .methodology-section {
+    margin-bottom: 3rem;
+  }
+
+  .methodology-section h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .source-card {
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+
+  .source-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--text);
+  }
+
+  .claim {
+    font-size: 0.9375rem;
+    color: var(--accent);
+    font-style: italic;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: rgba(185, 28, 28, 0.04);
+    border-left: 3px solid var(--accent);
+  }
+
+  .source-details {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+
+  .source-details p {
+    margin-bottom: 0.5rem;
+  }
+
+  .source-details strong {
+    color: var(--text);
+  }
+
+  .source-details a {
+    color: var(--accent);
+    text-decoration: none;
+    display: block;
+    margin-top: 0.75rem;
+  }
+
+  .source-details a:hover {
+    text-decoration: underline;
+  }
+
+  .source-details ul {
+    margin: 0.75rem 0;
+    padding-left: 1.25rem;
+  }
+
+  .source-details li {
+    margin-bottom: 0.25rem;
+  }
+
+  .threshold-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+    margin-top: 1rem;
+  }
+
+  .threshold-table th,
+  .threshold-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .threshold-table th {
+    font-weight: 600;
+    color: var(--text);
+    background: rgba(0,0,0,0.02);
+  }
+
+  .limitations ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .limitations li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+
+  .limitations li:last-child {
+    border-bottom: none;
+  }
+
+  .limitations strong {
+    color: var(--text);
+  }
+
+  .disclaimer {
+    background: rgba(0, 0, 0, 0.02);
+    border-left: 3px solid var(--text-muted);
+  }
+
+  .disclaimer h3 {
+    color: var(--text-muted);
+  }
+
+  footer {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-note {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 600px) {
+    html {
+      font-size: 16px;
+    }
+
+    h1 {
+      font-size: 2rem;
+    }
+
+    .threshold-table {
+      font-size: 0.75rem;
+    }
+
+    .threshold-table th,
+    .threshold-table td {
+      padding: 0.5rem;
+    }
+  }
+</style>

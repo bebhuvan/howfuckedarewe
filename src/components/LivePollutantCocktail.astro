@@ -1,0 +1,364 @@
+---
+/**
+ * Live Pollutant Cocktail Component
+ *
+ * What's in your air today. Each pollutant, its level, its harm.
+ * Design: Refined, data-forward, trustworthy with subtle severity indicators.
+ */
+
+import type { PollutantReadings } from '../lib/types';
+
+interface Props {
+  pollutants: PollutantReadings;
+  dominantPollutant: string | null;
+}
+
+const { pollutants, dominantPollutant } = Astro.props;
+
+// Pollutant metadata
+const pollutantMeta: Record<string, { name: string; fullName: string; harm: string }> = {
+  pm25: {
+    name: 'PM2.5',
+    fullName: 'Fine Particulate Matter',
+    harm: 'Enters bloodstream, crosses blood-brain barrier',
+  },
+  pm10: {
+    name: 'PM10',
+    fullName: 'Coarse Particles',
+    harm: 'Lodges in respiratory tract',
+  },
+  o3: {
+    name: 'O₃',
+    fullName: 'Ground-Level Ozone',
+    harm: 'Chemically burns lung tissue',
+  },
+  no2: {
+    name: 'NO₂',
+    fullName: 'Nitrogen Dioxide',
+    harm: 'Inflames airways, worsens asthma',
+  },
+  so2: {
+    name: 'SO₂',
+    fullName: 'Sulfur Dioxide',
+    harm: 'Triggers bronchospasm, acid rain precursor',
+  },
+  co: {
+    name: 'CO',
+    fullName: 'Carbon Monoxide',
+    harm: 'Displaces oxygen in blood',
+  },
+};
+
+// Severity thresholds and colors
+function getSeverity(aqi: number): { level: string; label: string; color: string; percent: number } {
+  if (aqi <= 50) return { level: 'good', label: 'Good', color: '#22c55e', percent: Math.min(aqi / 50 * 100, 100) };
+  if (aqi <= 100) return { level: 'moderate', label: 'Moderate', color: '#eab308', percent: Math.min(aqi / 100 * 100, 100) };
+  if (aqi <= 150) return { level: 'poor', label: 'Unhealthy', color: '#f97316', percent: Math.min(aqi / 150 * 100, 100) };
+  if (aqi <= 200) return { level: 'unhealthy', label: 'Very Unhealthy', color: '#dc2626', percent: Math.min(aqi / 200 * 100, 100) };
+  return { level: 'severe', label: 'Hazardous', color: '#7f1d1d', percent: 100 };
+}
+
+// Build display list
+type PollutantKey = keyof PollutantReadings;
+const keys: PollutantKey[] = ['pm25', 'pm10', 'o3', 'no2', 'so2', 'co'];
+const activePollutants = keys
+  .filter((key) => pollutants[key] !== null)
+  .map((key) => ({
+    key,
+    value: pollutants[key] as number,
+    meta: pollutantMeta[key],
+    severity: getSeverity(pollutants[key] as number),
+    isDominant: dominantPollutant?.toLowerCase() === key ||
+                dominantPollutant?.toLowerCase().replace('2', '₂').replace('3', '₃') === pollutantMeta[key].name.toLowerCase(),
+  }));
+
+// Sort: dominant first, then by value descending
+activePollutants.sort((a, b) => {
+  if (a.isDominant && !b.isDominant) return -1;
+  if (!a.isDominant && b.isDominant) return 1;
+  return b.value - a.value;
+});
+
+// Count by severity
+const severityCounts = {
+  safe: activePollutants.filter(p => p.value <= 50).length,
+  concern: activePollutants.filter(p => p.value > 50 && p.value <= 100).length,
+  harmful: activePollutants.filter(p => p.value > 100).length,
+};
+---
+
+<section class="pollutant-cocktail">
+  <div class="section-header">
+    <h2>What You're Breathing</h2>
+    <p class="section-intro">
+      {severityCounts.harmful > 0 ? (
+        <span class="intro-warning">{severityCounts.harmful} pollutant{severityCounts.harmful > 1 ? 's' : ''} at harmful levels right now.</span>
+      ) : severityCounts.concern > 0 ? (
+        <span>{severityCounts.concern} pollutant{severityCounts.concern > 1 ? 's' : ''} elevated. Not safe, not crisis.</span>
+      ) : (
+        <span class="intro-safe">All measured pollutants within safe limits.</span>
+      )}
+    </p>
+  </div>
+
+  {activePollutants.length > 0 ? (
+    <div class="pollutant-grid">
+      {activePollutants.map((p) => (
+        <div class:list={['pollutant-card', p.severity.level, { dominant: p.isDominant }]}>
+          <div class="card-header">
+            <div class="pollutant-identity">
+              <span class="pollutant-symbol">{p.meta.name}</span>
+              {p.isDominant && <span class="dominant-badge">Primary</span>}
+            </div>
+            <span class="pollutant-full">{p.meta.fullName}</span>
+          </div>
+
+          <div class="card-body">
+            <div class="reading">
+              <span class="reading-value" style={`color: ${p.severity.color}`}>{p.value}</span>
+              <span class="reading-unit">AQI</span>
+            </div>
+
+            <div class="severity-bar">
+              <div
+                class="severity-fill"
+                style={`width: ${Math.min(p.value / 2, 100)}%; background: ${p.severity.color};`}
+              ></div>
+            </div>
+
+            <div class="severity-label" style={`color: ${p.severity.color}`}>
+              {p.severity.label}
+            </div>
+          </div>
+
+          <p class="pollutant-harm">{p.meta.harm}</p>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div class="no-data">
+      <p>No live pollutant data available.</p>
+    </div>
+  )}
+
+  <div class="section-footer">
+    <div class="scale-legend">
+      <span class="legend-item"><span class="legend-dot good"></span>0-50 Safe</span>
+      <span class="legend-item"><span class="legend-dot moderate"></span>51-100 Moderate</span>
+      <span class="legend-item"><span class="legend-dot poor"></span>101-150 Unhealthy</span>
+      <span class="legend-item"><span class="legend-dot severe"></span>150+ Hazardous</span>
+    </div>
+  </div>
+</section>
+
+<style>
+  .pollutant-cocktail {
+    background: #faf8f5;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 1.75rem;
+  }
+
+  .section-header h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .section-intro {
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  .intro-warning {
+    color: #c41e1e;
+  }
+
+  .intro-safe {
+    color: #16a34a;
+  }
+
+  /* Grid Layout */
+  .pollutant-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  /* Cards */
+  .pollutant-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    transition: box-shadow 0.2s ease;
+  }
+
+  .pollutant-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .pollutant-card.dominant {
+    border-left: 3px solid var(--accent);
+  }
+
+  /* Card Header */
+  .card-header {
+    margin-bottom: 1rem;
+  }
+
+  .pollutant-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.125rem;
+  }
+
+  .pollutant-symbol {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .dominant-badge {
+    font-size: 0.5625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    background: rgba(196, 30, 30, 0.08);
+    padding: 0.125rem 0.375rem;
+    border-radius: 2px;
+  }
+
+  .pollutant-full {
+    font-size: 0.6875rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  /* Card Body */
+  .card-body {
+    margin-bottom: 0.75rem;
+  }
+
+  .reading {
+    display: flex;
+    align-items: baseline;
+    gap: 0.375rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .reading-value {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 2.5rem;
+    font-weight: 400;
+    line-height: 1;
+  }
+
+  .reading-unit {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+  }
+
+  /* Severity Bar */
+  .severity-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+  }
+
+  .severity-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+
+  .severity-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  /* Harm description */
+  .pollutant-harm {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+    margin: 0;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+  }
+
+  /* Footer */
+  .section-footer {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .scale-legend {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--text-light);
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .legend-dot.good { background: #22c55e; }
+  .legend-dot.moderate { background: #eab308; }
+  .legend-dot.poor { background: #f97316; }
+  .legend-dot.severe { background: #dc2626; }
+
+  /* No Data */
+  .no-data {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .pollutant-cocktail {
+      padding: 1.5rem 1rem;
+    }
+
+    .pollutant-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .reading-value {
+      font-size: 2rem;
+    }
+
+    .scale-legend {
+      gap: 0.5rem 1rem;
+    }
+  }
+</style>

@@ -1,0 +1,153 @@
+---
+/**
+ * Live Death Counter Component
+ *
+ * Deaths since you opened this page. Ticks in real-time.
+ * "We've been counting since you got here."
+ */
+import { INDIA_MORTALITY } from '../lib/constants';
+
+interface Props {
+  cityName?: string;
+  cityDeathsPerYear?: number;
+}
+
+const { cityName, cityDeathsPerYear } = Astro.props;
+
+const nationalDeathsPerSecond = INDIA_MORTALITY.ANNUAL_DEATHS / (365 * 24 * 60 * 60);
+const cityDeathsPerSecond = cityDeathsPerYear
+  ? cityDeathsPerYear / (365 * 24 * 60 * 60)
+  : null;
+---
+
+<section class="death-counter">
+  <div class="counter-header">
+    <span class="header-label">Since you opened this page</span>
+  </div>
+
+  <div class="counter-display">
+    <div class="counter-number" id="live-death-count" data-rate={nationalDeathsPerSecond}>
+      0
+    </div>
+    <div class="counter-context">
+      people in India have died from air pollution-related causes
+    </div>
+  </div>
+
+  <div class="counter-footer">
+    <p class="footer-source">
+      Based on {(INDIA_MORTALITY.ANNUAL_DEATHS / 1_000_000).toFixed(1)} million deaths/year
+      <span class="source-cite">(State of Global Air 2024)</span>
+    </p>
+    <p class="footer-note">
+      {INDIA_MORTALITY.UNDER_5_DAILY} of today's deaths will be children under 5.
+    </p>
+  </div>
+</section>
+
+<script>
+  const counter = document.getElementById('live-death-count');
+  if (counter) {
+    const rate = parseFloat(counter.dataset.rate || '0');
+    let deaths = 0;
+    let startTime = Date.now();
+
+    function updateCounter() {
+      const elapsed = (Date.now() - startTime) / 1000;
+      deaths = elapsed * rate;
+      counter.textContent = Math.floor(deaths).toString();
+      requestAnimationFrame(updateCounter);
+    }
+
+    updateCounter();
+  }
+</script>
+
+<style>
+  .death-counter {
+    background: #0a0a0a;
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    margin-bottom: 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .death-counter::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(196, 30, 30, 0.5), transparent);
+  }
+
+  .counter-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .header-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  .counter-display {
+    margin-bottom: 2rem;
+  }
+
+  .counter-number {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 6rem;
+    font-weight: 400;
+    color: #ef4444;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .counter-context {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.6);
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .counter-footer {
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .footer-source {
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 0.5rem;
+  }
+
+  .source-cite {
+    font-style: italic;
+  }
+
+  .footer-note {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+  }
+
+  @media (max-width: 600px) {
+    .death-counter {
+      padding: 2rem 1.5rem;
+    }
+
+    .counter-number {
+      font-size: 4rem;
+    }
+
+    .counter-context {
+      font-size: 0.9375rem;
+    }
+  }
+</style>

@@ -1,0 +1,165 @@
+---
+/**
+ * Lung Damage Component
+ *
+ * Visual representation of particles entering your lungs.
+ * "Every breath deposits fine particles deep in your lungs."
+ */
+---
+
+<section class="lung-damage">
+  <div class="lung-visual" aria-hidden="true">
+    <svg viewBox="0 0 200 160" class="lungs-svg">
+      <!-- Simplified lung shape -->
+      <path
+        class="lung left"
+        d="M60,40 Q30,50 25,90 Q20,130 50,140 Q80,145 90,100 Q95,70 85,50 Q75,35 60,40"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      />
+      <path
+        class="lung right"
+        d="M140,40 Q170,50 175,90 Q180,130 150,140 Q120,145 110,100 Q105,70 115,50 Q125,35 140,40"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      />
+      <!-- Trachea -->
+      <path
+        class="trachea"
+        d="M100,20 L100,55 M100,55 Q90,65 85,50 M100,55 Q110,65 115,50"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      />
+
+      <!-- Particles floating in -->
+      <g class="particles">
+        <circle class="particle p1" cx="100" cy="10" r="2" />
+        <circle class="particle p2" cx="95" cy="15" r="1.5" />
+        <circle class="particle p3" cx="105" cy="12" r="1" />
+        <circle class="particle p4" cx="98" cy="8" r="1.5" />
+        <circle class="particle p5" cx="103" cy="18" r="1" />
+      </g>
+
+      <!-- Particles deposited in lungs -->
+      <g class="deposited">
+        <circle cx="45" cy="100" r="1.5" fill="#c41e1e" opacity="0.6" />
+        <circle cx="55" cy="85" r="1" fill="#c41e1e" opacity="0.5" />
+        <circle cx="40" cy="110" r="1.5" fill="#c41e1e" opacity="0.7" />
+        <circle cx="65" cy="95" r="1" fill="#c41e1e" opacity="0.4" />
+        <circle cx="50" cy="120" r="1.5" fill="#c41e1e" opacity="0.6" />
+        <circle cx="155" cy="100" r="1.5" fill="#c41e1e" opacity="0.6" />
+        <circle cx="145" cy="85" r="1" fill="#c41e1e" opacity="0.5" />
+        <circle cx="160" cy="110" r="1.5" fill="#c41e1e" opacity="0.7" />
+        <circle cx="135" cy="95" r="1" fill="#c41e1e" opacity="0.4" />
+        <circle cx="150" cy="120" r="1.5" fill="#c41e1e" opacity="0.6" />
+      </g>
+    </svg>
+  </div>
+
+  <div class="lung-text">
+    <h3>Every breath deposits fine particles deep in your lungs</h3>
+    <p>
+      PM2.5 particles are small enough to enter your bloodstream.
+      They reach your heart, your brain, every organ.
+      <strong>They don't leave.</strong>
+    </p>
+  </div>
+</section>
+
+<style>
+  .lung-damage {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 2rem;
+    align-items: center;
+    background: rgba(196, 30, 30, 0.03);
+    border: 1px solid rgba(196, 30, 30, 0.1);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .lung-visual {
+    display: flex;
+    justify-content: center;
+  }
+
+  .lungs-svg {
+    width: 160px;
+    height: 130px;
+    color: #666;
+  }
+
+  .lung {
+    fill: rgba(196, 30, 30, 0.05);
+  }
+
+  .particle {
+    fill: #c41e1e;
+    animation: float-down 3s ease-in infinite;
+  }
+
+  .particle.p1 { animation-delay: 0s; }
+  .particle.p2 { animation-delay: 0.5s; }
+  .particle.p3 { animation-delay: 1s; }
+  .particle.p4 { animation-delay: 1.5s; }
+  .particle.p5 { animation-delay: 2s; }
+
+  @keyframes float-down {
+    0% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    70% {
+      opacity: 0.8;
+      transform: translateY(80px);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(100px);
+    }
+  }
+
+  .lung-text h3 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+    color: var(--text);
+  }
+
+  .lung-text p {
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .lung-text strong {
+    color: #c41e1e;
+  }
+
+  @media (max-width: 600px) {
+    .lung-damage {
+      grid-template-columns: 1fr;
+      text-align: center;
+      padding: 1.5rem;
+    }
+
+    .lung-visual {
+      order: 1;
+    }
+
+    .lung-text {
+      order: 2;
+    }
+
+    .lungs-svg {
+      width: 120px;
+      height: 100px;
+    }
+  }
+</style>

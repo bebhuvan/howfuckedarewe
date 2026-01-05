@@ -1,0 +1,23 @@
+{
+  "name": "howfuckedarewe",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "India Air Quality Dashboard - How Fucked Are We",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "wrangler pages dev ./dist",
+    "deploy": "astro build && wrangler pages deploy ./dist",
+    "astro": "astro",
+    "db:migrate": "wrangler d1 execute aqi-historical --file=./migrations/0001_initial_schema.sql",
+    "db:migrate:local": "wrangler d1 execute aqi-historical --file=./migrations/0001_initial_schema.sql --local"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^12.0.1",
+    "astro": "^5.16.6"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240117.0",
+    "wrangler": "^3.24.0"
+  }
+}

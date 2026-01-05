@@ -1,0 +1,187 @@
+---
+/**
+ * City Layout
+ *
+ * Shared layout for all city pages and the All-India overview.
+ */
+import Navigation from '../components/Navigation.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  currentSlug?: string;  // Current city slug (undefined for All India)
+}
+
+const { title, description, currentSlug } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="How Fucked Are We" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+
+    <title>{title}</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  </head>
+
+  <body>
+    <Navigation currentSlug={currentSlug} />
+
+    <main>
+      <slot />
+    </main>
+
+    <footer>
+      <div class="footer-content">
+        <div class="footer-links">
+          <a href="/data">Data & Research</a>
+          <span class="divider">|</span>
+          <a href="/methodology">Methodology</a>
+          <span class="divider">|</span>
+          <a href="https://github.com/anthropics/howfuckedarewe" target="_blank" rel="noopener">GitHub</a>
+        </div>
+        <p class="footer-attribution">
+          Data from <a href="https://aqicn.org/" target="_blank" rel="noopener">World Air Quality Index</a> (WAQI)
+        </p>
+        <p class="footer-disclaimer">
+          howfuckedarewe.in — Making the invisible visible since 2026
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --bg: #fafafa;
+    --text: #1a1a1a;
+    --text-muted: #666;
+    --text-light: #999;
+    --accent: #b91c1c;
+    --border: rgba(0, 0, 0, 0.08);
+    --card-bg: white;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    font-size: 16px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  main {
+    flex: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    width: 100%;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  /* Utility classes */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>
+
+<style>
+  footer {
+    background: #1a1a1a;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 2rem 1.5rem;
+    margin-top: auto;
+  }
+
+  .footer-content {
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .footer-links {
+    margin-bottom: 1rem;
+  }
+
+  .footer-links a {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.875rem;
+  }
+
+  .footer-links a:hover {
+    color: white;
+  }
+
+  .divider {
+    margin: 0 0.75rem;
+    color: rgba(255, 255, 255, 0.3);
+  }
+
+  .footer-attribution {
+    font-size: 0.8125rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .footer-attribution a {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .footer-disclaimer {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+  }
+</style>

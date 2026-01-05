@@ -1,0 +1,328 @@
+---
+/**
+ * Global Comparison Component
+ *
+ * "If you were in..." - shows what would happen in other countries
+ * at current PM2.5 levels. Makes the invisible visible.
+ */
+
+interface Props {
+  pm25: number;
+  cityName: string;
+}
+
+const { pm25, cityName } = Astro.props;
+
+// What different countries/cities would do at various PM2.5 levels
+interface CityResponse {
+  city: string;
+  country: string;
+  flag: string;
+  threshold: number;
+  response: string;
+  triggered: boolean;
+}
+
+const cityResponses: CityResponse[] = [
+  {
+    city: 'London',
+    country: 'UK',
+    flag: '🇬🇧',
+    threshold: 35,
+    response: 'Health advisory issued',
+    triggered: pm25 >= 35,
+  },
+  {
+    city: 'Tokyo',
+    country: 'Japan',
+    flag: '🇯🇵',
+    threshold: 35,
+    response: 'Vulnerable groups warned',
+    triggered: pm25 >= 35,
+  },
+  {
+    city: 'Sydney',
+    country: 'Australia',
+    flag: '🇦🇺',
+    threshold: 25,
+    response: 'Outdoor activity reduced',
+    triggered: pm25 >= 25,
+  },
+  {
+    city: 'Los Angeles',
+    country: 'USA',
+    flag: '🇺🇸',
+    threshold: 35,
+    response: 'Unhealthy for sensitive groups',
+    triggered: pm25 >= 35,
+  },
+  {
+    city: 'Paris',
+    country: 'France',
+    flag: '🇫🇷',
+    threshold: 50,
+    response: 'Traffic restrictions activated',
+    triggered: pm25 >= 50,
+  },
+  {
+    city: 'Beijing',
+    country: 'China',
+    flag: '🇨🇳',
+    threshold: 75,
+    response: 'Schools may close',
+    triggered: pm25 >= 75,
+  },
+  {
+    city: 'Seoul',
+    country: 'South Korea',
+    flag: '🇰🇷',
+    threshold: 35,
+    response: 'Free masks distributed',
+    triggered: pm25 >= 35,
+  },
+  {
+    city: 'Singapore',
+    country: 'Singapore',
+    flag: '🇸🇬',
+    threshold: 55,
+    response: 'Outdoor events cancelled',
+    triggered: pm25 >= 55,
+  },
+];
+
+// Count how many would be triggered
+const triggeredCount = cityResponses.filter(c => c.triggered).length;
+
+// Get the most severe untriggered (what we haven't reached yet)
+const nextThreshold = cityResponses
+  .filter(c => !c.triggered)
+  .sort((a, b) => a.threshold - b.threshold)[0];
+
+// Sardonic headline
+function getHeadline(): string {
+  if (triggeredCount === 0) {
+    return "Surprisingly, this would be acceptable most places.";
+  }
+  if (triggeredCount <= 2) {
+    return "A few countries would raise eyebrows.";
+  }
+  if (triggeredCount <= 5) {
+    return "Half the world would be panicking.";
+  }
+  return "This would be an emergency everywhere else.";
+}
+---
+
+<section class="global-comparison">
+  <div class="comparison-header">
+    <h3>If This Were Somewhere Else</h3>
+    <p class="comparison-intro">
+      {cityName}'s current {pm25.toFixed(0)} µg/m³ would trigger:
+    </p>
+  </div>
+
+  <div class="triggered-count">
+    <span class="count-value">{triggeredCount}</span>
+    <span class="count-label">of {cityResponses.length} cities would take action</span>
+  </div>
+
+  <p class="comparison-headline">{getHeadline()}</p>
+
+  <div class="city-responses">
+    {cityResponses.map((city) => (
+      <div class:list={['response-item', { triggered: city.triggered, 'not-triggered': !city.triggered }]}>
+        <div class="response-city">
+          <span class="city-flag">{city.flag}</span>
+          <span class="city-name">{city.city}</span>
+        </div>
+        <div class="response-action">
+          {city.triggered ? (
+            <>
+              <span class="action-icon">⚠️</span>
+              <span class="action-text">{city.response}</span>
+            </>
+          ) : (
+            <span class="action-text safe">No action needed</span>
+          )}
+        </div>
+        <div class="response-threshold">
+          <span class="threshold-value">{city.threshold}</span>
+          <span class="threshold-unit">µg/m³</span>
+        </div>
+      </div>
+    ))}
+  </div>
+
+  <div class="comparison-footer">
+    <p class="india-note">
+      India's "Moderate" category extends to <strong>60 µg/m³</strong>.
+      Most of the world would call that an emergency.
+    </p>
+  </div>
+</section>
+
+<style>
+  .global-comparison {
+    background: #faf8f5;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .comparison-header {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  .comparison-header h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .comparison-intro {
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+  }
+
+  .triggered-count {
+    text-align: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .count-value {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 4rem;
+    font-weight: 400;
+    color: #c41e1e;
+    line-height: 1;
+  }
+
+  .count-label {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+
+  .comparison-headline {
+    text-align: center;
+    font-size: 1rem;
+    font-style: italic;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .city-responses {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .response-item {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr auto;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+
+  .response-item.triggered {
+    border-left: 3px solid #dc2626;
+  }
+
+  .response-item.not-triggered {
+    opacity: 0.5;
+  }
+
+  .response-city {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .city-flag {
+    font-size: 1.25rem;
+  }
+
+  .city-name {
+    font-weight: 500;
+    font-size: 0.9375rem;
+  }
+
+  .response-action {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+  }
+
+  .action-icon {
+    font-size: 0.875rem;
+  }
+
+  .action-text {
+    color: var(--text-muted);
+  }
+
+  .action-text.safe {
+    color: var(--text-light);
+    font-style: italic;
+  }
+
+  .response-threshold {
+    text-align: right;
+    display: flex;
+    align-items: baseline;
+    gap: 0.125rem;
+  }
+
+  .threshold-value {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--text);
+  }
+
+  .threshold-unit {
+    font-size: 0.625rem;
+    color: var(--text-light);
+  }
+
+  .comparison-footer {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .india-note {
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+
+  .india-note strong {
+    color: var(--accent);
+  }
+
+  @media (max-width: 600px) {
+    .global-comparison {
+      padding: 1.5rem 1rem;
+    }
+
+    .response-item {
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem;
+    }
+
+    .response-action {
+      display: none;
+    }
+
+    .count-value {
+      font-size: 3rem;
+    }
+  }
+</style>

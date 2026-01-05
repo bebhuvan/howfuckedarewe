@@ -1,0 +1,22 @@
+{
+  "name": "aqi-ingestion-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Scheduled worker for ingesting air quality data from WAQI into D1",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "db:create": "wrangler d1 create aqi-historical",
+    "db:create:dev": "wrangler d1 create aqi-historical-dev",
+    "db:migrate": "wrangler d1 execute aqi-historical --file=../../migrations/0001_initial_schema.sql",
+    "db:migrate:dev": "wrangler d1 execute aqi-historical-dev --file=../../migrations/0001_initial_schema.sql --local",
+    "db:studio": "wrangler d1 studio aqi-historical",
+    "trigger": "curl -X POST http://localhost:8787/trigger -H 'Authorization: Bearer test-secret'"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240117.0",
+    "typescript": "^5.3.3",
+    "wrangler": "^3.24.0"
+  }
+}
