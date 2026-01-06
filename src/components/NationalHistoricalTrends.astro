@@ -1,0 +1,489 @@
+---
+/**
+ * National Historical Trends
+ *
+ * How fucked we've been. Dark, stark, devastating.
+ * Matches the site's design language.
+ */
+import type { NationalDailyRow, NationalStats, YearOverYearData } from '../lib/db-national';
+
+interface Props {
+  dailyData: NationalDailyRow[];
+  stats: NationalStats;
+  consecutiveDaysAboveWHO?: number;
+  yearOverYear?: YearOverYearData | null;
+  lastIngestionTime?: string | null;
+}
+
+const { dailyData, stats, consecutiveDaysAboveWHO = 0, yearOverYear, lastIngestionTime } = Astro.props;
+
+if (dailyData.length === 0) return;
+
+// Get values for chart
+const values = dailyData.map(d => d.weighted_avg_pm25 || 0);
+const min = Math.min(...values);
+const max = Math.max(...values);
+const avg = values.reduce((a, b) => a + b, 0) / values.length;
+const current = values[values.length - 1];
+
+// WHO guideline
+const WHO_LIMIT = 5;
+
+// Chart dimensions
+const width = 600;
+const height = 160;
+const padding = { top: 20, right: 50, bottom: 25, left: 45 };
+const chartWidth = width - padding.left - padding.right;
+const chartHeight = height - padding.top - padding.bottom;
+
+// Scale to include WHO line
+const yMin = 0;
+const yMax = Math.max(max * 1.15, WHO_LIMIT * 3);
+const yRange = yMax - yMin;
+
+// Generate paths
+function getY(value: number): number {
+  return padding.top + chartHeight - ((value - yMin) / yRange) * chartHeight;
+}
+
+function getX(index: number): number {
+  return padding.left + (index / (values.length - 1)) * chartWidth;
+}
+
+// Create line path
+const linePath = values.map((v, i) => {
+  const x = getX(i);
+  const y = getY(v);
+  return i === 0 ? `M ${x},${y}` : `L ${x},${y}`;
+}).join(' ');
+
+// Create area path
+const areaPath = linePath +
+  ` L ${getX(values.length - 1)},${getY(0)}` +
+  ` L ${getX(0)},${getY(0)} Z`;
+
+// WHO line position
+const whoY = getY(WHO_LIMIT);
+
+// Days above WHO
+const daysAboveWHO = values.filter(v => v > WHO_LIMIT).length;
+const percentAboveWHO = Math.round((daysAboveWHO / values.length) * 100);
+
+// Y-axis ticks (fewer, cleaner)
+const yTicks = [0, Math.round(yMax / 2), Math.round(yMax)];
+
+// Year-over-year
+const yoyChange = yearOverYear?.percentChange;
+const yoyWorse = yoyChange && yoyChange > 0;
+
+// Format last update
+function formatLastUpdate(isoString: string | null | undefined): string {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  if (diffHours < 1) return 'Updated just now';
+  if (diffHours < 24) return `Updated ${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `Updated ${diffDays}d ago`;
+}
+---
+
+<section class="historical-trends">
+  <div class="trends-header">
+    <div class="header-text">
+      <h2>Air Quality: Satisfactory</h2>
+      <p class="subtitle">Source: Ministry of Cope</p>
+    </div>
+    <div class="streak-stat">
+      <span class="streak-number">{consecutiveDaysAboveWHO}</span>
+      <span class="streak-label">consecutive days<br/>above WHO</span>
+    </div>
+  </div>
+
+  <div class="chart-section">
+    <svg viewBox={`0 0 ${width} ${height}`} class="trend-chart" preserveAspectRatio="xMidYMid meet">
+      <!-- Grid lines -->
+      {yTicks.map(tick => (
+        <line
+          x1={padding.left}
+          y1={getY(tick)}
+          x2={width - padding.right}
+          y2={getY(tick)}
+          stroke="rgba(0,0,0,0.06)"
+        />
+      ))}
+
+      <!-- Y-axis labels -->
+      {yTicks.map(tick => (
+        <text
+          x={padding.left - 8}
+          y={getY(tick) + 4}
+          text-anchor="end"
+          fill="rgba(0,0,0,0.4)"
+          font-size="10"
+          font-family="Inter, sans-serif"
+        >{tick}</text>
+      ))}
+
+      <!-- WHO limit line -->
+      <line
+        x1={padding.left}
+        y1={whoY}
+        x2={width - padding.right}
+        y2={whoY}
+        stroke="#16a34a"
+        stroke-width="1.5"
+        stroke-dasharray="6,4"
+      />
+      <text
+        x={width - padding.right + 6}
+        y={whoY + 4}
+        fill="#16a34a"
+        font-size="9"
+        font-weight="600"
+        font-family="Inter, sans-serif"
+      >WHO 5</text>
+
+      <!-- Area fill -->
+      <defs>
+        <linearGradient id="trend-gradient" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#dc2626" stop-opacity="0.25" />
+          <stop offset="100%" stop-color="#dc2626" stop-opacity="0.02" />
+        </linearGradient>
+      </defs>
+      <path d={areaPath} fill="url(#trend-gradient)" />
+
+      <!-- Line -->
+      <path
+        d={linePath}
+        fill="none"
+        stroke="#dc2626"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+
+      <!-- Current point -->
+      <circle
+        cx={getX(values.length - 1)}
+        cy={getY(current)}
+        r="5"
+        fill="#dc2626"
+        stroke="#fafaf9"
+        stroke-width="2"
+      />
+
+      <!-- Current value label -->
+      <text
+        x={getX(values.length - 1)}
+        y={getY(current) - 12}
+        text-anchor="middle"
+        fill="#dc2626"
+        font-size="11"
+        font-weight="600"
+        font-family="Inter, sans-serif"
+      >{current.toFixed(0)}</text>
+    </svg>
+  </div>
+
+  <div class="stats-grid">
+    <div class="trend-stat">
+      <span class="stat-value">{avg.toFixed(0)}</span>
+      <span class="stat-label">30-day avg</span>
+    </div>
+    <div class="trend-stat">
+      <span class="stat-value accent">{max.toFixed(0)}</span>
+      <span class="stat-label">peak</span>
+    </div>
+    <div class="trend-stat">
+      <span class="stat-value">{daysAboveWHO}<span class="stat-small">/{values.length}</span></span>
+      <span class="stat-label">days above WHO</span>
+    </div>
+    {yearOverYear && yearOverYear.percentChange !== null && (
+      <div class="trend-stat">
+        <span class:list={['stat-value', { worse: yoyWorse, better: !yoyWorse }]}>
+          {yoyWorse ? '+' : ''}{yearOverYear.percentChange.toFixed(0)}%
+        </span>
+        <span class="stat-label">vs last year</span>
+      </div>
+    )}
+  </div>
+
+  <div class="chart-explainer">
+    <p>The red line is what you breathed. The green dashed line is what lungs prefer. They haven't met.</p>
+  </div>
+
+  <div class="trends-footer">
+    <p class="footer-note">
+      WHO safe limit: 5 µg/m³. Days we exceeded it: <strong>{percentAboveWHO}%</strong>
+    </p>
+    <div class="footer-meta">
+      {lastIngestionTime && (
+        <span class="last-update">{formatLastUpdate(lastIngestionTime)}</span>
+      )}
+      <span class="source">Data: <a href="/methodology">OpenAQ + WAQI</a></span>
+    </div>
+  </div>
+</section>
+
+<style>
+  .historical-trends {
+    background: var(--bg-paper);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2.5rem 2rem;
+    margin-bottom: 2.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .trends-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+  }
+
+  .header-text h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 500;
+    margin: 0 0 0.25rem 0;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .subtitle {
+    font-size: 0.8125rem;
+    color: var(--text-light);
+    margin: 0;
+    font-style: italic;
+  }
+
+  .streak-stat {
+    text-align: right;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: rgba(220, 38, 38, 0.06);
+    border-radius: 8px;
+  }
+
+  .streak-number {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 2.5rem;
+    font-weight: 400;
+    line-height: 1;
+    color: var(--accent-bright);
+  }
+
+  .streak-label {
+    font-size: 0.5625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-light);
+    line-height: 1.4;
+    text-align: left;
+  }
+
+  .chart-section {
+    margin-bottom: 1.5rem;
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .trend-chart {
+    width: 100%;
+    height: auto;
+    max-height: 180px;
+    display: block;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+  }
+
+  .trend-stat {
+    text-align: center;
+  }
+
+  .stat-value {
+    display: block;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 2rem;
+    font-weight: 400;
+    line-height: 1;
+    color: var(--text);
+    margin-bottom: 0.375rem;
+  }
+
+  .stat-value.accent {
+    color: var(--accent-bright);
+  }
+
+  .stat-value.worse {
+    color: var(--accent-bright);
+  }
+
+  .stat-value.better {
+    color: #16a34a;
+  }
+
+  .stat-small {
+    font-size: 1rem;
+    color: var(--text-light);
+  }
+
+  .stat-label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-light);
+  }
+
+  .chart-explainer {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .chart-explainer p {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    margin: 0;
+    font-style: italic;
+  }
+
+  .trends-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .footer-note {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  .footer-note strong {
+    color: var(--accent-bright);
+    font-weight: 600;
+  }
+
+  .footer-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .last-update {
+    font-size: 0.6875rem;
+    font-family: 'Söhne Mono', 'SF Mono', monospace;
+    color: var(--text-light);
+  }
+
+  .source {
+    font-size: 0.6875rem;
+    color: var(--text-light);
+  }
+
+  .source a {
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+
+  .source a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 768px) {
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.25rem;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .historical-trends {
+      padding: 1.5rem 1.25rem;
+    }
+
+    .trends-header {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .streak-stat {
+      width: 100%;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(220, 38, 38, 0.04);
+    }
+
+    .streak-number {
+      font-size: 2rem;
+    }
+
+    .header-text h2 {
+      font-size: 1.375rem;
+    }
+
+    .stat-value {
+      font-size: 1.75rem;
+    }
+
+    .trends-footer {
+      flex-direction: column;
+      gap: 0.75rem;
+      text-align: center;
+    }
+
+    .footer-meta {
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .footer-note {
+      font-size: 0.8125rem;
+    }
+
+    .chart-section {
+      padding: 0.75rem;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .historical-trends {
+      padding: 1.5rem 1rem;
+    }
+
+    .header-text h2 {
+      font-size: 1.25rem;
+    }
+
+    .streak-number {
+      font-size: 2rem;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+    }
+
+    .stats-grid {
+      gap: 1rem;
+    }
+  }
+</style>

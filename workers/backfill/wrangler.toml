@@ -1,13 +1,12 @@
-# Ingestion Worker Configuration
-# Fetches air quality data from WAQI and stores in D1
+# Backfill Worker Configuration
+# Imports historical data from OpenAQ
 
-name = "aqi-ingestion"
+name = "aqi-backfill"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
-# Scheduled triggers - run every hour at minute 0
-[triggers]
-crons = ["0 * * * *"]
+# No cron trigger - this is HTTP-triggered manually
+# Use /backfill endpoint with date range params
 
 # D1 Database binding
 [[d1_databases]]
@@ -15,13 +14,14 @@ binding = "DB"
 database_name = "aqi-historical"
 database_id = "fd2739c3-9278-46ea-a4e3-b5cb357c1195"
 
-# Environment variables (secrets should be set via `wrangler secret put`)
+# Environment variables
 [vars]
-# Non-sensitive config can go here
+BACKFILL_BATCH_SIZE = "30"
+BACKFILL_RATE_LIMIT_MS = "500"
 
 # For local development
 [env.dev]
-name = "aqi-ingestion-dev"
+name = "aqi-backfill-dev"
 
 [[env.dev.d1_databases]]
 binding = "DB"

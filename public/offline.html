@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#991b1b">
+  <title>Offline | How Fucked Are We</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #fafaf9;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 480px;
+    }
+
+    .icon {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 2rem;
+      opacity: 0.6;
+    }
+
+    h1 {
+      font-size: clamp(1.5rem, 5vw, 2.5rem);
+      margin-bottom: 1rem;
+      color: #991b1b;
+      font-weight: 600;
+    }
+
+    .message {
+      font-size: 1.125rem;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 1rem;
+      line-height: 1.6;
+    }
+
+    .subtext {
+      font-size: 0.875rem;
+      color: rgba(255, 255, 255, 0.4);
+      margin-bottom: 2rem;
+      line-height: 1.5;
+    }
+
+    .cached-data {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      text-align: left;
+    }
+
+    .cached-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(255, 255, 255, 0.4);
+      margin-bottom: 0.5rem;
+    }
+
+    .cached-value {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #991b1b;
+    }
+
+    .cached-note {
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.4);
+      margin-top: 0.5rem;
+    }
+
+    .actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 0.875rem 1.75rem;
+      background: #991b1b;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #7f1d1d;
+    }
+
+    button.secondary {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    button.secondary:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .footer {
+      position: fixed;
+      bottom: 2rem;
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M18.364 5.636a9 9 0 010 12.728M15.536 8.464a5 5 0 010 7.072M12 12h.01" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="4" y1="4" x2="20" y2="20" stroke="#991b1b" stroke-width="2"/>
+    </svg>
+
+    <h1>You're Offline</h1>
+
+    <p class="message">Even our servers need a breath of fresh air.</p>
+
+    <p class="subtext">
+      The air quality data requires an internet connection.<br>
+      But honestly, it probably got worse since you last checked.
+    </p>
+
+    <div id="cached-data" class="cached-data" style="display: none;">
+      <div class="cached-label">Last known reading</div>
+      <div id="cached-value" class="cached-value">—</div>
+      <div id="cached-note" class="cached-note"></div>
+    </div>
+
+    <div class="actions">
+      <button onclick="location.reload()">Try Again</button>
+      <button class="secondary" onclick="goHome()">Go Home</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    howfuckedarewe.in — Making the invisible visible
+  </div>
+
+  <script>
+    function goHome() {
+      window.location.href = '/';
+    }
+
+    // Try to show cached data if available
+    if ('caches' in window) {
+      caches.open('hfaw-v1-dynamic').then(cache => {
+        cache.match('/').then(response => {
+          if (response) {
+            const cachedAt = response.headers.get('sw-cached-at');
+            if (cachedAt) {
+              const date = new Date(parseInt(cachedAt, 10));
+              const ago = Math.round((Date.now() - date.getTime()) / 60000);
+              document.getElementById('cached-note').textContent =
+                `Cached ${ago < 60 ? ago + ' minutes' : Math.round(ago / 60) + ' hours'} ago`;
+            }
+          }
+        });
+      });
+    }
+  </script>
+</body>
+</html>

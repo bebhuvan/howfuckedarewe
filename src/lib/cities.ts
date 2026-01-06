@@ -26,7 +26,7 @@ export const BANGALORE: CityConfig = {
   coordinates: { lat: 12.9716, lng: 77.5946 },
   population: 13_000_000,
   timezone: 'Asia/Kolkata',
-  tagline: 'Garden City? More like Gas Chamber City.',
+  tagline: 'Tech capital of India. Zero innovation in breathing.',
   stations: [
     { id: 8190, name: 'BTM Layout', area: 'BTM Layout' },
     { id: 11276, name: 'Jayanagar 5th Block', area: 'Jayanagar' },
@@ -49,7 +49,7 @@ export const DELHI: CityConfig = {
   coordinates: { lat: 28.6139, lng: 77.2090 },
   population: 32_000_000,
   timezone: 'Asia/Kolkata',
-  tagline: 'The national capital of coughing.',
+  tagline: 'The national capital of coughing. Also governance. Mostly coughing.',
   stations: [
     { id: 2553, name: 'Anand Vihar', area: 'Anand Vihar' },
     { id: 10118, name: 'ITI Shahdra', area: 'Jhilmil' },
@@ -79,7 +79,7 @@ export const MUMBAI: CityConfig = {
   coordinates: { lat: 19.0760, lng: 72.8777 },
   population: 21_000_000,
   timezone: 'Asia/Kolkata',
-  tagline: 'City of Dreams. Respiratory nightmares included.',
+  tagline: 'Bollywood dreams. Reality: emphysema.',
   stations: [
     { id: 13715, name: 'Bandra Kurla Complex', area: 'BKC' },
     { id: 11962, name: 'Colaba', area: 'Colaba' },
@@ -133,7 +133,7 @@ export const KOLKATA: CityConfig = {
   coordinates: { lat: 22.5726, lng: 88.3639 },
   population: 15_000_000,
   timezone: 'Asia/Kolkata',
-  tagline: 'City of Joy? City of Wheezing.',
+  tagline: 'City of Joy. The joy of chronic bronchitis.',
   stations: [
     { id: 12746, name: 'Ballygunge', area: 'Ballygunge' },
     { id: 12458, name: 'Jadavpur', area: 'Jadavpur' },
@@ -156,7 +156,7 @@ export const HYDERABAD: CityConfig = {
   coordinates: { lat: 17.3850, lng: 78.4867 },
   population: 10_000_000,
   timezone: 'Asia/Kolkata',
-  tagline: 'Biryani tastes better when you can breathe.',
+  tagline: 'Biryani with a side of particulate matter.',
   stations: [
     { id: 8700, name: 'Zoo Park', area: 'Nehru Zoological Park' },
     { id: 11224, name: 'Bollaram', area: 'Bollaram' },
@@ -167,6 +167,84 @@ export const HYDERABAD: CityConfig = {
     { id: 11229, name: 'Kompally', area: 'Kompally' },
     { id: 11230, name: 'Nacharam', area: 'Nacharam' },
     { id: 11231, name: 'Charminar', area: 'Charminar' },
+  ],
+};
+
+export const AHMEDABAD: CityConfig = {
+  slug: 'ahmedabad',
+  name: 'Ahmedabad',
+  localName: 'અમદાવાદ',
+  state: 'Gujarat',
+  coordinates: { lat: 23.0225, lng: 72.5714 },
+  population: 8_000_000,
+  timezone: 'Asia/Kolkata',
+  tagline: 'Vibrant Gujarat. Vibrating alveoli.',
+  stations: [
+    { id: 12451, name: 'Phase-4 GIDC Vatva', area: 'Vatva' },
+    { id: 13749, name: 'Gyaspur', area: 'Gyaspur' },
+    { id: 8192, name: 'Maninagar', area: 'Maninagar' },
+    { id: 13748, name: 'Rakhial', area: 'Rakhial' },
+    { id: 13746, name: 'SAC ISRO Satellite', area: 'Satellite' },
+    { id: 13750, name: 'Chandkheda', area: 'Chandkheda' },
+    { id: 13747, name: 'Pirana', area: 'Pirana' },
+  ],
+};
+
+export const PATNA: CityConfig = {
+  slug: 'patna',
+  name: 'Patna',
+  localName: 'पटना',
+  state: 'Bihar',
+  coordinates: { lat: 25.5941, lng: 85.1376 },
+  population: 2_500_000,
+  timezone: 'Asia/Kolkata',
+  tagline: "Bihar's crown jewel. The crown is made of soot.",
+  stations: [
+    { id: 12742, name: 'Samanpura', area: 'Samanpura' },
+    { id: 12744, name: 'Muradpur', area: 'Muradpur' },
+    { id: 12743, name: 'Rajbansi Nagar', area: 'Rajbansi Nagar' },
+    { id: 8674, name: 'IGSC Planetarium Complex', area: 'Planetarium' },
+    { id: 12888, name: 'DRM Office Danapur', area: 'Danapur' },
+    { id: 12887, name: 'Govt. High School Shikarpur', area: 'Shikarpur' },
+    { id: 12886, name: 'Srikrishnapuri', area: 'Srikrishnapuri' },
+  ],
+};
+
+export const LUCKNOW: CityConfig = {
+  slug: 'lucknow',
+  name: 'Lucknow',
+  localName: 'लखनऊ',
+  state: 'Uttar Pradesh',
+  coordinates: { lat: 26.8467, lng: 80.9462 },
+  population: 3_500_000,
+  timezone: 'Asia/Kolkata',
+  tagline: 'City of Nawabs. Dying like commoners.',
+  stations: [
+    { id: 8673, name: 'Lalbagh', area: 'Lalbagh' },
+    { id: 3845, name: 'Central School', area: 'Central School' },
+    { id: 12468, name: 'Gomti Nagar', area: 'Gomti Nagar' },
+    { id: 8188, name: 'Talkatora', area: 'Talkatora' },
+    { id: 13721, name: 'B R Ambedkar University', area: 'Ambedkar University' },
+    { id: 13720, name: 'Kukrail Picnic Spot', area: 'Kukrail' },
+  ],
+};
+
+export const AGRA: CityConfig = {
+  slug: 'agra',
+  name: 'Agra',
+  localName: 'आगरा',
+  state: 'Uttar Pradesh',
+  coordinates: { lat: 27.1767, lng: 78.0081 },
+  population: 1_800_000,
+  timezone: 'Asia/Kolkata',
+  tagline: 'The Taj Mahal is turning yellow. So are your lungs.',
+  stations: [
+    { id: 8186, name: 'Sanjay Palace', area: 'Sanjay Palace' },
+    { id: 13754, name: 'Manoharpur', area: 'Manoharpur' },
+    { id: 13873, name: 'Rohta', area: 'Rohta' },
+    { id: 13753, name: 'Sector-3B Avas Vikas Colony', area: 'Avas Vikas' },
+    { id: 13752, name: 'Bodla', area: 'Bodla' },
+    { id: 13751, name: 'Rambagh', area: 'Rambagh' },
   ],
 };
 
@@ -183,6 +261,11 @@ export const ALL_CITIES: CityConfig[] = [
   KOLKATA,    // 10 stations
   BANGALORE,  // 10 stations
   CHENNAI,    // 8 stations
+  HYDERABAD,  // 9 stations
+  AHMEDABAD,  // 7 stations
+  PATNA,      // 7 stations
+  LUCKNOW,    // 6 stations
+  AGRA,       // 6 stations
 ];
 
 /**
@@ -190,8 +273,13 @@ export const ALL_CITIES: CityConfig[] = [
  */
 export const CITIES_BY_POLLUTION: CityConfig[] = [
   DELHI,
+  PATNA,
+  LUCKNOW,
+  AGRA,
   KOLKATA,
+  AHMEDABAD,
   MUMBAI,
+  HYDERABAD,
   CHENNAI,
   BANGALORE,
 ];
@@ -218,5 +306,5 @@ export const ALL_INDIA = {
   slug: 'india',
   name: 'All India',
   population: 1_400_000_000,
-  tagline: "1.4 billion people. One shared atmosphere. No one's getting out alive.",
+  tagline: "1.4 billion people. One shared atmosphere. Zero accountability.",
 } as const;

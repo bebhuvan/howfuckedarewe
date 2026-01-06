@@ -9,40 +9,80 @@ export const CITIES = [
     name: 'Delhi',
     localName: 'दिल्ली',
     state: 'Delhi',
-    population: 32941000,
-    waqiId: '@7013',
+    population: 32000000,
+    waqiId: '@2553', // Anand Vihar
   },
   {
     slug: 'mumbai',
     name: 'Mumbai',
     localName: 'मुंबई',
     state: 'Maharashtra',
-    population: 21297000,
-    waqiId: '@8482',
+    population: 21000000,
+    waqiId: '@13715', // Bandra Kurla Complex
   },
   {
     slug: 'kolkata',
     name: 'Kolkata',
     localName: 'কলকাতা',
     state: 'West Bengal',
-    population: 15134000,
-    waqiId: '@12414',
+    population: 15000000,
+    waqiId: '@9068', // Victoria
   },
   {
     slug: 'bangalore',
     name: 'Bangalore',
     localName: 'ಬೆಂಗಳೂರು',
     state: 'Karnataka',
-    population: 13193000,
-    waqiId: '@12407',
+    population: 13000000,
+    waqiId: '@8190', // BTM Layout
   },
   {
     slug: 'chennai',
     name: 'Chennai',
     localName: 'சென்னை',
     state: 'Tamil Nadu',
-    population: 11503000,
-    waqiId: '@7614',
+    population: 11000000,
+    waqiId: '@8185', // Manali
+  },
+  {
+    slug: 'hyderabad',
+    name: 'Hyderabad',
+    localName: 'హైదరాబాద్',
+    state: 'Telangana',
+    population: 10000000,
+    waqiId: '@8700', // Zoo Park
+  },
+  {
+    slug: 'ahmedabad',
+    name: 'Ahmedabad',
+    localName: 'અમદાવાદ',
+    state: 'Gujarat',
+    population: 8000000,
+    waqiId: '@8192', // Maninagar
+  },
+  {
+    slug: 'patna',
+    name: 'Patna',
+    localName: 'पटना',
+    state: 'Bihar',
+    population: 2500000,
+    waqiId: '@8674', // IGSC Planetarium
+  },
+  {
+    slug: 'lucknow',
+    name: 'Lucknow',
+    localName: 'लखनऊ',
+    state: 'Uttar Pradesh',
+    population: 3500000,
+    waqiId: '@8673', // Lalbagh
+  },
+  {
+    slug: 'agra',
+    name: 'Agra',
+    localName: 'आगरा',
+    state: 'Uttar Pradesh',
+    population: 1800000,
+    waqiId: '@8186', // Sanjay Palace
   },
 ] as const;
 

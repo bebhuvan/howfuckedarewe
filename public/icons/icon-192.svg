@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a1a"/>
+      <stop offset="100%" style="stop-color:#0a0a0a"/>
+    </linearGradient>
+    <linearGradient id="smoke" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color:#991b1b;stop-opacity:0.8"/>
+      <stop offset="100%" style="stop-color:#991b1b;stop-opacity:0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="192" height="192" rx="32" fill="url(#bg)"/>
+
+  <!-- Lungs silhouette -->
+  <g transform="translate(96, 96)" fill="#991b1b">
+    <!-- Left lung -->
+    <path d="M-10,-35 C-10,-45 -25,-50 -35,-45 C-50,-38 -55,-20 -55,5 C-55,30 -45,45 -30,50 C-20,53 -10,45 -10,35 Z" opacity="0.9"/>
+    <!-- Right lung -->
+    <path d="M10,-35 C10,-45 25,-50 35,-45 C50,-38 55,-20 55,5 C55,30 45,45 30,50 C20,53 10,45 10,35 Z" opacity="0.9"/>
+    <!-- Trachea -->
+    <rect x="-5" y="-55" width="10" height="25" rx="3" opacity="0.7"/>
+  </g>
+
+  <!-- Smoke wisps -->
+  <g fill="url(#smoke)">
+    <path d="M85,75 Q75,60 85,45 Q95,30 85,15" stroke="#991b1b" stroke-width="3" fill="none" opacity="0.5">
+      <animate attributeName="d" dur="3s" repeatCount="indefinite"
+        values="M85,75 Q75,60 85,45 Q95,30 85,15;
+                M85,75 Q95,60 85,45 Q75,30 85,15;
+                M85,75 Q75,60 85,45 Q95,30 85,15"/>
+    </path>
+    <path d="M107,75 Q117,55 107,40 Q97,25 107,10" stroke="#991b1b" stroke-width="3" fill="none" opacity="0.4">
+      <animate attributeName="d" dur="4s" repeatCount="indefinite"
+        values="M107,75 Q117,55 107,40 Q97,25 107,10;
+                M107,75 Q97,55 107,40 Q117,25 107,10;
+                M107,75 Q117,55 107,40 Q97,25 107,10"/>
+    </path>
+  </g>
+
+  <!-- HFAW text -->
+  <text x="96" y="175" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#fafaf9" opacity="0.8">HFAW</text>
+</svg>

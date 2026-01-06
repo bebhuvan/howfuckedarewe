@@ -132,26 +132,94 @@ async function ingestAllCities(env: Env): Promise<Record<string, any>> {
 }
 
 /**
- * Fetch data from WAQI API
+ * Retry configuration for API calls
+ */
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 1000,
+  maxDelayMs: 10000,
+  backoffMultiplier: 2,
+};
+
+/**
+ * Sleep for specified milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Calculate exponential backoff delay with jitter
+ */
+function getBackoffDelay(attempt: number): number {
+  const exponentialDelay = RETRY_CONFIG.baseDelayMs * Math.pow(RETRY_CONFIG.backoffMultiplier, attempt);
+  const jitter = Math.random() * 0.3 * exponentialDelay; // 0-30% jitter
+  return Math.min(exponentialDelay + jitter, RETRY_CONFIG.maxDelayMs);
+}
+
+/**
+ * Fetch data from WAQI API with retry logic
  */
 async function fetchWaqiData(stationId: string, token: string): Promise<WaqiResponse | null> {
   const url = `${WAQI_CONFIG.baseUrl}/feed/${stationId}/?token=${token}`;
+  let lastError: Error | null = null;
 
-  try {
-    const response = await fetch(url, {
-      headers: { 'User-Agent': WAQI_CONFIG.userAgent },
-    });
+  for (let attempt = 0; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
+    try {
+      if (attempt > 0) {
+        const delay = getBackoffDelay(attempt - 1);
+        console.log(`WAQI retry attempt ${attempt}/${RETRY_CONFIG.maxRetries} after ${Math.round(delay)}ms delay`);
+        await sleep(delay);
+      }
 
-    if (!response.ok) {
-      console.error(`WAQI API error: ${response.status}`);
-      return null;
+      const response = await fetch(url, {
+        headers: { 'User-Agent': WAQI_CONFIG.userAgent },
+      });
+
+      // Rate limit handling - wait and retry
+      if (response.status === 429) {
+        const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
+        console.warn(`WAQI rate limited, waiting ${retryAfter}s...`);
+        await sleep(retryAfter * 1000);
+        continue;
+      }
+
+      // Server errors are retryable
+      if (response.status >= 500) {
+        lastError = new Error(`WAQI server error: ${response.status}`);
+        console.error(`WAQI API error: ${response.status} (attempt ${attempt + 1})`);
+        continue;
+      }
+
+      // Client errors are not retryable
+      if (!response.ok) {
+        console.error(`WAQI API client error: ${response.status} - not retrying`);
+        return null;
+      }
+
+      const data = await response.json();
+
+      // Validate response structure
+      if (!data || typeof data !== 'object') {
+        lastError = new Error('Invalid WAQI response structure');
+        console.error('Invalid WAQI response structure');
+        continue;
+      }
+
+      return data;
+    } catch (error) {
+      lastError = error as Error;
+      console.error(`WAQI fetch error (attempt ${attempt + 1}):`, error);
+
+      // Network errors are retryable
+      if (attempt < RETRY_CONFIG.maxRetries) {
+        continue;
+      }
     }
-
-    return await response.json();
-  } catch (error) {
-    console.error('WAQI fetch error:', error);
-    return null;
   }
+
+  console.error(`WAQI fetch failed after ${RETRY_CONFIG.maxRetries + 1} attempts:`, lastError);
+  return null;
 }
 
 /**

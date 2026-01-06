@@ -2,236 +2,437 @@
 /**
  * Navigation Component
  *
- * Site header with logo, city selector, and main navigation.
+ * Mobile-first responsive navigation with hamburger menu
  */
-import { ALL_CITIES, ALL_INDIA } from '../lib/cities';
+import { ALL_CITIES } from '../lib/cities';
 
 interface Props {
-  currentSlug?: string;  // Current city slug (undefined for All India)
+  currentSlug?: string;
 }
 
 const { currentSlug } = Astro.props;
 
-// Check if we're on a special page
 const currentPath = Astro.url.pathname;
 const isLeaderboard = currentPath === '/leaderboard';
 const isWhatNow = currentPath === '/what-now';
 const isData = currentPath === '/data';
 const isMethodology = currentPath === '/methodology';
+const isMarketplace = currentPath === '/marketplace';
+const isStatus = currentPath === '/status';
+const isHome = !currentSlug && !isLeaderboard && !isWhatNow && !isData && !isMethodology && !isMarketplace && !isStatus;
+
+// Get current city name for mobile display
+const currentCityName = currentSlug
+  ? ALL_CITIES.find(c => c.slug === currentSlug)?.name || currentSlug
+  : 'All India';
 ---
 
 <nav class="site-nav">
-  <!-- Site Branding -->
-  <div class="nav-brand">
-    <a href="/" class="brand-link">
-      <span class="brand-name">howfuckedarewe</span>
-      <span class="brand-tld">.in</span>
+  <div class="nav-top">
+    <a href="/" class="brand">
+      how <strong>fucked</strong> are we<span class="brand-q">?</span>
     </a>
-    <span class="brand-tagline">India's air, unfiltered</span>
+
+    <!-- Mobile: Current city indicator + hamburger -->
+    <div class="mobile-controls">
+      <span class="current-city-badge">{currentCityName}</span>
+      <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+        <span class="hamburger">
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
+      </button>
+    </div>
+
+    <!-- Desktop nav links -->
+    <div class="nav-links">
+      <a href="/leaderboard" class:list={[{ active: isLeaderboard }]}>Leaderboard</a>
+      <a href="/marketplace" class:list={['lungs-link', { active: isMarketplace }]}>Lung Exchange</a>
+      <a href="/data" class:list={[{ active: isData }]}>Data</a>
+      <a href="/what-now" class:list={[{ active: isWhatNow }]}>What Now</a>
+    </div>
   </div>
 
-  <!-- Main Navigation -->
-  <div class="nav-main">
-    <!-- City Selector -->
-    <div class="nav-cities-wrap">
-      <a
-        href="/"
-        class:list={['nav-link', { active: !currentSlug && !isLeaderboard && !isWhatNow && !isData && !isMethodology }]}
-      >
-        {ALL_INDIA.name}
+  <!-- City pills - horizontal scroll on mobile -->
+  <div class="nav-cities">
+    <a href="/" class:list={['city', { active: isHome }]}>All India</a>
+    {ALL_CITIES.map((city) => (
+      <a href={`/${city.slug}`} class:list={['city', { active: currentSlug === city.slug }]}>
+        {city.name}
       </a>
-      <div class="nav-cities">
+    ))}
+  </div>
+
+  <!-- Mobile dropdown menu -->
+  <div class="mobile-menu" aria-hidden="true">
+    <div class="mobile-menu-section">
+      <span class="mobile-menu-label">Cities</span>
+      <div class="mobile-cities-grid">
+        <a href="/" class:list={['mobile-city', { active: isHome }]}>All India</a>
         {ALL_CITIES.map((city) => (
-          <a
-            href={`/${city.slug}`}
-            class:list={['nav-link', { active: currentSlug === city.slug }]}
-          >
+          <a href={`/${city.slug}`} class:list={['mobile-city', { active: currentSlug === city.slug }]}>
             {city.name}
           </a>
         ))}
       </div>
     </div>
-
-    <!-- Special Pages -->
-    <div class="nav-pages">
-      <a href="/leaderboard" class:list={['nav-link', 'nav-link-special', { active: isLeaderboard }]}>
-        Leaderboard
-      </a>
-      <a href="/data" class:list={['nav-link', 'nav-link-special', { active: isData }]}>
-        Data
-      </a>
-      <a href="/what-now" class:list={['nav-link', 'nav-link-special', { active: isWhatNow }]}>
-        What Now?
-      </a>
+    <div class="mobile-menu-divider"></div>
+    <div class="mobile-menu-links">
+      <a href="/leaderboard" class:list={[{ active: isLeaderboard }]}>Fucked Leaderboard</a>
+      <a href="/marketplace" class:list={['lungs-link', { active: isMarketplace }]}>The Lung Exchange™</a>
+      <a href="/data" class:list={[{ active: isData }]}>Data & Research</a>
+      <a href="/what-now" class:list={[{ active: isWhatNow }]}>What Now?</a>
+      <a href="/methodology" class:list={[{ active: isMethodology }]}>Methodology</a>
     </div>
   </div>
 </nav>
+
+<script>
+  // Mobile menu toggle
+  const menuToggle = document.querySelector('.menu-toggle');
+  const mobileMenu = document.querySelector('.mobile-menu');
+  const nav = document.querySelector('.site-nav');
+
+  if (menuToggle && mobileMenu) {
+    menuToggle.addEventListener('click', () => {
+      const isExpanded = menuToggle.getAttribute('aria-expanded') === 'true';
+      menuToggle.setAttribute('aria-expanded', String(!isExpanded));
+      mobileMenu.setAttribute('aria-hidden', String(isExpanded));
+      nav?.classList.toggle('menu-open');
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!nav?.contains(e.target as Node)) {
+        menuToggle.setAttribute('aria-expanded', 'false');
+        mobileMenu.setAttribute('aria-hidden', 'true');
+        nav?.classList.remove('menu-open');
+      }
+    });
+
+    // Close menu when clicking a link
+    mobileMenu.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        menuToggle.setAttribute('aria-expanded', 'false');
+        mobileMenu.setAttribute('aria-hidden', 'true');
+        nav?.classList.remove('menu-open');
+      });
+    });
+  }
+</script>
 
 <style>
   .site-nav {
     position: sticky;
     top: 0;
     z-index: 100;
-    background: rgba(250, 250, 250, 0.98);
+    background: rgba(250, 250, 249, 0.97);
     backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  }
-
-  /* Brand Section */
-  .nav-brand {
-    padding: 0.75rem 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     border-bottom: 1px solid var(--border);
-    max-width: 1200px;
+  }
+
+  .nav-top {
+    max-width: 1100px;
     margin: 0 auto;
-  }
-
-  .brand-link {
-    text-decoration: none;
+    padding: 0.875rem 1.5rem;
     display: flex;
-    align-items: baseline;
-  }
-
-  .brand-link:hover {
-    text-decoration: none;
-  }
-
-  .brand-name {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text);
-    letter-spacing: -0.02em;
-  }
-
-  .brand-tld {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #b91c1c;
-  }
-
-  .brand-tagline {
-    font-size: 0.6875rem;
-    color: var(--text-light);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  /* Main Navigation */
-  .nav-main {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0.5rem 1rem;
-    display: flex;
-    align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    align-items: center;
   }
 
-  .nav-cities-wrap {
+  /* Brand */
+  .brand {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 400;
+    color: var(--text);
+    text-decoration: none;
+    letter-spacing: -0.01em;
+  }
+
+  .brand strong {
+    font-weight: 600;
+  }
+
+  .brand:hover {
+    text-decoration: none;
+  }
+
+  .brand-q {
+    font-weight: 600;
+    color: var(--accent);
+    font-size: 1.3em;
+    vertical-align: baseline;
+  }
+
+  /* Mobile controls - hidden on desktop */
+  .mobile-controls {
+    display: none;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .current-city-badge {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: white;
+    background: var(--text);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+  }
+
+  .menu-toggle {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    flex: 1;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  .nav-cities-wrap::-webkit-scrollbar {
-    display: none;
+  .hamburger {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: 20px;
   }
 
-  .nav-cities {
+  .hamburger span {
+    display: block;
+    height: 2px;
+    background: var(--text);
+    border-radius: 1px;
+    transition: all 0.3s ease;
+  }
+
+  .hamburger span:nth-child(1) { width: 100%; }
+  .hamburger span:nth-child(2) { width: 75%; }
+  .hamburger span:nth-child(3) { width: 100%; }
+
+  /* Hamburger animation when open */
+  .menu-open .hamburger span:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+  }
+  .menu-open .hamburger span:nth-child(2) {
+    opacity: 0;
+    width: 0;
+  }
+  .menu-open .hamburger span:nth-child(3) {
+    transform: rotate(-45deg) translate(5px, -5px);
+  }
+
+  /* Top nav links */
+  .nav-links {
     display: flex;
     gap: 0.25rem;
   }
 
-  .nav-pages {
-    display: flex;
-    gap: 0.5rem;
-    flex-shrink: 0;
+  .nav-links a {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-light);
+    text-decoration: none;
+    border-radius: 6px;
+    transition: color 0.15s;
   }
 
-  .nav-link {
-    padding: 0.4rem 0.875rem;
-    border-radius: 6px;
-    font-size: 0.8125rem;
+  .nav-links a:hover {
+    color: var(--text);
+  }
+
+  .nav-links a.active {
+    color: var(--accent);
+  }
+
+  /* City row */
+  .nav-cities {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1.5rem 0.75rem;
+    display: flex;
+    gap: 0.25rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .nav-cities::-webkit-scrollbar {
+    display: none;
+  }
+
+  .city {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.875rem;
     font-weight: 500;
-    color: #666;
+    color: var(--text-secondary);
     text-decoration: none;
     white-space: nowrap;
+    border-radius: 6px;
+    transition: all 0.15s;
+  }
+
+  .city:hover {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--text);
+  }
+
+  .city.active {
+    background: var(--text);
+    color: white;
+  }
+
+  /* Mobile menu - hidden by default */
+  .mobile-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(250, 250, 249, 0.98);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  .mobile-menu[aria-hidden="false"] {
+    display: block;
+    animation: slideDown 0.2s ease-out;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .mobile-menu-section {
+    margin-bottom: 1rem;
+  }
+
+  .mobile-menu-label {
+    display: block;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-light);
+    margin-bottom: 0.75rem;
+  }
+
+  .mobile-cities-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+
+  .mobile-city {
+    display: block;
+    padding: 0.625rem 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-decoration: none;
+    text-align: center;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.03);
     transition: all 0.15s ease;
   }
 
-  .nav-link:hover {
-    background: rgba(0, 0, 0, 0.05);
-    color: #333;
+  .mobile-city:hover,
+  .mobile-city:active {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--text);
+  }
+
+  .mobile-city.active {
+    background: var(--text);
+    color: white;
+  }
+
+  .mobile-menu-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 1rem 0;
+  }
+
+  .mobile-menu-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .mobile-menu-links a {
+    display: block;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--text-secondary);
     text-decoration: none;
+    border-radius: 6px;
+    transition: all 0.15s ease;
   }
 
-  .nav-link.active {
-    background: #b91c1c;
-    color: white;
+  .mobile-menu-links a:hover,
+  .mobile-menu-links a:active {
+    background: rgba(0, 0, 0, 0.03);
+    color: var(--text);
   }
 
-  .nav-link-special {
-    background: rgba(185, 28, 28, 0.08);
-    color: #b91c1c;
-    font-weight: 600;
+  .mobile-menu-links a.active {
+    color: var(--accent);
   }
 
-  .nav-link-special:hover {
-    background: rgba(185, 28, 28, 0.15);
-    color: #991b1b;
+  /* Mobile breakpoint */
+  @media (max-width: 700px) {
+    .nav-top {
+      padding: 0.75rem 1rem;
+    }
+
+    .brand {
+      font-size: 1rem;
+    }
+
+    /* Show mobile controls, hide desktop nav */
+    .mobile-controls {
+      display: flex;
+    }
+
+    .nav-links {
+      display: none;
+    }
+
+    /* Hide city row on mobile - use dropdown instead */
+    .nav-cities {
+      display: none;
+    }
   }
 
-  .nav-link-special.active {
-    background: #b91c1c;
-    color: white;
-  }
-
-  @media (max-width: 768px) {
-    .nav-brand {
-      padding: 0.5rem 1rem;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.125rem;
+  /* Tablet - show scrollable cities */
+  @media (min-width: 701px) and (max-width: 900px) {
+    .nav-cities {
+      padding: 0 1rem 0.75rem;
     }
 
-    .brand-name,
-    .brand-tld {
-      font-size: 1.125rem;
-    }
-
-    .brand-tagline {
-      font-size: 0.625rem;
-    }
-
-    .nav-main {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 0.5rem;
-      padding: 0.5rem;
-    }
-
-    .nav-cities-wrap {
-      order: 2;
-    }
-
-    .nav-pages {
-      order: 1;
-      justify-content: center;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 0.5rem;
-    }
-
-    .nav-link {
-      padding: 0.35rem 0.625rem;
-      font-size: 0.75rem;
+    .city {
+      padding: 0.4rem 0.625rem;
+      font-size: 0.8125rem;
     }
   }
 </style>

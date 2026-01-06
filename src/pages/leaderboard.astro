@@ -19,41 +19,9 @@ const rankedCities = citiesData
   .filter(c => c.avgPm25 !== null)
   .sort((a, b) => (b.avgPm25 || 0) - (a.avgPm25 || 0));
 
-// Satirical quotes - played straight
-const quotes = [
-  { text: "Clean air is a state of mind.", author: "Aristotle" },
-  { text: "You want pure air? Go to Papua New Guinea or Burkina Faso.", author: "Local Neta" },
-  { text: "What makes you wheeze and cough as if you're dying, makes you stronger.", author: "Abraham Lincoln" },
-  { text: "Have you tried breathing less?", author: "Helpful Neighbor" },
-];
-
-const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-
-// City-specific local dialogues
-const cityDialogues: Record<string, string> = {
-  delhi: "\"Bhai, AQI 400 pe toh mask lagana padega... 300 tak toh normal hai.\"",
-  mumbai: "\"Local mein toh AC nahi hai, window bhi band nahi kar sakte.\"",
-  bangalore: "\"Traffic mein 2 ghante roz... at least WFH mein ghar ka pollution toh kam hai.\"",
-  chennai: "\"Summer mein AC chalao, winter mein bhi... pollution ka kya karein?\"",
-  kolkata: "\"Durga Puja ke baad toh air quality normal ho jaata hai... agle saal tak.\"",
-  hyderabad: "\"IT Park ke andar HEPA filter hai, bahar kyun jaana?\"",
-};
-
-// Medal emojis for top 3
-function getMedal(rank: number): string {
-  if (rank === 1) return '💀';
-  if (rank === 2) return '☠️';
-  if (rank === 3) return '😵';
-  return '';
-}
-
-function getVerdict(whoRatio: number): string {
-  if (whoRatio <= 2) return 'Surviving';
-  if (whoRatio <= 4) return 'Coping';
-  if (whoRatio <= 8) return 'Fucked';
-  if (whoRatio <= 15) return 'Very Fucked';
-  return 'LOL';
-}
+// Top 3 for podium
+const [gold, silver, bronze] = rankedCities;
+const restOfCities = rankedCities.slice(3);
 
 // Page metadata
 const title = "Fucked Leaderboard — Which Indian City Wins?";
@@ -61,10 +29,10 @@ const description = "A real-time ranking of India's most polluted cities. Spoile
 
 // Calculate some stats
 const avgWhoViolation = rankedCities.reduce((sum, c) => sum + (c.avgPm25 || 0), 0) / rankedCities.length / WHO.PM25_ANNUAL;
-const totalCigsPerDay = rankedCities.reduce((sum, c) => sum + (c.metrics?.cigarettesPerDay || 0), 0);
+const worstCity = rankedCities[0];
+const bestCity = rankedCities[rankedCities.length - 1];
 
-// World's cleanest cities (IQAir 2024 World Air Quality Report)
-// Source: https://www.iqair.com/world-air-quality-report
+// World's cleanest cities for comparison
 const cleanestCities = [
   { name: "Reykjavik", country: "Iceland", pm25: 4.1 },
   { name: "Canberra", country: "Australia", pm25: 4.5 },
@@ -73,188 +41,265 @@ const cleanestCities = [
   { name: "Vancouver", country: "Canada", pm25: 4.2 },
 ];
 
-// Get India's "best" city for comparison
-const bestIndianCity = rankedCities[rankedCities.length - 1];
-const worstIndianCity = rankedCities[0];
+function getVerdict(whoRatio: number): { text: string; color: string } {
+  if (whoRatio <= 2) return { text: 'Surviving', color: '#166534' };
+  if (whoRatio <= 4) return { text: 'Coping', color: '#a3a322' };
+  if (whoRatio <= 8) return { text: 'Fucked', color: '#c45a20' };
+  if (whoRatio <= 15) return { text: 'Very Fucked', color: '#b91c1c' };
+  return { text: 'LOL', color: '#7f1d1d' };
+}
+
+function getBarWidth(pm25: number): number {
+  const maxPm25 = worstCity?.avgPm25 || 300;
+  return Math.min((pm25 / maxPm25) * 100, 100);
+}
 ---
 
 <CityLayout title={title} description={description}>
   <div class="leaderboard-page">
+    <!-- Hero Header -->
     <header class="page-header">
+      <span class="page-label">Live Rankings</span>
       <h1>The Fucked Leaderboard</h1>
-      <p class="subtitle">A real-time ranking of India's major cities by air quality</p>
+      <p class="subtitle">Real-time ranking of India's major cities by air quality</p>
       <p class="spoiler">(Spoiler: everyone loses)</p>
     </header>
 
-    <!-- Random Satirical Quote -->
-    <blockquote class="satirical-quote">
-      <p class="quote-text">"{randomQuote.text}"</p>
-      <footer class="quote-author">— {randomQuote.author}</footer>
-    </blockquote>
-
-    <!-- Summary Stats -->
-    <div class="summary-stats">
-      <div class="summary-stat">
-        <span class="stat-value">{avgWhoViolation.toFixed(1)}×</span>
-        <span class="stat-label">Avg WHO violation</span>
+    <!-- Live Stats Bar -->
+    <div class="live-stats">
+      <div class="live-indicator">
+        <span class="pulse"></span>
+        <span>Live Data</span>
       </div>
-      <div class="summary-stat">
-        <span class="stat-value">{rankedCities.length}</span>
-        <span class="stat-label">Cities ranked</span>
-      </div>
-      <div class="summary-stat">
-        <span class="stat-value">0</span>
-        <span class="stat-label">Within WHO limits</span>
+      <div class="stat-pills">
+        <span class="pill">{avgWhoViolation.toFixed(1)}× avg WHO violation</span>
+        <span class="pill">{rankedCities.length} cities ranked</span>
+        <span class="pill accent">0 within WHO limits</span>
       </div>
     </div>
 
-    <!-- The Leaderboard -->
-    <div class="leaderboard">
-      <div class="leaderboard-header">
-        <span class="col-rank">Rank</span>
-        <span class="col-city">City</span>
-        <span class="col-pm25">PM2.5</span>
-        <span class="col-who">× WHO</span>
-        <span class="col-cigs">Cigs/Day</span>
-        <span class="col-verdict">Verdict</span>
-      </div>
+    <!-- Podium Section -->
+    <section class="podium-section">
+      <h2 class="section-title">The Podium of Shame</h2>
 
-      {rankedCities.map((city, index) => {
-        const rank = index + 1;
-        const whoRatio = (city.avgPm25 || 0) / WHO.PM25_ANNUAL;
-        const verdict = getVerdict(whoRatio);
-        const medal = getMedal(rank);
-        const dialogue = cityDialogues[city.city.slug];
-
-        return (
-          <a href={`/${city.city.slug}`} class:list={['leaderboard-row', { top3: rank <= 3 }]}>
-            <span class="col-rank">
-              {medal && <span class="medal">{medal}</span>}
-              <span class="rank-num">#{rank}</span>
-            </span>
-            <span class="col-city">
-              <span class="city-name">{city.city.name}</span>
-              <span class="city-state">{city.city.state}</span>
-              {dialogue && <span class="city-dialogue">{dialogue}</span>}
-            </span>
-            <span class="col-pm25">
-              <span class="pm25-value">{city.avgPm25?.toFixed(1)}</span>
-              <span class="pm25-unit">µg/m³</span>
-            </span>
-            <span class="col-who" data-severity={whoRatio > 8 ? 'extreme' : whoRatio > 4 ? 'high' : 'medium'}>
-              {whoRatio.toFixed(1)}×
-            </span>
-            <span class="col-cigs">
-              {city.metrics?.cigarettesPerDay.toFixed(1)}
-            </span>
-            <span class="col-verdict" data-verdict={verdict.toLowerCase().replace(' ', '-')}>
-              {verdict}
-            </span>
+      <div class="podium">
+        <!-- Silver (2nd) -->
+        {silver && (
+          <a href={`/${silver.city.slug}`} class="podium-place silver">
+            <div class="podium-rank">2</div>
+            <div class="podium-city">{silver.city.name}</div>
+            <div class="podium-value">{silver.avgPm25?.toFixed(0)}</div>
+            <div class="podium-unit">µg/m³</div>
+            <div class="podium-who">{((silver.avgPm25 || 0) / WHO.PM25_ANNUAL).toFixed(1)}× WHO</div>
+            <div class="podium-bar">
+              <div class="bar-fill" style={`height: ${getBarWidth(silver.avgPm25 || 0)}%`}></div>
+            </div>
+            <div class="podium-base silver-base">
+              <span class="medal">🥈</span>
+            </div>
           </a>
-        );
-      })}
-    </div>
+        )}
 
-    <!-- We're Winning! Global Comparison -->
-    <div class="global-race">
-      <div class="race-header">
-        <h3>🏆 We're Winning!</h3>
-        <p class="race-subtitle">A comparison with the so-called "developed" world</p>
+        <!-- Gold (1st) -->
+        {gold && (
+          <a href={`/${gold.city.slug}`} class="podium-place gold">
+            <div class="crown">👑</div>
+            <div class="podium-rank">1</div>
+            <div class="podium-city">{gold.city.name}</div>
+            <div class="podium-value">{gold.avgPm25?.toFixed(0)}</div>
+            <div class="podium-unit">µg/m³</div>
+            <div class="podium-who">{((gold.avgPm25 || 0) / WHO.PM25_ANNUAL).toFixed(1)}× WHO</div>
+            <div class="podium-cigs">
+              <span class="cig-icon">🚬</span>
+              <span>{gold.metrics?.cigarettesPerDay.toFixed(1)} cigs/day</span>
+            </div>
+            <div class="podium-bar">
+              <div class="bar-fill" style={`height: ${getBarWidth(gold.avgPm25 || 0)}%`}></div>
+            </div>
+            <div class="podium-base gold-base">
+              <span class="medal">🏆</span>
+            </div>
+          </a>
+        )}
+
+        <!-- Bronze (3rd) -->
+        {bronze && (
+          <a href={`/${bronze.city.slug}`} class="podium-place bronze">
+            <div class="podium-rank">3</div>
+            <div class="podium-city">{bronze.city.name}</div>
+            <div class="podium-value">{bronze.avgPm25?.toFixed(0)}</div>
+            <div class="podium-unit">µg/m³</div>
+            <div class="podium-who">{((bronze.avgPm25 || 0) / WHO.PM25_ANNUAL).toFixed(1)}× WHO</div>
+            <div class="podium-bar">
+              <div class="bar-fill" style={`height: ${getBarWidth(bronze.avgPm25 || 0)}%`}></div>
+            </div>
+            <div class="podium-base bronze-base">
+              <span class="medal">🥉</span>
+            </div>
+          </a>
+        )}
       </div>
+    </section>
 
-      <div class="race-comparison">
-        <div class="race-column losers">
-          <div class="column-header">The "Developed" World 🥱</div>
+    <!-- Full Rankings -->
+    <section class="rankings-section">
+      <h2 class="section-title">Full Rankings</h2>
+
+      <div class="rankings-list">
+        {rankedCities.map((city, index) => {
+          const rank = index + 1;
+          const whoRatio = (city.avgPm25 || 0) / WHO.PM25_ANNUAL;
+          const verdict = getVerdict(whoRatio);
+          const barWidth = getBarWidth(city.avgPm25 || 0);
+
+          return (
+            <a href={`/${city.city.slug}`} class:list={['ranking-card', { 'top-three': rank <= 3 }]}>
+              <div class="rank-badge" data-rank={rank <= 3 ? rank : 'other'}>
+                {rank <= 3 ? ['🏆', '🥈', '🥉'][rank - 1] : `#${rank}`}
+              </div>
+
+              <div class="card-main">
+                <div class="card-header">
+                  <span class="city-name">{city.city.name}</span>
+                  <span class="city-state">{city.city.state}</span>
+                </div>
+
+                <div class="card-bar">
+                  <div class="bar-track">
+                    <div class="bar-fill" style={`width: ${barWidth}%`}>
+                      <span class="bar-value">{city.avgPm25?.toFixed(0)} µg/m³</span>
+                    </div>
+                  </div>
+                  <div class="bar-markers">
+                    <span class="marker who" style="left: calc(5 / 300 * 100%)">WHO</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-stats">
+                <div class="stat">
+                  <span class="stat-value" style={`color: ${verdict.color}`}>{whoRatio.toFixed(1)}×</span>
+                  <span class="stat-label">WHO</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-value">{city.metrics?.cigarettesPerDay.toFixed(1)}</span>
+                  <span class="stat-label">🚬/day</span>
+                </div>
+                <div class="stat verdict">
+                  <span class="verdict-badge" style={`background: ${verdict.color}`}>{verdict.text}</span>
+                </div>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+
+    <!-- Global Comparison -->
+    <section class="global-section">
+      <h2 class="section-title">We're Winning! 🏆</h2>
+      <p class="section-subtitle">A comparison with the so-called "developed" world</p>
+
+      <div class="global-comparison">
+        <div class="comparison-side losers">
+          <div class="side-header">
+            <span class="side-label">World's Cleanest</span>
+            <span class="side-emoji">😴</span>
+          </div>
           {cleanestCities.map((city, i) => (
-            <div class="race-entry loser">
-              <span class="race-rank">#{i + 1}</span>
-              <span class="race-city">
+            <div class="comparison-row">
+              <span class="row-rank">#{i + 1}</span>
+              <span class="row-city">
                 {city.name}
-                <span class="race-country">{city.country}</span>
+                <span class="row-country">{city.country}</span>
               </span>
-              <span class="race-pm25 clean">{city.pm25} µg/m³</span>
+              <span class="row-value clean">{city.pm25}</span>
+              <div class="row-bar">
+                <div class="bar-fill clean" style={`width: ${(city.pm25 / 300) * 100}%`}></div>
+              </div>
             </div>
           ))}
-          <p class="loser-note">Imagine having clean air and still being boring.</p>
+          <p class="side-note">Imagine having clean air and still being boring.</p>
         </div>
 
-        <div class="race-divider">
+        <div class="comparison-vs">
           <span class="vs-badge">VS</span>
         </div>
 
-        <div class="race-column winners">
-          <div class="column-header">Team India 🇮🇳</div>
-          <div class="race-entry winner highlight">
-            <span class="race-rank">🏆</span>
-            <span class="race-city">
-              {worstIndianCity?.city.name}
-              <span class="race-country">Reigning Champion</span>
-            </span>
-            <span class="race-pm25 dirty">{worstIndianCity?.avgPm25?.toFixed(1)} µg/m³</span>
+        <div class="comparison-side winners">
+          <div class="side-header">
+            <span class="side-label">Team India</span>
+            <span class="side-emoji">🇮🇳</span>
           </div>
-          <div class="race-entry winner">
-            <span class="race-rank">🥈</span>
-            <span class="race-city">
-              {bestIndianCity?.city.name}
-              <span class="race-country">Our "Cleanest" (Still Crushing It)</span>
+          <div class="comparison-row champion">
+            <span class="row-rank">🏆</span>
+            <span class="row-city">
+              {worstCity?.city.name}
+              <span class="row-country">Reigning Champion</span>
             </span>
-            <span class="race-pm25 dirty">{bestIndianCity?.avgPm25?.toFixed(1)} µg/m³</span>
+            <span class="row-value dirty">{worstCity?.avgPm25?.toFixed(0)}</span>
+            <div class="row-bar">
+              <div class="bar-fill dirty" style={`width: ${((worstCity?.avgPm25 || 0) / 300) * 100}%`}></div>
+            </div>
           </div>
-          <div class="race-stats">
-            <p>Our champion destroys their best by <strong>{((worstIndianCity?.avgPm25 || 0) / Math.max(...cleanestCities.map(c => c.pm25))).toFixed(1)}×</strong></p>
-            <p>Even our worst player beats them by <strong>{((bestIndianCity?.avgPm25 || 0) / Math.min(...cleanestCities.map(c => c.pm25))).toFixed(1)}×</strong></p>
+          <div class="comparison-row">
+            <span class="row-rank">🥈</span>
+            <span class="row-city">
+              {bestCity?.city.name}
+              <span class="row-country">Our "Cleanest"</span>
+            </span>
+            <span class="row-value dirty">{bestCity?.avgPm25?.toFixed(0)}</span>
+            <div class="row-bar">
+              <div class="bar-fill dirty" style={`width: ${((bestCity?.avgPm25 || 0) / 300) * 100}%`}></div>
+            </div>
+          </div>
+
+          <div class="domination-stats">
+            <div class="dom-stat">
+              <span class="dom-value">{((worstCity?.avgPm25 || 0) / Math.max(...cleanestCities.map(c => c.pm25))).toFixed(0)}×</span>
+              <span class="dom-label">Our #1 vs Their #1</span>
+            </div>
+            <div class="dom-stat">
+              <span class="dom-value">{((bestCity?.avgPm25 || 0) / Math.min(...cleanestCities.map(c => c.pm25))).toFixed(0)}×</span>
+              <span class="dom-label">Our worst vs Their best</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="race-brag">
-        <p class="brag-main">Developed nations? Please.</p>
-        <p class="brag-sub">They're playing checkers. We're playing 4D chess with our respiratory systems.</p>
+      <div class="victory-banner">
+        <p class="victory-text">🇮🇳 India #1 — Atmanirbhar in Pollution 🇮🇳</p>
       </div>
+    </section>
 
-      <p class="race-footer">
-        India #1 🇮🇳 — Atmanirbhar in Pollution
-      </p>
-    </div>
-
-    <!-- The Fine Print -->
-    <div class="fine-print">
-      <h3>About This Leaderboard</h3>
-      <ul>
-        <li><strong>Data source:</strong> World Air Quality Index (WAQI) / CPCB monitoring stations</li>
-        <li><strong>WHO limit:</strong> 5 µg/m³ annual mean PM2.5 (2021 guidelines)</li>
-        <li><strong>Cigarette equivalence:</strong> 22 µg/m³ = 1 cigarette/day (Berkeley Earth)</li>
-        <li><strong>Update frequency:</strong> Data refreshed on each page load</li>
-      </ul>
-      <p class="disclaimer">
-        This is not meant to make you feel better. It's meant to make you angry enough to demand change.
-      </p>
-    </div>
-
-    <!-- Share CTA -->
-    <div class="share-section">
+    <!-- Share Section -->
+    <section class="share-section">
       <h3>Share the truth</h3>
       <p>Because pretending the air is fine won't make it fine.</p>
       <div class="share-buttons">
         <a
-          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`${rankedCities[0]?.city.name} is India's most polluted city right now at ${rankedCities[0]?.avgPm25?.toFixed(1)} µg/m³ (${((rankedCities[0]?.avgPm25 || 0) / WHO.PM25_ANNUAL).toFixed(1)}× WHO limit). Check the Fucked Leaderboard:`)}&url=${encodeURIComponent('https://howfuckedarewe.in/leaderboard')}`}
+          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`${worstCity?.city.name} is India's most polluted city right now at ${worstCity?.avgPm25?.toFixed(0)} µg/m³ (${((worstCity?.avgPm25 || 0) / WHO.PM25_ANNUAL).toFixed(0)}× WHO limit). Check the Fucked Leaderboard:`)}&url=${encodeURIComponent('https://howfuckedarewe.in/leaderboard')}`}
           target="_blank"
           rel="noopener"
           class="share-btn twitter"
         >
-          Share on Twitter/X
+          Share on X
         </a>
         <button class="share-btn copy" id="copy-link">
           Copy Link
         </button>
       </div>
-    </div>
+    </section>
 
-    <!-- Another Quote -->
-    <blockquote class="satirical-quote bottom-quote">
-      <p class="quote-text">"Statistics are like bikinis. What they reveal is suggestive, but what they conceal is vital."</p>
-      <footer class="quote-author">— Aaron Levenstein <span class="quote-note">(actually said this)</span></footer>
-    </blockquote>
+    <!-- Fine Print -->
+    <footer class="fine-print">
+      <p class="data-note">
+        <strong>Data:</strong> WAQI / CPCB • <strong>WHO limit:</strong> 5 µg/m³ • <strong>1 cigarette:</strong> 22 µg/m³ (Berkeley Earth)
+      </p>
+      <p class="disclaimer">
+        This is not meant to make you feel better. It's meant to make you angry enough to demand change.
+      </p>
+    </footer>
   </div>
 </CityLayout>
 
@@ -281,19 +326,34 @@ const worstIndianCity = rankedCities[0];
     margin: 0 auto;
   }
 
+  /* Header */
   .page-header {
     text-align: center;
     margin-bottom: 2rem;
   }
 
+  .page-label {
+    display: inline-block;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    background: rgba(153, 27, 27, 0.08);
+    padding: 0.375rem 0.75rem;
+    border-radius: 100px;
+    margin-bottom: 1rem;
+  }
+
   .page-header h1 {
     font-size: 2.5rem;
     margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
   }
 
   .subtitle {
-    font-size: 1.125rem;
-    color: var(--text-muted);
+    font-size: 1.0625rem;
+    color: var(--text-secondary);
     margin-bottom: 0.25rem;
   }
 
@@ -303,134 +363,273 @@ const worstIndianCity = rankedCities[0];
     font-style: italic;
   }
 
-  /* Satirical Quote */
-  .satirical-quote {
-    background: #faf8f5;
-    border-left: 4px solid var(--accent);
-    padding: 1.5rem 2rem;
-    margin: 0 0 2rem 0;
-    border-radius: 0 8px 8px 0;
-  }
-
-  .quote-text {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.25rem;
-    font-style: italic;
-    color: var(--text);
-    margin: 0 0 0.75rem 0;
-  }
-
-  .quote-author {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-  }
-
-  .quote-note {
-    color: var(--text-light);
-    font-style: italic;
-  }
-
-  .bottom-quote {
-    margin-top: 2rem;
-  }
-
-  /* Summary Stats */
-  .summary-stats {
+  /* Live Stats Bar */
+  .live-stats {
     display: flex;
-    justify-content: center;
-    gap: 3rem;
-    padding: 1.5rem;
-    background: #1a1a1a;
-    border-radius: 8px;
-    margin-bottom: 2rem;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: var(--dark-bg);
+    border-radius: 12px;
+    margin-bottom: 3rem;
   }
 
-  .summary-stat {
-    text-align: center;
-  }
-
-  .stat-value {
-    display: block;
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 2rem;
-    color: white;
-    line-height: 1;
-  }
-
-  .stat-label {
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.6);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  /* Leaderboard */
-  .leaderboard {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 2rem;
-  }
-
-  .leaderboard-header {
-    display: grid;
-    grid-template-columns: 80px 1fr 100px 80px 80px 100px;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    background: #f5f5f5;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-  }
-
-  .leaderboard-row {
-    display: grid;
-    grid-template-columns: 80px 1fr 100px 80px 80px 100px;
-    gap: 0.5rem;
-    padding: 1rem;
-    border-bottom: 1px solid var(--border);
-    text-decoration: none;
-    color: var(--text);
-    transition: background 0.15s ease;
-  }
-
-  .leaderboard-row:hover {
-    background: #fafafa;
-  }
-
-  .leaderboard-row:last-child {
-    border-bottom: none;
-  }
-
-  .leaderboard-row.top3 {
-    background: rgba(196, 30, 30, 0.02);
-  }
-
-  .col-rank {
+  .live-indicator {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #22c55e;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
+  .pulse {
+    width: 8px;
+    height: 8px;
+    background: #22c55e;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+  }
+
+  .stat-pills {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .pill {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0.375rem 0.75rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 100px;
+  }
+
+  .pill.accent {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+  }
+
+  /* Section Titles */
+  .section-title {
+    font-size: 1.5rem;
+    text-align: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .section-subtitle {
+    text-align: center;
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+    font-size: 0.9375rem;
+  }
+
+  /* Podium Section */
+  .podium-section {
+    margin-bottom: 4rem;
+  }
+
+  .podium {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 1rem;
+    padding: 2rem 1rem;
+  }
+
+  .podium-place {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: var(--text);
+    transition: transform 0.2s ease;
+  }
+
+  .podium-place:hover {
+    transform: translateY(-8px);
+    text-decoration: none;
+  }
+
+  .crown {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .podium-rank {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    color: var(--text-light);
+    margin-bottom: 0.25rem;
+  }
+
+  .podium-city {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .gold .podium-city { font-size: 1.5rem; }
+
+  .podium-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .gold .podium-value { font-size: 3.5rem; color: var(--accent); }
+  .silver .podium-value { font-size: 2.5rem; }
+  .bronze .podium-value { font-size: 2rem; }
+
+  .podium-unit {
+    font-size: 0.6875rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .podium-who {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-top: 0.25rem;
+  }
+
+  .podium-cigs {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+    padding: 0.25rem 0.625rem;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 100px;
+  }
+
+  .podium-bar {
+    width: 60px;
+    height: 100px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+    margin-top: 1rem;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .gold .podium-bar { width: 80px; height: 140px; }
+  .silver .podium-bar { height: 110px; }
+  .bronze .podium-bar { height: 80px; }
+
+  .podium-bar .bar-fill {
+    width: 100%;
+    background: linear-gradient(to top, var(--accent), #ef4444);
+    border-radius: 4px 4px 0 0;
+    transition: height 1s ease;
+  }
+
+  .podium-base {
+    width: 100%;
+    padding: 1.5rem 2rem;
+    text-align: center;
+    border-radius: 8px 8px 0 0;
+    margin-top: 0.5rem;
+  }
+
+  .gold-base { background: linear-gradient(135deg, #ffd700, #ffb800); padding: 2rem 3rem; }
+  .silver-base { background: linear-gradient(135deg, #c0c0c0, #a8a8a8); }
+  .bronze-base { background: linear-gradient(135deg, #cd7f32, #b87333); }
+
   .medal {
+    font-size: 1.5rem;
+  }
+
+  .gold .medal { font-size: 2rem; }
+
+  /* Rankings List */
+  .rankings-section {
+    margin-bottom: 4rem;
+  }
+
+  .rankings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .ranking-card {
+    display: grid;
+    grid-template-columns: 60px 1fr auto;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--text);
+    transition: all 0.15s ease;
+  }
+
+  .ranking-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    text-decoration: none;
+  }
+
+  .ranking-card.top-three {
+    background: linear-gradient(135deg, rgba(153, 27, 27, 0.02), rgba(153, 27, 27, 0.05));
+    border-color: rgba(153, 27, 27, 0.15);
+  }
+
+  .rank-badge {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    border-radius: 50%;
     font-size: 1.25rem;
   }
 
-  .rank-num {
+  .rank-badge[data-rank="other"] {
+    font-size: 0.875rem;
     font-weight: 600;
-    color: var(--text-muted);
+    color: var(--text-secondary);
   }
 
-  .col-city {
+  .card-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .card-header {
     display: flex;
-    flex-direction: column;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
   }
 
   .city-name {
     font-weight: 600;
+    font-size: 1rem;
   }
 
   .city-state {
@@ -438,106 +637,285 @@ const worstIndianCity = rankedCities[0];
     color: var(--text-light);
   }
 
-  .city-dialogue {
-    font-size: 0.6875rem;
-    font-style: italic;
-    color: var(--text-light);
-    margin-top: 0.25rem;
-    line-height: 1.3;
-    opacity: 0.8;
+  .card-bar {
+    position: relative;
   }
 
-  .col-pm25 {
+  .bar-track {
+    height: 24px;
+    background: var(--bg);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .bar-track .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #fbbf24, #f59e0b, #ef4444, var(--accent));
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 0.5rem;
+    transition: width 0.8s ease;
+  }
+
+  .bar-value {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
+  }
+
+  .bar-markers {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .marker {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.5rem;
+    font-weight: 700;
+    color: var(--severity-good);
+    background: white;
+    padding: 0.125rem 0.25rem;
+    border-radius: 2px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+
+  .card-stats {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-value {
+    display: block;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 0.5625rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .verdict-badge {
+    display: inline-block;
+    padding: 0.375rem 0.625rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: white;
+    border-radius: 4px;
+  }
+
+  /* Global Comparison */
+  .global-section {
+    background: var(--dark-bg);
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    margin-bottom: 3rem;
+    color: white;
+  }
+
+  .global-section .section-title {
+    color: #ffd700;
+  }
+
+  .global-section .section-subtitle {
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .global-comparison {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  .comparison-side {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+
+  .side-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .side-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .side-emoji {
+    font-size: 1.25rem;
+  }
+
+  .comparison-row {
+    display: grid;
+    grid-template-columns: 30px 1fr 50px;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.5rem 0;
+  }
+
+  .comparison-row.champion {
+    background: rgba(255, 215, 0, 0.1);
+    border-radius: 6px;
+    padding: 0.625rem;
+    margin: -0.125rem;
+  }
+
+  .row-rank {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .row-city {
+    font-size: 0.875rem;
+    font-weight: 500;
     display: flex;
     flex-direction: column;
   }
 
-  .pm25-value {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.25rem;
+  .row-country {
+    font-size: 0.625rem;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  .row-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
     font-weight: 500;
+    text-align: right;
   }
 
-  .pm25-unit {
+  .row-value.clean { color: #22c55e; }
+  .row-value.dirty { color: #ef4444; }
+
+  .row-bar {
+    grid-column: 1 / -1;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 0.25rem;
+  }
+
+  .row-bar .bar-fill {
+    height: 100%;
+    border-radius: 2px;
+  }
+
+  .row-bar .bar-fill.clean { background: #22c55e; }
+  .row-bar .bar-fill.dirty { background: linear-gradient(90deg, #ef4444, var(--accent)); }
+
+  .side-note {
     font-size: 0.6875rem;
-    color: var(--text-light);
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.4);
+    text-align: center;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  .col-who {
-    font-weight: 600;
+  .comparison-vs {
     display: flex;
     align-items: center;
+    justify-content: center;
+    padding-top: 4rem;
   }
 
-  .col-who[data-severity="medium"] { color: #a3a322; }
-  .col-who[data-severity="high"] { color: #c45a20; }
-  .col-who[data-severity="extreme"] { color: #b91c1c; }
-
-  .col-cigs {
-    display: flex;
-    align-items: center;
-    color: var(--text-muted);
-  }
-
-  .col-verdict {
-    display: flex;
-    align-items: center;
+  .vs-badge {
+    background: #ffd700;
+    color: var(--dark-bg);
     font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
+    font-weight: 800;
+    padding: 0.625rem 0.875rem;
+    border-radius: 6px;
   }
 
-  .col-verdict[data-verdict="surviving"] { color: #6b8e6b; }
-  .col-verdict[data-verdict="coping"] { color: #a3a322; }
-  .col-verdict[data-verdict="fucked"] { color: #c45a20; }
-  .col-verdict[data-verdict="very-fucked"] { color: #b91c1c; }
-  .col-verdict[data-verdict="lol"] { color: #7f1d1d; }
-
-  /* Fine Print */
-  .fine-print {
-    background: #fafafa;
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
+  .domination-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  .fine-print h3 {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.875rem;
+  .dom-stat {
+    text-align: center;
+  }
+
+  .dom-value {
+    display: block;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
     font-weight: 600;
+    color: #ffd700;
+  }
+
+  .dom-label {
+    font-size: 0.5625rem;
+    color: rgba(255, 255, 255, 0.5);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--text-muted);
-    margin-bottom: 1rem;
   }
 
-  .fine-print ul {
-    margin: 0 0 1rem 1.5rem;
-    padding: 0;
-    font-size: 0.875rem;
-    color: var(--text-muted);
+  .victory-banner {
+    margin-top: 2rem;
+    padding: 1rem;
+    background: rgba(255, 215, 0, 0.1);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    border-radius: 8px;
+    text-align: center;
   }
 
-  .fine-print li {
-    margin-bottom: 0.5rem;
-  }
-
-  .disclaimer {
-    font-size: 0.875rem;
-    font-style: italic;
-    color: var(--text);
+  .victory-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #ffd700;
     margin: 0;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border);
+    letter-spacing: 0.02em;
   }
 
   /* Share Section */
   .share-section {
     text-align: center;
-    padding: 2rem;
-    background: #1a1a1a;
-    border-radius: 8px;
-    color: white;
+    padding: 2.5rem 2rem;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 2rem;
   }
 
   .share-section h3 {
@@ -546,7 +924,7 @@ const worstIndianCity = rankedCities[0];
   }
 
   .share-section p {
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-secondary);
     margin-bottom: 1.5rem;
   }
 
@@ -557,259 +935,127 @@ const worstIndianCity = rankedCities[0];
   }
 
   .share-btn {
-    padding: 0.75rem 1.5rem;
-    border-radius: 6px;
+    padding: 0.875rem 1.75rem;
+    border-radius: 8px;
     font-weight: 600;
     font-size: 0.875rem;
     text-decoration: none;
     cursor: pointer;
     border: none;
+    transition: all 0.15s ease;
   }
 
   .share-btn.twitter {
-    background: #1da1f2;
+    background: #0a0a0a;
     color: white;
   }
 
   .share-btn.copy {
     background: white;
-    color: #1a1a1a;
+    color: var(--text);
+    border: 1px solid var(--border);
   }
 
   .share-btn:hover {
-    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 
-  /* Global Race - We're Winning */
-  .global-race {
-    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-    border-radius: 12px;
-    padding: 2rem;
-    margin-bottom: 2rem;
-    color: white;
-  }
-
-  .race-header {
+  /* Fine Print */
+  .fine-print {
     text-align: center;
-    margin-bottom: 1.5rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
   }
 
-  .race-header h3 {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.75rem;
-    margin-bottom: 0.25rem;
-    color: #ffd700;
-  }
-
-  .race-subtitle {
-    font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.6);
-  }
-
-  .race-comparison {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    gap: 1.5rem;
-    align-items: start;
-  }
-
-  .race-column {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    padding: 1rem;
-  }
-
-  .column-header {
+  .data-note {
     font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--text-light);
     margin-bottom: 0.75rem;
-    text-align: center;
   }
 
-  .race-entry {
-    display: grid;
-    grid-template-columns: 30px 1fr auto;
-    gap: 0.5rem;
-    align-items: center;
-    padding: 0.5rem;
-    border-radius: 4px;
-    margin-bottom: 0.25rem;
-  }
-
-  .race-entry.loser {
-    background: rgba(107, 142, 107, 0.1);
-  }
-
-  .race-entry.winner {
-    background: rgba(185, 28, 28, 0.2);
-  }
-
-  .race-entry.winner.highlight {
-    background: rgba(185, 28, 28, 0.3);
-    border: 1px solid rgba(185, 28, 28, 0.5);
-  }
-
-  .race-rank {
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.5);
-  }
-
-  .race-city {
-    font-size: 0.875rem;
-    font-weight: 500;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .race-country {
-    font-size: 0.6875rem;
-    font-weight: 400;
-    color: rgba(255, 255, 255, 0.5);
-  }
-
-  .race-pm25 {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 0.875rem;
-    font-weight: 500;
-  }
-
-  .race-pm25.clean {
-    color: #6b8e6b;
-  }
-
-  .race-pm25.dirty {
-    color: #ef4444;
-  }
-
-  .race-divider {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .vs-badge {
-    background: #ffd700;
-    color: #1a1a1a;
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 0.5rem 0.75rem;
-    border-radius: 4px;
-  }
-
-  .race-stats {
-    margin-top: 1rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.6);
-  }
-
-  .race-stats p {
-    margin: 0.25rem 0;
-  }
-
-  .race-stats strong {
-    color: #ffd700;
-  }
-
-  .loser-note {
-    font-size: 0.6875rem;
+  .disclaimer {
+    font-size: 0.8125rem;
     font-style: italic;
-    color: rgba(255, 255, 255, 0.4);
-    text-align: center;
-    margin-top: 0.75rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
   }
 
-  .race-brag {
-    text-align: center;
-    margin-top: 1.5rem;
-    padding: 1rem;
-    background: rgba(255, 215, 0, 0.1);
-    border-radius: 8px;
-    border: 1px solid rgba(255, 215, 0, 0.2);
-  }
-
-  .brag-main {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.25rem;
-    font-weight: 500;
-    color: #ffd700;
-    margin: 0 0 0.25rem 0;
-  }
-
-  .brag-sub {
-    font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.7);
-    margin: 0;
-  }
-
-  .race-footer {
-    text-align: center;
-    margin-top: 1rem;
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #ffd700;
-    letter-spacing: 0.02em;
-  }
-
+  /* Responsive */
   @media (max-width: 800px) {
-    .leaderboard-header,
-    .leaderboard-row {
-      grid-template-columns: 60px 1fr 80px 60px;
+    .live-stats {
+      flex-direction: column;
+      gap: 1rem;
+      text-align: center;
     }
 
-    .col-cigs,
-    .col-verdict,
-    .leaderboard-header .col-cigs,
-    .leaderboard-header .col-verdict {
-      display: none;
+    .stat-pills {
+      flex-wrap: wrap;
+      justify-content: center;
     }
 
-    .summary-stats {
+    .podium {
+      gap: 0.5rem;
+    }
+
+    .gold .podium-value { font-size: 2.5rem; }
+    .silver .podium-value { font-size: 2rem; }
+    .bronze .podium-value { font-size: 1.75rem; }
+
+    .gold .podium-bar { width: 60px; height: 100px; }
+    .silver .podium-bar { height: 80px; }
+    .bronze .podium-bar { height: 60px; }
+
+    .gold-base { padding: 1.25rem 2rem; }
+    .silver-base, .bronze-base { padding: 1rem 1.5rem; }
+
+    .ranking-card {
+      grid-template-columns: 48px 1fr;
+      gap: 0.75rem;
+    }
+
+    .card-stats {
+      grid-column: 1 / -1;
+      justify-content: flex-start;
       gap: 1.5rem;
+      margin-top: 0.5rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
     }
 
-    .stat-value {
-      font-size: 1.5rem;
-    }
-
-    .race-comparison {
+    .global-comparison {
       grid-template-columns: 1fr;
       gap: 1rem;
     }
 
-    .race-divider {
+    .comparison-vs {
       padding: 0.5rem 0;
-    }
-
-    .city-dialogue {
-      display: none;
     }
   }
 
   @media (max-width: 500px) {
     .page-header h1 {
-      font-size: 2rem;
+      font-size: 1.75rem;
     }
 
-    .leaderboard-header,
-    .leaderboard-row {
-      grid-template-columns: 50px 1fr 70px;
+    .podium-city {
+      font-size: 1rem;
     }
 
-    .col-who,
-    .leaderboard-header .col-who {
-      display: none;
+    .gold .podium-city { font-size: 1.125rem; }
+
+    .podium-value { font-size: 1.5rem !important; }
+    .gold .podium-value { font-size: 2rem !important; }
+
+    .card-stats {
+      flex-wrap: wrap;
     }
 
     .share-buttons {
       flex-direction: column;
+    }
+
+    .share-btn {
+      width: 100%;
     }
   }
 </style>

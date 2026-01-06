@@ -9,14 +9,103 @@ import CityLayout from '../layouts/CityLayout.astro';
 import DeathCounter from '../components/DeathCounter.astro';
 import CityRankingChart from '../components/CityRankingChart.astro';
 import PopulationExposure from '../components/PopulationExposure.astro';
+import NationalHistoricalTrends from '../components/NationalHistoricalTrends.astro';
 
 import { ALL_CITIES, ALL_INDIA, CITIES_BY_POLLUTION } from '../lib/cities';
 import { fetchAllCitiesData } from '../lib/waqi';
 import { calculateAllMetrics, calculateAveragePm25 } from '../lib/calculations';
+import {
+  getNationalDailyAggregates,
+  getNationalStats,
+  getConsecutiveDaysAboveWHO,
+  getYearOverYearComparison,
+  getLastIngestionTime,
+  hasEnoughHistoricalData,
+} from '../lib/db-national';
 import type { CitySnapshot } from '../lib/types';
+import type { NationalDailyRow, NationalStats, YearOverYearData } from '../lib/db-national';
 
 // Fetch data for all cities in parallel
 const citiesData: CitySnapshot[] = await fetchAllCitiesData(ALL_CITIES);
+
+// Fetch historical national data from D1 (with graceful fallback)
+let nationalDailyData: NationalDailyRow[] = [];
+let nationalStats: NationalStats | null = null;
+let consecutiveDaysAboveWHO = 0;
+let yearOverYear: YearOverYearData | null = null;
+let lastIngestionTime: string | null = null;
+let hasHistoricalData = false;
+
+// Only try D1 in production (skip in dev to avoid table-not-found errors)
+if (!import.meta.env.DEV) {
+  try {
+    const db = Astro.locals.runtime?.env?.DB;
+    if (db && await hasEnoughHistoricalData(db, 7)) {
+      hasHistoricalData = true;
+      [nationalDailyData, nationalStats, consecutiveDaysAboveWHO, yearOverYear, lastIngestionTime] = await Promise.all([
+        getNationalDailyAggregates(db, 30),
+        getNationalStats(db, 30),
+        getConsecutiveDaysAboveWHO(db),
+        getYearOverYearComparison(db),
+        getLastIngestionTime(db),
+      ]);
+    }
+  } catch (e) {
+    // D1 not available or no data yet - that's fine, we just won't show historical trends
+    console.log('Historical data not available:', e);
+  }
+}
+
+// DEV MODE: Generate mock data when D1 isn't available (for local preview)
+// Remove this block once real data pipeline is running
+if (!hasHistoricalData && import.meta.env.DEV) {
+  hasHistoricalData = true;
+  const now = new Date();
+  nationalDailyData = Array.from({ length: 30 }, (_, i) => {
+    const date = new Date(now);
+    date.setDate(date.getDate() - (29 - i));
+    // Simulate realistic Indian winter PM2.5 (40-120 range with some variance)
+    const basePm25 = 60 + Math.sin(i / 5) * 25 + (Math.random() - 0.5) * 30;
+    return {
+      id: i + 1,
+      date: date.toISOString().split('T')[0],
+      avg_pm25: basePm25,
+      weighted_avg_pm25: basePm25 + Math.random() * 10,
+      min_pm25: basePm25 - 20,
+      max_pm25: basePm25 + 30,
+      cities_reporting: 10,
+      total_population_covered: 150_000_000,
+      cigarettes_equivalent: basePm25 / 22,
+      years_lost_per_year: Math.max(0, (basePm25 - 5) / 10) * 0.98,
+      who_violation_factor: basePm25 / 5,
+      worst_city_id: 1,
+      best_city_id: 4,
+    };
+  });
+
+  const avgPm25 = nationalDailyData.reduce((sum, d) => sum + (d.weighted_avg_pm25 || 0), 0) / nationalDailyData.length;
+  const worstDay = nationalDailyData.reduce((max, d) =>
+    (d.weighted_avg_pm25 || 0) > (max.weighted_avg_pm25 || 0) ? d : max, nationalDailyData[0]);
+
+  nationalStats = {
+    avgPm25,
+    worstDay: { date: worstDay.date, pm25: worstDay.weighted_avg_pm25 || 0 },
+    bestDay: { date: nationalDailyData[0].date, pm25: nationalDailyData[0].weighted_avg_pm25 || 0 },
+    daysAboveWho: 30, // All days above WHO limit of 5
+    totalDays: 30,
+    trend: 'worsening',
+    percentChange: 12.5,
+  };
+
+  consecutiveDaysAboveWHO = 47; // Mock streak
+  yearOverYear = {
+    thisYearAvg: avgPm25,
+    lastYearAvg: avgPm25 * 1.08,
+    percentChange: -7.4,
+    monthlyData: { thisYear: [], lastYear: [] },
+  };
+  lastIngestionTime = new Date().toISOString();
+}
 
 // Calculate national average (from cities with data)
 const cityPm25Values = citiesData
@@ -32,21 +121,36 @@ const sortedByPm25 = [...citiesWithData].sort((a, b) => (b.avgPm25 || 0) - (a.av
 const worstCity = sortedByPm25[0];
 const bestCity = sortedByPm25[sortedByPm25.length - 1];
 
-// Sardonic wisdom - played straight
-const sardonicQuotes = [
+// Ministry of Denial quotes - rotate randomly
+const ministryQuotes = [
   {
-    text: "Clean air is a state of mind.",
-    author: "Aristotle"
+    text: "The situation is being monitored. The monitoring is proceeding as expected.",
+    note: "Status Update, Weekly Brief"
   },
   {
-    text: "You want pure air? Go to Papua New Guinea or Burkina Faso.",
-    author: "Local Neta"
+    text: "International standards were not developed keeping Indian conditions in mind.",
+    note: "Official Position Paper"
   },
   {
-    text: "What makes you wheeze and cough as if you're dying, makes you stronger.",
-    author: "Abraham Lincoln"
+    text: "A committee has been formed to assess the findings of the previous committee.",
+    note: "Press Release"
+  },
+  {
+    text: "Residents are advised to remain calm and breathe normally.",
+    note: "Public Advisory"
+  },
+  {
+    text: "Data from unofficial sources should not be relied upon.",
+    note: "Media Guidelines"
+  },
+  {
+    text: "Comparing our air quality to international standards is unfair given our unique developmental context.",
+    note: "Standard Response Template, Form 12-A"
   },
 ];
+
+// Pick a random quote
+const randomQuote = ministryQuotes[Math.floor(Math.random() * ministryQuotes.length)];
 
 // Page metadata
 const title = "How Fucked Are We — India Air Quality";
@@ -66,28 +170,40 @@ function getColorForPm25(pm25: number | null): string {
 <CityLayout title={title} description={description}>
   <!-- Hero Section -->
   <header class="india-hero">
-    <h1>{ALL_INDIA.name}</h1>
-    <p class="tagline">{ALL_INDIA.tagline}</p>
+    <div class="hero-hook">
+      <span class="hook-number">{nationalMetrics ? nationalMetrics.whoViolation.toFixed(0) : '—'}×</span>
+      <span class="hook-text">above what the WHO says is safe to breathe</span>
+    </div>
+
+    <h1 class="hero-title">
+      Right now, in India
+    </h1>
 
     {nationalMetrics && nationalAvgPm25 && (
-      <div class="national-stats">
-        <div class="stat primary">
-          <span class="stat-value" style={`color: ${nationalMetrics.severity.color}`}>
-            {nationalAvgPm25.toFixed(1)}
-          </span>
-          <span class="stat-label">Avg PM2.5 µg/m³</span>
+      <div class="hero-stat-main">
+        <span class="main-number" style={`color: ${nationalMetrics.severity.color}`}>
+          {nationalAvgPm25.toFixed(0)}
+        </span>
+        <span class="main-unit">µg/m³ PM2.5</span>
+        <span class="main-context">Every breath. Every person. {(ALL_INDIA.population / 1_000_000_000).toFixed(1)} billion lungs.</span>
+      </div>
+    )}
+
+    <p class="tagline">{ALL_INDIA.tagline}</p>
+
+    {nationalMetrics && (
+      <div class="hero-stats-row">
+        <div class="stat-pill">
+          <span class="pill-value">{nationalMetrics.cigarettesPerDay.toFixed(1)}</span>
+          <span class="pill-label">cigarettes/day equivalent</span>
         </div>
-        <div class="stat">
-          <span class="stat-value">{nationalMetrics.whoViolation.toFixed(1)}x</span>
-          <span class="stat-label">WHO limit</span>
+        <div class="stat-pill">
+          <span class="pill-value">{(nationalMetrics.dailyLifeLostMinutes / 60).toFixed(1)}h</span>
+          <span class="pill-label">life lost per person today</span>
         </div>
-        <div class="stat">
-          <span class="stat-value">{nationalMetrics.cigarettesPerDay.toFixed(1)}</span>
-          <span class="stat-label">cigs/day avg</span>
-        </div>
-        <div class="stat">
-          <span class="stat-value">{citiesWithData.length}/{ALL_CITIES.length}</span>
-          <span class="stat-label">cities reporting</span>
+        <div class="stat-pill">
+          <span class="pill-value">{citiesWithData.length}/{ALL_CITIES.length}</span>
+          <span class="pill-label">cities reporting</span>
         </div>
       </div>
     )}
@@ -96,7 +212,6 @@ function getColorForPm25(pm25: number | null): string {
   <!-- Data Source Disclosure -->
   <div class="data-source">
     <div class="source-badge">
-      <span class="source-icon">📡</span>
       <div class="source-text">
         <strong>Live data from <a href="https://aqicn.org/map/india/" target="_blank" rel="noopener">World Air Quality Index</a></strong>
         <span class="source-note">Updated hourly from CPCB monitoring stations</span>
@@ -109,6 +224,17 @@ function getColorForPm25(pm25: number | null): string {
 
   <!-- Population at Risk -->
   <PopulationExposure cities={citiesData} />
+
+  <!-- Historical Trends (only shows if we have enough D1 data) -->
+  {hasHistoricalData && nationalStats && (
+    <NationalHistoricalTrends
+      dailyData={nationalDailyData}
+      stats={nationalStats}
+      consecutiveDaysAboveWHO={consecutiveDaysAboveWHO}
+      yearOverYear={yearOverYear}
+      lastIngestionTime={lastIngestionTime}
+    />
+  )}
 
   <!-- What is AQI Section -->
   <section class="aqi-explainer">
@@ -182,20 +308,6 @@ function getColorForPm25(pm25: number | null): string {
           <li><strong>Vote angry.</strong> Stubble burning didn't vote itself into policy.</li>
         </ul>
       </div>
-    </div>
-  </section>
-
-  <!-- Sardonic Wisdom -->
-  <section class="wisdom-section">
-    <h2>Words of Wisdom</h2>
-    <p class="wisdom-intro">Inspirational quotes to help you cope</p>
-    <div class="wisdom-quotes">
-      {sardonicQuotes.map((quote) => (
-        <blockquote class="wisdom-quote">
-          <p class="quote-text">"{quote.text}"</p>
-          <footer class="quote-attribution">— {quote.author}</footer>
-        </blockquote>
-      ))}
     </div>
   </section>
 
@@ -305,8 +417,8 @@ function getColorForPm25(pm25: number | null): string {
     <div class="stamp-content">
       <div class="stamp-header">Ministry of Denial — All India Office</div>
       <div class="stamp-body">
-        <p>"Comparing our air quality to international standards is unfair given our unique developmental context."</p>
-        <p class="stamp-note">— Standard Response Template, Form 12-A</p>
+        <p>"{randomQuote.text}"</p>
+        <p class="stamp-note">— {randomQuote.note}</p>
       </div>
     </div>
   </aside>
@@ -315,80 +427,134 @@ function getColorForPm25(pm25: number | null): string {
 <style>
   .india-hero {
     text-align: center;
-    margin-bottom: 2rem;
-    padding-bottom: 2rem;
+    margin-bottom: 2.5rem;
+    padding-bottom: 2.5rem;
     border-bottom: 1px solid var(--border);
   }
 
-  .india-hero h1 {
-    font-size: 3rem;
-    margin-bottom: 0.5rem;
+  .hero-hook {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    background: var(--dark-bg);
+    color: white;
+    padding: 0.625rem 1.25rem;
+    border-radius: 4px;
+    margin-bottom: 1.5rem;
+  }
+
+  .hook-number {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 2rem;
+    font-weight: 600;
+    color: #ef4444;
+    line-height: 1;
+  }
+
+  .hook-text {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .hero-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.01em;
+  }
+
+  .hero-stat-main {
+    margin-bottom: 1rem;
+  }
+
+  .main-number {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(5rem, 18vw, 9rem);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    display: block;
+  }
+
+  .main-unit {
+    font-size: 1rem;
+    color: var(--text-light);
+    display: block;
+    margin-top: 0.25rem;
+  }
+
+  .main-context {
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+    display: block;
+    margin-top: 0.75rem;
+    font-style: italic;
   }
 
   .tagline {
-    font-size: 1.125rem;
+    font-size: 1rem;
     color: var(--text-muted);
-    margin-bottom: 2rem;
-    max-width: 600px;
+    margin-bottom: 1.5rem;
+    max-width: 500px;
     margin-left: auto;
     margin-right: auto;
   }
 
-  .national-stats {
+  .hero-stats-row {
     display: flex;
     justify-content: center;
-    gap: 2.5rem;
+    gap: 1rem;
     flex-wrap: wrap;
   }
 
-  .stat {
+  .stat-pill {
     display: flex;
     flex-direction: column;
     align-items: center;
+    background: var(--bg-paper);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.75rem 1.25rem;
+    min-width: 120px;
   }
 
-  .stat.primary .stat-value {
-    font-size: 3rem;
-  }
-
-  .stat-value {
+  .pill-value {
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     font-weight: 500;
+    color: var(--text);
     line-height: 1;
   }
 
-  .stat-label {
-    font-size: 0.75rem;
+  .pill-label {
+    font-size: 0.6875rem;
     color: var(--text-light);
     text-transform: uppercase;
+    letter-spacing: 0.02em;
     margin-top: 0.25rem;
+    text-align: center;
   }
 
   .data-source {
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
+    text-align: center;
   }
 
   .source-badge {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    background: rgba(107, 142, 107, 0.08);
-    border: 1px solid rgba(107, 142, 107, 0.2);
+    display: inline-flex;
+    padding: 0.625rem 1rem;
+    background: var(--bg-paper);
+    border: 1px solid var(--border);
     border-radius: 6px;
-    max-width: 400px;
-    margin: 0 auto;
-  }
-
-  .source-icon {
-    font-size: 1.25rem;
   }
 
   .source-text {
     display: flex;
     flex-direction: column;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
+    text-align: center;
   }
 
   .source-text a {
@@ -396,8 +562,9 @@ function getColorForPm25(pm25: number | null): string {
   }
 
   .source-note {
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     color: var(--text-light);
+    margin-top: 0.125rem;
   }
 
   .extremes-banner {
@@ -612,37 +779,42 @@ function getColorForPm25(pm25: number | null): string {
   }
 
   .ministry-stamp {
-    padding: 1.5rem;
-    background: rgba(0, 0, 0, 0.02);
-    border: 1px dashed rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
+    padding: 2rem;
+    background: var(--bg-paper);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--text-light);
+    border-radius: 0 8px 8px 0;
+    margin-top: 3rem;
   }
 
   .stamp-content {
-    max-width: 500px;
+    max-width: 560px;
     margin: 0 auto;
     text-align: center;
   }
 
   .stamp-header {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 0.875rem;
+    font-size: 0.625rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.15em;
     color: var(--text-light);
-    margin-bottom: 0.75rem;
+    margin-bottom: 1rem;
   }
 
   .stamp-body p {
-    font-size: 0.9375rem;
-    color: var(--text-muted);
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1rem;
+    color: var(--text-secondary);
     font-style: italic;
+    line-height: 1.6;
   }
 
   .stamp-note {
-    font-size: 0.75rem !important;
-    margin-top: 0.5rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.6875rem !important;
+    font-style: normal !important;
+    margin-top: 0.75rem;
     color: var(--text-light) !important;
   }
 
@@ -707,8 +879,8 @@ function getColorForPm25(pm25: number | null): string {
 
   .scale-item {
     display: grid;
-    grid-template-columns: 60px 100px 1fr;
-    gap: 0.75rem;
+    grid-template-columns: 45px 90px 1fr;
+    gap: 0.5rem;
     align-items: center;
     padding: 0.5rem;
     border-radius: 4px;
@@ -769,75 +941,44 @@ function getColorForPm25(pm25: number | null): string {
     color: var(--text);
   }
 
-  /* Wisdom Section */
-  .wisdom-section {
-    margin-bottom: 2.5rem;
-    text-align: center;
-  }
-
-  .wisdom-section h2 {
-    font-size: 1.5rem;
-    margin-bottom: 0.25rem;
-  }
-
-  .wisdom-intro {
-    font-size: 0.875rem;
-    color: var(--text-light);
-    font-style: italic;
-    margin-bottom: 1.5rem;
-  }
-
-  .wisdom-quotes {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-  }
-
-  .wisdom-quote {
-    background: #faf8f5;
-    border-left: 3px solid var(--accent);
-    padding: 1.25rem;
-    margin: 0;
-    text-align: left;
-    border-radius: 0 6px 6px 0;
-  }
-
-  .quote-text {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1rem;
-    font-style: italic;
-    color: var(--text);
-    margin: 0 0 0.75rem 0;
-    line-height: 1.5;
-  }
-
-  .quote-attribution {
-    font-size: 0.8125rem;
-    color: var(--text-muted);
-  }
-
-  .quote-note {
-    color: var(--text-light);
-    font-style: italic;
-  }
-
-  @media (max-width: 800px) {
-    .wisdom-quotes {
-      grid-template-columns: 1fr;
-    }
-  }
-
   @media (max-width: 600px) {
-    .india-hero h1 {
-      font-size: 2rem;
+    .hero-hook {
+      flex-direction: column;
+      gap: 0.25rem;
+      padding: 0.75rem 1rem;
     }
 
-    .stat.primary .stat-value {
+    .hook-number {
       font-size: 2.5rem;
     }
 
-    .national-stats {
-      gap: 1.5rem;
+    .hook-text {
+      font-size: 0.75rem;
+    }
+
+    .hero-title {
+      font-size: 1.25rem;
+    }
+
+    .main-context {
+      font-size: 0.8125rem;
+    }
+
+    .hero-stats-row {
+      gap: 0.5rem;
+    }
+
+    .stat-pill {
+      padding: 0.5rem 0.75rem;
+      min-width: 100px;
+    }
+
+    .pill-value {
+      font-size: 1.25rem;
+    }
+
+    .pill-label {
+      font-size: 0.625rem;
     }
 
     .explainer-grid {
@@ -845,8 +986,16 @@ function getColorForPm25(pm25: number | null): string {
     }
 
     .scale-item {
-      grid-template-columns: 50px 80px 1fr;
+      grid-template-columns: 40px 1fr;
       font-size: 0.75rem;
+    }
+
+    .scale-label {
+      display: none;
+    }
+
+    .scale-note {
+      font-size: 0.6875rem;
     }
 
     .extremes-banner {

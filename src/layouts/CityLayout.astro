@@ -19,27 +19,94 @@ const { title, description, currentSlug } = Astro.props;
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="description" content={description} />
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#991b1b" />
+    <meta name="color-scheme" content="light" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="HFAW" />
+    <meta name="application-name" content="How Fucked Are We" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://api.waqi.info" />
+    <link rel="dns-prefetch" href="https://api.waqi.info" />
 
     <!-- Open Graph -->
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="How Fucked Are We" />
+    <meta property="og:url" content="https://howfuckedarewe.in" />
+    <meta property="og:locale" content="en_IN" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
+    <meta name="twitter:site" content="@howfuckedarewe" />
 
     <title>{title}</title>
 
-    <!-- Fonts -->
+    <!-- Fonts - Optimized with display=swap and subset -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@400;500;600&display=swap&subset=latin"
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    </noscript>
+
+    <!-- Critical font fallback -->
+    <style>
+      @font-face {
+        font-family: 'Playfair Display Fallback';
+        src: local('Georgia'), local('Times New Roman');
+        font-weight: 400 600;
+        font-display: swap;
+        ascent-override: 97%;
+        descent-override: 27%;
+        line-gap-override: 0%;
+        size-adjust: 105%;
+      }
+      @font-face {
+        font-family: 'Inter Fallback';
+        src: local('Helvetica Neue'), local('Arial');
+        font-weight: 400 600;
+        font-display: swap;
+        ascent-override: 90%;
+        descent-override: 22%;
+        line-gap-override: 0%;
+        size-adjust: 107%;
+      }
+    </style>
+
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => {
+              // Check for updates periodically
+              setInterval(() => reg.update(), 60 * 60 * 1000);
+            })
+            .catch(err => console.warn('SW registration failed:', err));
+        });
+      }
+    </script>
   </head>
 
   <body>
@@ -56,7 +123,9 @@ const { title, description, currentSlug } = Astro.props;
           <span class="divider">|</span>
           <a href="/methodology">Methodology</a>
           <span class="divider">|</span>
-          <a href="https://github.com/anthropics/howfuckedarewe" target="_blank" rel="noopener">GitHub</a>
+          <a href="/status">System Status</a>
+          <span class="divider">|</span>
+          <a href="https://github.com/bebhuvan/howfuckedarewe" target="_blank" rel="noopener">GitHub</a>
         </div>
         <p class="footer-attribution">
           Data from <a href="https://aqicn.org/" target="_blank" rel="noopener">World Air Quality Index</a> (WAQI)
@@ -71,13 +140,25 @@ const { title, description, currentSlug } = Astro.props;
 
 <style is:global>
   :root {
-    --bg: #fafafa;
-    --text: #1a1a1a;
-    --text-muted: #666;
-    --text-light: #999;
-    --accent: #b91c1c;
-    --border: rgba(0, 0, 0, 0.08);
-    --card-bg: white;
+    /* Refined color palette */
+    --bg: #fafaf9;
+    --bg-paper: #ffffff;
+    --text: #0a0a0a;
+    --text-secondary: #525252;
+    --text-muted: #525252;
+    --text-light: #737373;
+    --accent: #991b1b;
+    --accent-bright: #dc2626;
+    --border: #e5e5e5;
+    --card-bg: #ffffff;
+    --dark-bg: #0a0a0a;
+
+    /* Severity colors */
+    --severity-good: #166534;
+    --severity-moderate: #854d0e;
+    --severity-bad: #c2410c;
+    --severity-danger: #991b1b;
+    --severity-extreme: #7f1d1d;
   }
 
   * {
@@ -87,14 +168,20 @@ const { title, description, currentSlug } = Astro.props;
   }
 
   html {
-    font-size: 16px;
+    font-size: 14px;
+  }
+
+  @media (min-width: 600px) {
+    html {
+      font-size: 15px;
+    }
   }
 
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    line-height: 1.6;
+    font-family: 'Inter', 'Inter Fallback', -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1.65;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     min-height: 100vh;
@@ -104,16 +191,23 @@ const { title, description, currentSlug } = Astro.props;
 
   main {
     flex: 1;
-    max-width: 900px;
+    max-width: 960px;
     margin: 0 auto;
     padding: 2rem 1.5rem;
     width: 100%;
   }
 
+  @media (min-width: 600px) {
+    main {
+      padding: 3rem 2rem;
+    }
+  }
+
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: 'Playfair Display', 'Playfair Display Fallback', Georgia, serif;
     font-weight: 500;
-    line-height: 1.3;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
   }
 
   a {
@@ -123,6 +217,21 @@ const { title, description, currentSlug } = Astro.props;
 
   a:hover {
     text-decoration: underline;
+  }
+
+  /* Typography utilities */
+  .label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-light);
+  }
+
+  .number-display {
+    font-family: 'Playfair Display', 'Playfair Display Fallback', Georgia, serif;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
   }
 
   /* Utility classes */
@@ -141,25 +250,26 @@ const { title, description, currentSlug } = Astro.props;
 
 <style>
   footer {
-    background: #1a1a1a;
-    color: rgba(255, 255, 255, 0.7);
-    padding: 2rem 1.5rem;
+    background: var(--dark-bg);
+    color: rgba(255, 255, 255, 0.6);
+    padding: 3rem 1.5rem;
     margin-top: auto;
   }
 
   .footer-content {
-    max-width: 900px;
+    max-width: 960px;
     margin: 0 auto;
     text-align: center;
   }
 
   .footer-links {
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
   }
 
   .footer-links a {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.8125rem;
+    font-weight: 500;
   }
 
   .footer-links a:hover {
@@ -167,21 +277,22 @@ const { title, description, currentSlug } = Astro.props;
   }
 
   .divider {
-    margin: 0 0.75rem;
-    color: rgba(255, 255, 255, 0.3);
+    margin: 0 1rem;
+    color: rgba(255, 255, 255, 0.2);
   }
 
   .footer-attribution {
-    font-size: 0.8125rem;
-    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+    margin-bottom: 0.75rem;
   }
 
   .footer-attribution a {
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(255, 255, 255, 0.85);
   }
 
   .footer-disclaimer {
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.6875rem;
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 0.02em;
   }
 </style>

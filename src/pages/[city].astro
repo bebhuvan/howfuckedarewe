@@ -8,6 +8,8 @@ import CityLayout from '../layouts/CityLayout.astro';
 import CigaretteHero from '../components/CigaretteHero.astro';
 import DamageCard from '../components/DamageCard.astro';
 import FuckedMeter from '../components/FuckedMeter.astro';
+import HardStats from '../components/HardStats.astro';
+import RiskContext from '../components/RiskContext.astro';
 import LiveDeathCounter from '../components/LiveDeathCounter.astro';
 import LivePollutantCocktail from '../components/LivePollutantCocktail.astro';
 import LungDamage from '../components/LungDamage.astro';
@@ -23,22 +25,20 @@ import { fetchCityData } from '../lib/waqi';
 import { estimateAnnualDeaths } from '../lib/calculations';
 import type { CityConfig, CitySnapshot } from '../lib/types';
 
-// Prerender all city pages at build time for faster loads
-export const prerender = true;
+// SSR: Fetch live data on each request (no prerendering)
+// This ensures data is always fresh from WAQI API
+export const prerender = false;
 
-// Generate static paths for all cities
-export function getStaticPaths() {
-  return ALL_CITIES.map((city) => ({
-    params: { city: city.slug },
-    props: { cityConfig: city },
-  }));
+// Get city from URL params
+const { city: citySlug } = Astro.params;
+
+// Look up city config
+const cityConfig = citySlug ? getCityBySlug(citySlug) : null;
+
+// Return 404 if city not found
+if (!cityConfig) {
+  return Astro.redirect('/404');
 }
-
-interface Props {
-  cityConfig: CityConfig;
-}
-
-const { cityConfig } = Astro.props;
 
 // Fetch live data from WAQI
 const snapshot: CitySnapshot = await fetchCityData(cityConfig);
@@ -89,6 +89,14 @@ function formatTime(iso: string): string {
       <!-- The Fucked Index -->
       <FuckedMeter metrics={snapshot.metrics} cityName={cityConfig.name} />
 
+      <!-- Hard Stats: Population, Deaths, Violations -->
+      <HardStats
+        metrics={snapshot.metrics}
+        cityName={cityConfig.name}
+        population={cityConfig.population}
+        annualDeaths={annualDeaths}
+      />
+
       <!-- The Death Toll -->
       <LiveDeathCounter
         cityName={cityConfig.name}
@@ -104,6 +112,12 @@ function formatTime(iso: string): string {
       <!-- Today's Villain -->
       <DominantPollutant
         pollutant={snapshot.dominantPollutant}
+        cityName={cityConfig.name}
+      />
+
+      <!-- Who's At Risk -->
+      <RiskContext
+        pm25={snapshot.avgPm25}
         cityName={cityConfig.name}
       />
 

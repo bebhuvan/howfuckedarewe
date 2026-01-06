@@ -297,28 +297,78 @@ function getRankSuffix(rank: number): string {
       display: none;
     }
 
-    .who-label {
+    .who-line {
       display: none;
     }
   }
 
   @media (max-width: 500px) {
     .city-ranking {
-      padding: 1.5rem 1rem;
+      padding: 1.25rem 1rem;
+    }
+
+    .ranking-header h2 {
+      font-size: 1.25rem;
     }
 
     .ranking-row {
-      grid-template-columns: 35px 1fr;
+      grid-template-columns: 32px 1fr auto;
+      gap: 0.5rem;
+      padding: 0.625rem 0;
     }
 
-    .bar-container {
+    .rank-number {
+      font-size: 1.125rem;
+    }
+
+    .rank-suffix {
+      font-size: 0.625rem;
+    }
+
+    .city-name {
+      font-size: 0.8125rem;
+    }
+
+    .city-local {
       display: none;
     }
 
-    .city-info::after {
-      content: attr(data-pm25);
-      font-weight: 600;
-      color: var(--accent);
+    .bar-container {
+      width: 60px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    .bar-value {
+      font-size: 0.625rem;
+    }
+
+    .legend {
+      gap: 0.5rem;
+    }
+
+    .legend-item {
+      font-size: 0.625rem;
+    }
+
+    .legend-color {
+      width: 8px;
+      height: 8px;
+    }
+  }
+
+  @media (max-width: 380px) {
+    .ranking-row {
+      grid-template-columns: 28px 1fr auto;
+    }
+
+    .bar-container {
+      width: 50px;
+      height: 20px;
+    }
+
+    .city-name {
+      font-size: 0.75rem;
     }
   }
 </style>

@@ -25,6 +25,7 @@ import type { AirQualityMetrics, SeverityLevel } from './types';
  * Calculate how many times a PM2.5 concentration exceeds WHO annual guideline
  */
 export function calculateWHOViolation(pm25: number): number {
+  if (!Number.isFinite(pm25) || pm25 < 0) return 0;
   return pm25 / WHO.PM25_ANNUAL;
 }
 
@@ -32,6 +33,7 @@ export function calculateWHOViolation(pm25: number): number {
  * Calculate how many times a PM2.5 concentration exceeds US EPA annual standard
  */
 export function calculateUSEPAViolation(pm25: number): number {
+  if (!Number.isFinite(pm25) || pm25 < 0) return 0;
   return pm25 / US_EPA.PM25_ANNUAL;
 }
 
@@ -39,6 +41,7 @@ export function calculateUSEPAViolation(pm25: number): number {
  * Calculate how many times a PM2.5 concentration exceeds India NAAQS
  */
 export function calculateIndiaViolation(pm25: number): number {
+  if (!Number.isFinite(pm25) || pm25 < 0) return 0;
   return pm25 / INDIA_NAAQS.PM25_ANNUAL;
 }
 
@@ -64,13 +67,25 @@ export function calculateFuckedIndex(pm25: number): number {
 
 /**
  * Get severity level based on Fucked Index
+ *
+ * Each level has sardonic copy that doesn't sugarcoat the reality.
  */
 export function getSeverityLevel(fuckedIndex: number): SeverityLevel {
+  // Guard against NaN/undefined
+  if (!Number.isFinite(fuckedIndex) || fuckedIndex < 0) {
+    return {
+      level: 'fine',
+      label: 'Data Missing',
+      description: "The sensors are silent. That's somehow worse.",
+      color: '#525252',
+    };
+  }
+
   if (fuckedIndex < FUCKED_INDEX_THRESHOLDS.FINE) {
     return {
       level: 'fine',
       label: 'Suspiciously Okay',
-      description: "Check again. This can't be right.",
+      description: "Don't get used to it.",
       color: '#6b8e6b',
     };
   }
@@ -78,7 +93,7 @@ export function getSeverityLevel(fuckedIndex: number): SeverityLevel {
     return {
       level: 'cope',
       label: 'Adjust Maadkoli',
-      description: "Nothing hurts yet. That's how they get you.",
+      description: "Your body is building 'character'. That's what we're calling lung scarring now.",
       color: '#a3a322',
     };
   }
@@ -87,15 +102,15 @@ export function getSeverityLevel(fuckedIndex: number): SeverityLevel {
       level: 'denial',
       label: fuckedIndex < 3.5 ? 'Very Fucked' : 'Extremely Fucked',
       description: fuckedIndex < 3.5
-        ? 'Your lungs know. Your heart knows.'
-        : 'This would be breaking news elsewhere.',
+        ? 'The government says this is fine. The government is lying.'
+        : 'This would shut down cities elsewhere. Here, we call it Tuesday.',
       color: fuckedIndex < 3.5 ? '#c45a20' : '#b91c1c',
     };
   }
   return {
     level: 'lol',
     label: 'LOL',
-    description: "You can see the air. You're not supposed to see the air.",
+    description: "Congratulations! You're breathing what firefighters train for.",
     color: '#7f1d1d',
   };
 }
@@ -221,12 +236,19 @@ export function calculateAllMetrics(pm25: number): AirQualityMetrics {
 
 /**
  * Calculate average PM2.5 from an array of values
- * Returns null if array is empty
+ * Returns null if array is empty or all values are invalid
+ * Filters out NaN, undefined, null, and negative values
  */
 export function calculateAveragePm25(values: number[]): number | null {
-  if (values.length === 0) return null;
-  const sum = values.reduce((a, b) => a + b, 0);
-  return sum / values.length;
+  // Filter to only valid, finite, positive numbers
+  const validValues = values.filter(
+    (v): v is number => Number.isFinite(v) && v >= 0
+  );
+
+  if (validValues.length === 0) return null;
+
+  const sum = validValues.reduce((a, b) => a + b, 0);
+  return sum / validValues.length;
 }
 
 // ============================================================================

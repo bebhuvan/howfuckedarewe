@@ -1,0 +1,362 @@
+---
+/**
+ * Hard Stats Component
+ *
+ * The numbers that matter. No spin. No comfort.
+ * Population, deaths, violations - the full picture.
+ */
+
+import { WHO, US_EPA, INDIA_NAAQS } from '../lib/constants';
+import type { AirQualityMetrics } from '../lib/types';
+
+interface Props {
+  metrics: AirQualityMetrics;
+  cityName: string;
+  population: number;
+  annualDeaths: number | null;
+}
+
+const { metrics, cityName, population, annualDeaths } = Astro.props;
+
+// Format population
+function formatPopulation(pop: number): string {
+  if (pop >= 1_000_000_000) {
+    return `${(pop / 1_000_000_000).toFixed(1)}B`;
+  }
+  if (pop >= 1_000_000) {
+    return `${(pop / 1_000_000).toFixed(1)}M`;
+  }
+  return `${(pop / 1000).toFixed(0)}K`;
+}
+
+// Format deaths
+function formatDeaths(deaths: number): string {
+  if (deaths >= 1000) {
+    return `${(deaths / 1000).toFixed(1)}K`;
+  }
+  return deaths.toLocaleString();
+}
+
+// Calculate violation percentages for visual bars
+const whoPercent = Math.min(metrics.whoViolation * 10, 100); // 10x = 100%
+const epaPercent = Math.min(metrics.usEpaViolation * 10, 100);
+const indiaPercent = Math.min(metrics.indiaViolation * 25, 100); // 4x = 100%
+
+// Determine violation severity
+function getViolationClass(violation: number, standard: 'who' | 'epa' | 'india'): string {
+  if (standard === 'who') {
+    if (violation <= 1) return 'safe';
+    if (violation <= 3) return 'warning';
+    if (violation <= 5) return 'danger';
+    return 'extreme';
+  }
+  if (standard === 'epa') {
+    if (violation <= 1) return 'safe';
+    if (violation <= 2) return 'warning';
+    if (violation <= 4) return 'danger';
+    return 'extreme';
+  }
+  // India
+  if (violation <= 1) return 'safe';
+  if (violation <= 1.5) return 'warning';
+  return 'danger';
+}
+
+// Calculate deaths per hour for impact
+const deathsPerHour = annualDeaths ? Math.round(annualDeaths / 8760) : null;
+---
+
+<section class="hard-stats">
+  <h3 class="section-label">The Arithmetic</h3>
+
+  <div class="stats-grid">
+    <!-- Population at risk -->
+    <div class="stat-card population">
+      <div class="stat-number">{formatPopulation(population)}</div>
+      <div class="stat-label">people breathing this</div>
+      <div class="stat-context">Every breath. Every day.</div>
+    </div>
+
+    <!-- City deaths -->
+    {annualDeaths && (
+      <div class="stat-card deaths">
+        <div class="stat-number">{formatDeaths(annualDeaths)}</div>
+        <div class="stat-label">deaths/year in {cityName}</div>
+        {deathsPerHour && deathsPerHour > 0 && (
+          <div class="stat-context">{deathsPerHour}/hour. While you read this.</div>
+        )}
+      </div>
+    )}
+  </div>
+
+  <!-- Violation Bars -->
+  <div class="violations">
+    <div class="violation-title">Standards Violated</div>
+
+    <div class="violation-row">
+      <div class="violation-info">
+        <span class="violation-name">WHO</span>
+        <span class="violation-limit">{WHO.PM25_ANNUAL} µg/m³</span>
+      </div>
+      <div class="violation-bar-container">
+        <div
+          class:list={['violation-bar', getViolationClass(metrics.whoViolation, 'who')]}
+          style={`width: ${whoPercent}%`}
+        ></div>
+      </div>
+      <div class="violation-value">{metrics.whoViolation}×</div>
+    </div>
+
+    <div class="violation-row">
+      <div class="violation-info">
+        <span class="violation-name">US EPA</span>
+        <span class="violation-limit">{US_EPA.PM25_ANNUAL} µg/m³</span>
+      </div>
+      <div class="violation-bar-container">
+        <div
+          class:list={['violation-bar', getViolationClass(metrics.usEpaViolation, 'epa')]}
+          style={`width: ${epaPercent}%`}
+        ></div>
+      </div>
+      <div class="violation-value">{metrics.usEpaViolation}×</div>
+    </div>
+
+    <div class="violation-row">
+      <div class="violation-info">
+        <span class="violation-name">India NAAQS</span>
+        <span class="violation-limit">{INDIA_NAAQS.PM25_ANNUAL} µg/m³</span>
+      </div>
+      <div class="violation-bar-container">
+        <div
+          class:list={['violation-bar', getViolationClass(metrics.indiaViolation, 'india')]}
+          style={`width: ${indiaPercent}%`}
+        ></div>
+      </div>
+      <div class="violation-value">
+        {metrics.indiaViolation >= 1
+          ? `${metrics.indiaViolation}×`
+          : 'Within'}
+      </div>
+    </div>
+
+    <p class="violation-footnote">
+      India's limit is 8× WHO's. We still exceed it.
+    </p>
+  </div>
+</section>
+
+<style>
+  .hard-stats {
+    background: var(--dark-bg);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hard-stats::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(to right, transparent, #ef4444, transparent);
+  }
+
+  .section-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgba(255, 255, 255, 0.35);
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+  }
+
+  .stat-card.population {
+    border-left: 3px solid #3b82f6;
+  }
+
+  .stat-card.deaths {
+    border-left: 3px solid #ef4444;
+  }
+
+  .stat-number {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 3rem;
+    font-weight: 400;
+    line-height: 1;
+    color: white;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-card.deaths .stat-number {
+    color: #ef4444;
+  }
+
+  .stat-label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 0.25rem;
+  }
+
+  .stat-context {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.35);
+    font-style: italic;
+  }
+
+  .violations {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 1.5rem;
+  }
+
+  .violation-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
+  .violation-row {
+    display: grid;
+    grid-template-columns: 100px 1fr 50px;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .violation-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .violation-name {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .violation-limit {
+    font-size: 0.625rem;
+    color: rgba(255, 255, 255, 0.35);
+    font-family: 'Söhne Mono', 'SF Mono', monospace;
+  }
+
+  .violation-bar-container {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .violation-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+
+  .violation-bar.safe {
+    background: linear-gradient(90deg, #22c55e, #4ade80);
+  }
+
+  .violation-bar.warning {
+    background: linear-gradient(90deg, #eab308, #facc15);
+  }
+
+  .violation-bar.danger {
+    background: linear-gradient(90deg, #f97316, #fb923c);
+  }
+
+  .violation-bar.extreme {
+    background: linear-gradient(90deg, #dc2626, #ef4444);
+  }
+
+  .violation-value {
+    font-family: 'Söhne Mono', 'SF Mono', monospace;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: white;
+    text-align: right;
+  }
+
+  .violation-footnote {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.35);
+    text-align: center;
+    font-style: italic;
+    margin-top: 1rem;
+    margin-bottom: 0;
+  }
+
+  @media (max-width: 600px) {
+    .hard-stats {
+      padding: 1.5rem 1rem;
+    }
+
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .stat-number {
+      font-size: 2.5rem;
+    }
+
+    .violation-row {
+      grid-template-columns: 80px 1fr 45px;
+      gap: 0.75rem;
+    }
+
+    .violation-name {
+      font-size: 0.75rem;
+    }
+
+    .violation-limit {
+      font-size: 0.5625rem;
+    }
+
+    .violation-value {
+      font-size: 0.8125rem;
+    }
+  }
+
+  @media (max-width: 400px) {
+    .violation-row {
+      grid-template-columns: 70px 1fr 40px;
+      gap: 0.5rem;
+    }
+
+    .stat-card {
+      padding: 1rem;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+    }
+  }
+</style>

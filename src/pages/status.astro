@@ -1,0 +1,568 @@
+---
+/**
+ * System Status Page
+ *
+ * Shows data freshness, ingestion history, and system health.
+ * Because transparency is the least we can offer.
+ */
+import CityLayout from '../layouts/CityLayout.astro';
+import { getCityStatuses, getRecentIngestionLogs, getSystemStatus, hasStatusData } from '../lib/db-status';
+import type { CityStatus, IngestionLog, SystemStatus } from '../lib/db-status';
+
+// SSR - always fresh
+export const prerender = false;
+
+let cityStatuses: CityStatus[] = [];
+let ingestionLogs: IngestionLog[] = [];
+let systemStatus: SystemStatus | null = null;
+let hasData = false;
+let error: string | null = null;
+
+try {
+  const db = Astro.locals.runtime?.env?.DB;
+  if (db && await hasStatusData(db)) {
+    hasData = true;
+    [cityStatuses, ingestionLogs, systemStatus] = await Promise.all([
+      getCityStatuses(db),
+      getRecentIngestionLogs(db, 15),
+      getSystemStatus(db),
+    ]);
+  }
+} catch (e) {
+  error = String(e);
+  console.error('Status page error:', e);
+}
+
+// Helper functions
+function formatTime(iso: string | null): string {
+  if (!iso) return '—';
+  const date = new Date(iso);
+  return date.toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatTimeAgo(iso: string | null): string {
+  if (!iso) return 'Never';
+  const date = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ${diffMins % 60}m ago`;
+  return `${diffDays}d ago`;
+}
+
+function getStatusColor(status: string): string {
+  switch (status) {
+    case 'fresh': return '#22c55e';
+    case 'stale': return '#eab308';
+    case 'offline': return '#ef4444';
+    case 'completed': return '#22c55e';
+    case 'running': return '#3b82f6';
+    case 'failed': return '#ef4444';
+    default: return '#6b7280';
+  }
+}
+
+const title = "System Status — How Fucked Are We";
+const description = "Data freshness, ingestion logs, and system health for howfuckedarewe.in";
+---
+
+<CityLayout title={title} description={description}>
+  <div class="status-page">
+    <header class="page-header">
+      <h1>System Status</h1>
+      <p class="subtitle">Data freshness and system health. Transparency is the least we can offer.</p>
+    </header>
+
+    {!hasData ? (
+      <div class="no-data-card">
+        <h2>No Historical Data Yet</h2>
+        <p>The database is empty. Data will appear after the first ingestion runs.</p>
+        <p class="note">Ingestion is scheduled to run hourly at :00</p>
+        {error && <p class="error">Error: {error}</p>}
+      </div>
+    ) : (
+      <>
+        <!-- System Overview -->
+        <section class="overview-section">
+          <h2>System Overview</h2>
+          <div class="overview-grid">
+            <div class="overview-card">
+              <span class="card-label">Last Ingestion</span>
+              <span class="card-value">{formatTimeAgo(systemStatus?.lastIngestion || null)}</span>
+              <span class="card-detail">{formatTime(systemStatus?.lastIngestion || null)}</span>
+            </div>
+            <div class="overview-card">
+              <span class="card-label">Data Points</span>
+              <span class="card-value">{(systemStatus?.totalSnapshots || 0).toLocaleString()}</span>
+              <span class="card-detail">city snapshots stored</span>
+            </div>
+            <div class="overview-card">
+              <span class="card-label">Cities Tracked</span>
+              <span class="card-value">{systemStatus?.citiesWithData || 0}</span>
+              <span class="card-detail">with recent data</span>
+            </div>
+            <div class="overview-card">
+              <span class="card-label">Data Range</span>
+              <span class="card-value">{systemStatus?.oldestData ? formatTime(systemStatus.oldestData).split(',')[0] : '—'}</span>
+              <span class="card-detail">to {systemStatus?.newestData ? formatTime(systemStatus.newestData).split(',')[0] : '—'}</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- City Status -->
+        <section class="cities-section">
+          <h2>City Data Freshness</h2>
+          <p class="section-intro">Real-time status of data for each monitored city.</p>
+
+          <div class="cities-table-wrapper">
+            <table class="cities-table">
+              <thead>
+                <tr>
+                  <th>City</th>
+                  <th>Status</th>
+                  <th>Last Update</th>
+                  <th>PM2.5</th>
+                  <th>Stations</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cityStatuses.map((city) => (
+                  <tr>
+                    <td class="city-name">
+                      <a href={`/${city.slug}`}>{city.name}</a>
+                    </td>
+                    <td>
+                      <span class="status-badge" style={`background: ${getStatusColor(city.status)}`}>
+                        {city.status}
+                      </span>
+                    </td>
+                    <td class="time-cell">
+                      <span class="time-ago">{formatTimeAgo(city.lastUpdate)}</span>
+                      <span class="time-full">{formatTime(city.lastUpdate)}</span>
+                    </td>
+                    <td class="pm25-cell">
+                      {city.avgPm25 ? `${city.avgPm25.toFixed(0)} µg/m³` : '—'}
+                    </td>
+                    <td class="stations-cell">{city.stationCount || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="status-legend">
+            <div class="legend-item">
+              <span class="legend-dot" style="background: #22c55e"></span>
+              <span>Fresh (&lt; 1 hour)</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background: #eab308"></span>
+              <span>Stale (1-6 hours)</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background: #ef4444"></span>
+              <span>Offline (&gt; 6 hours)</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Ingestion Logs -->
+        <section class="logs-section">
+          <h2>Ingestion History</h2>
+          <p class="section-intro">Recent data collection runs.</p>
+
+          <div class="logs-table-wrapper">
+            <table class="logs-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Source</th>
+                  <th>Status</th>
+                  <th>Cities</th>
+                  <th>Records</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ingestionLogs.length === 0 ? (
+                  <tr>
+                    <td colspan="5" class="empty-row">No ingestion logs yet</td>
+                  </tr>
+                ) : (
+                  ingestionLogs.map((log) => (
+                    <tr class={log.status === 'failed' ? 'failed-row' : ''}>
+                      <td class="time-cell">
+                        <span class="time-ago">{formatTimeAgo(log.startedAt)}</span>
+                        <span class="time-full">{formatTime(log.startedAt)}</span>
+                      </td>
+                      <td class="source-cell">{log.source}</td>
+                      <td>
+                        <span class="status-badge" style={`background: ${getStatusColor(log.status)}`}>
+                          {log.status}
+                        </span>
+                      </td>
+                      <td>{log.citiesProcessed}</td>
+                      <td>{log.recordsProcessed}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Data Sources -->
+        <section class="sources-section">
+          <h2>Data Sources</h2>
+          <div class="sources-grid">
+            <div class="source-card">
+              <h3>WAQI (Primary)</h3>
+              <p>World Air Quality Index provides real-time PM2.5, PM10, and other pollutant data from CPCB monitoring stations.</p>
+              <a href="https://aqicn.org" target="_blank" rel="noopener">aqicn.org →</a>
+            </div>
+            <div class="source-card">
+              <h3>Update Schedule</h3>
+              <p>Data is fetched automatically every hour at :00. Aggregations run at :15. No manual intervention required.</p>
+              <span class="schedule-badge">Cron: 0 * * * *</span>
+            </div>
+          </div>
+        </section>
+      </>
+    )}
+
+    <footer class="page-footer">
+      <p>Last checked: {new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST</p>
+    </footer>
+  </div>
+</CityLayout>
+
+<style>
+  .status-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding-bottom: 3rem;
+  }
+
+  .page-header {
+    text-align: center;
+    padding: 2rem 0 2.5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2rem;
+  }
+
+  .page-header h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 2.5rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 1rem;
+  }
+
+  /* Overview Section */
+  .overview-section {
+    margin-bottom: 3rem;
+  }
+
+  .overview-section h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .overview-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+
+  .overview-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .card-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+  }
+
+  .card-value {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  .card-detail {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+  }
+
+  /* Cities Section */
+  .cities-section, .logs-section, .sources-section {
+    margin-bottom: 3rem;
+  }
+
+  .cities-section h2, .logs-section h2, .sources-section h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .section-intro {
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+    margin-bottom: 1rem;
+  }
+
+  .cities-table-wrapper, .logs-table-wrapper {
+    overflow-x: auto;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .cities-table, .logs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  .cities-table th, .logs-table th {
+    text-align: left;
+    padding: 0.875rem 1rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-light);
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .cities-table td, .logs-table td {
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  .cities-table tr:last-child td, .logs-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .city-name a {
+    font-weight: 600;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .city-name a:hover {
+    color: var(--accent);
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.625rem;
+    border-radius: 100px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: white;
+  }
+
+  .time-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .time-ago {
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .time-full {
+    font-size: 0.75rem;
+    color: var(--text-light);
+  }
+
+  .pm25-cell {
+    font-weight: 500;
+  }
+
+  .stations-cell, .source-cell {
+    color: var(--text-muted);
+  }
+
+  .empty-row {
+    text-align: center;
+    color: var(--text-light);
+    font-style: italic;
+    padding: 2rem !important;
+  }
+
+  .failed-row {
+    background: rgba(239, 68, 68, 0.05);
+  }
+
+  .status-legend {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  /* Sources Section */
+  .sources-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .source-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+  }
+
+  .source-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .source-card p {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+  }
+
+  .source-card a {
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+
+  .schedule-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: var(--bg);
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  /* No Data State */
+  .no-data-card {
+    text-align: center;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    margin: 2rem 0;
+  }
+
+  .no-data-card h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .no-data-card p {
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .no-data-card .note {
+    font-size: 0.875rem;
+    font-style: italic;
+  }
+
+  .no-data-card .error {
+    color: #ef4444;
+    font-family: monospace;
+    font-size: 0.75rem;
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 4px;
+  }
+
+  /* Page Footer */
+  .page-footer {
+    text-align: center;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.8125rem;
+    color: var(--text-light);
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .overview-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .sources-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .page-header h1 {
+      font-size: 2rem;
+    }
+
+    .overview-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .status-legend {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .cities-table th:nth-child(4),
+    .cities-table td:nth-child(4),
+    .cities-table th:nth-child(5),
+    .cities-table td:nth-child(5) {
+      display: none;
+    }
+  }
+</style>

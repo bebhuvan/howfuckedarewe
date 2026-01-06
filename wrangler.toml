@@ -2,33 +2,20 @@
 # Astro site deployed to Cloudflare Workers
 
 name = "howfuckedarewe"
-compatibility_date = "2024-01-01"
+main = "dist/_worker.js/index.js"
+compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
+
+# Static assets served by Workers
+[assets]
+directory = "./dist"
 
 # D1 Database binding - shared with ingestion worker
 [[d1_databases]]
 binding = "DB"
 database_name = "aqi-historical"
-database_id = "" # Fill in after creating database with: wrangler d1 create aqi-historical
+database_id = "fd2739c3-9278-46ea-a4e3-b5cb357c1195"
 
 # Environment variables
 [vars]
 SITE_URL = "https://howfuckedarewe.in"
-
-# For local development
-[env.dev]
-name = "howfuckedarewe-dev"
-
-[[env.dev.d1_databases]]
-binding = "DB"
-database_name = "aqi-historical-dev"
-database_id = "" # Fill in after creating dev database
-
-# Preview deployments
-[env.preview]
-name = "howfuckedarewe-preview"
-
-[[env.preview.d1_databases]]
-binding = "DB"
-database_name = "aqi-historical"
-database_id = "" # Same as production for preview

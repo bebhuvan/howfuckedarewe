@@ -1,0 +1,187 @@
+---
+/**
+ * Did You Know Component
+ *
+ * Rotating dark facts about air pollution that make you uncomfortable.
+ * Because comfort is not the goal.
+ */
+
+interface Props {
+  pm25?: number;
+  cityName?: string;
+}
+
+const { pm25 = 100, cityName = 'your city' } = Astro.props;
+
+// Collection of uncomfortable facts
+const facts = [
+  {
+    fact: "India's air quality standards are 8× weaker than WHO's.",
+    punchline: "We're not failing to meet standards. We're meeting the wrong ones.",
+    source: "WHO vs NAAQS comparison"
+  },
+  {
+    fact: "Delhi's air in November is equivalent to smoking 50 cigarettes a day.",
+    punchline: "But cigarettes have warning labels.",
+    source: "Berkeley Earth"
+  },
+  {
+    fact: "Air pollution kills more Indians annually than tobacco.",
+    punchline: "Yet there's no 'Pollution Chhodo' campaign.",
+    source: "State of Global Air 2024"
+  },
+  {
+    fact: "464 Indian children under 5 die daily from air pollution.",
+    punchline: "Most of them never saw a blue sky.",
+    source: "UNICEF/WHO"
+  },
+  {
+    fact: "Indoor air in Indian homes is often worse than outdoor air.",
+    punchline: "'Stay indoors' is not the solution you think it is.",
+    source: "CPCB studies"
+  },
+  {
+    fact: "The Taj Mahal is turning yellow from air pollution.",
+    punchline: "At least monuments get restoration. Lungs don't.",
+    source: "ASI reports"
+  },
+  {
+    fact: "India has 21 of the world's 30 most polluted cities.",
+    punchline: "We're winning something. It's just the wrong thing.",
+    source: "IQAir World Air Quality Report"
+  },
+  {
+    fact: "A Delhi traffic cop has the lung capacity of a 70-year-old.",
+    punchline: "He's 35.",
+    source: "CSE Delhi study"
+  },
+  {
+    fact: "Crop burning contributes to 30% of Delhi's winter pollution.",
+    punchline: "It's illegal. It happens every year. No one goes to jail.",
+    source: "SAFAR/IITM"
+  },
+  {
+    fact: "Air pollution costs India 3% of GDP annually.",
+    punchline: "Economic development, they said. GDP growth, they said.",
+    source: "World Bank"
+  },
+  {
+    fact: "Your lungs process 11,000 liters of air daily.",
+    punchline: "None of it filtered for you.",
+    source: "Medical literature"
+  },
+  {
+    fact: "PM2.5 particles are 30× smaller than a human hair.",
+    punchline: "Small enough to enter your bloodstream. Too small to see.",
+    source: "EPA"
+  }
+];
+
+// Pick a fact deterministically based on PM2.5 value (so it's stable per page load)
+const factIndex = Math.floor(pm25) % facts.length;
+const selectedFact = facts[factIndex];
+---
+
+<aside class="did-you-know" aria-label="Air pollution fact">
+  <div class="fact-container">
+    <span class="label">Did you know?</span>
+    <p class="fact">{selectedFact.fact}</p>
+    <p class="punchline">{selectedFact.punchline}</p>
+    <span class="source">{selectedFact.source}</span>
+  </div>
+</aside>
+
+<style>
+  .did-you-know {
+    background: linear-gradient(135deg, rgba(153, 27, 27, 0.03) 0%, rgba(153, 27, 27, 0.08) 100%);
+    border: 1px solid rgba(153, 27, 27, 0.12);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .did-you-know::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--accent);
+    border-radius: 4px 0 0 4px;
+  }
+
+  .fact-container {
+    padding-left: 0.5rem;
+  }
+
+  .label {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    background: rgba(153, 27, 27, 0.08);
+    border-radius: 3px;
+  }
+
+  .fact {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--text);
+    margin: 0 0 0.75rem 0;
+  }
+
+  .punchline {
+    font-size: 1rem;
+    font-style: italic;
+    color: var(--text-secondary);
+    margin: 0 0 1rem 0;
+    line-height: 1.5;
+  }
+
+  .source {
+    font-size: 0.6875rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* Animation on scroll into view */
+  .did-you-know {
+    animation: slideIn 0.6s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @media (max-width: 600px) {
+    .did-you-know {
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .fact {
+      font-size: 1.125rem;
+    }
+
+    .punchline {
+      font-size: 0.9375rem;
+    }
+  }
+</style>

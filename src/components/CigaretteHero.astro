@@ -2,7 +2,7 @@
 /**
  * Cigarette Hero Component
  *
- * The gut punch opener.
+ * The visceral gut punch. A massive cigarette that demands attention.
  */
 import type { AirQualityMetrics } from '../lib/types';
 
@@ -14,255 +14,480 @@ interface Props {
 
 const { metrics, cityName, pm25 } = Astro.props;
 const cigarettes = metrics.cigarettesPerDay;
+const wholeCount = Math.floor(cigarettes);
+const showMultiple = cigarettes >= 2;
 ---
 
-<section class="cigarette-hero">
-  <p class="hero-intro">Today, by breathing the air in {cityName}, you will inhale the equivalent of</p>
+<section class="hero">
+  <!-- The Cigarette -->
+  <div class="cigarette-container" aria-hidden="true">
+    <div class="cigarette">
+      <!-- Smoke - Multi-layer for realism -->
+      <div class="smoke-container">
+        <div class="smoke smoke-1"></div>
+        <div class="smoke smoke-2"></div>
+        <div class="smoke smoke-3"></div>
+        <div class="smoke smoke-4"></div>
+        <div class="smoke smoke-5"></div>
+      </div>
 
-  <div class="hero-number-container">
-    <span class="hero-number">{cigarettes.toFixed(1)}</span>
-    <div class="hero-unit">
+      <!-- Ember -->
+      <div class="ember">
+        <div class="ember-glow"></div>
+      </div>
+
+      <!-- Ash -->
+      <div class="ash"></div>
+
+      <!-- Paper -->
+      <div class="paper">
+        <div class="paper-lines"></div>
+      </div>
+
+      <!-- Filter -->
+      <div class="filter"></div>
+    </div>
+  </div>
+
+  <!-- The Number -->
+  <div class="stat-block">
+    <div class="number">{cigarettes.toFixed(1)}</div>
+    <div class="unit">
       <span class="unit-text">cigarettes</span>
       <span class="unit-period">per day</span>
     </div>
   </div>
 
-  <!-- Single large cigarette, burning -->
-  <div class="cigarette-art" aria-hidden="true">
-    <div class="smoke">
-      <span></span><span></span><span></span>
-    </div>
-    <div class="cig">
-      <div class="ember"></div>
-      <div class="ash"></div>
-      <div class="paper"></div>
-      <div class="filter"></div>
-    </div>
-  </div>
+  <!-- The Punchline -->
+  <p class="punchline">You didn't ask for any of them.</p>
 
-  <p class="punchline">You didn't light a single one.</p>
-
-  <p class="explanation">
-    Based on Berkeley Earth research: 22 µg/m³ of PM2.5 exposure
-    equals the mortality risk of smoking one cigarette daily.
-  </p>
-
-  <div class="context-line">
+  <!-- Context -->
+  <div class="context">
     <span class="context-city">{cityName}</span>
-    <span class="context-sep">•</span>
-    <span class="context-pm25">{pm25.toFixed(0)} µg/m³ PM2.5</span>
-    <span class="context-sep">•</span>
+    <span class="context-dot">·</span>
+    <span class="context-pm25">{pm25.toFixed(0)} µg/m³</span>
+    <span class="context-dot">·</span>
     <span class="context-who">{metrics.whoViolation.toFixed(0)}× WHO limit</span>
   </div>
+
+  <!-- Source -->
+  <p class="source">
+    22 µg/m³ PM2.5 = 1 cigarette mortality risk
+    <span class="source-cite">(Berkeley Earth)</span>
+  </p>
 </section>
 
 <style>
-  .cigarette-hero {
+  .hero {
     text-align: center;
     padding: 4rem 1.5rem 3rem;
-    background: linear-gradient(to bottom, #faf8f5 0%, var(--bg) 100%);
-    border-bottom: 1px solid var(--border);
     margin-bottom: 0;
   }
 
-  .hero-intro {
-    font-size: 1.125rem;
-    color: var(--text-muted);
-    margin-bottom: 1rem;
-    max-width: 400px;
-    margin-left: auto;
-    margin-right: auto;
+  /* Cigarette Container */
+  .cigarette-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+    height: 120px;
   }
 
-  .hero-number-container {
+  .cigarette {
+    display: flex;
+    align-items: center;
+    height: 28px;
+    transform: rotate(-3deg);
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+    position: relative;
+  }
+
+  /* Smoke - Enhanced multi-layer animation */
+  .smoke-container {
+    position: absolute;
+    left: -30px;
+    top: -90px;
+    width: 80px;
+    height: 110px;
+    pointer-events: none;
+  }
+
+  .smoke {
+    position: absolute;
+    bottom: 0;
+    border-radius: 50%;
+    filter: blur(12px);
+  }
+
+  /* Large diffuse smoke particles */
+  .smoke-1 {
+    left: 15px;
+    width: 24px;
+    height: 24px;
+    background: radial-gradient(ellipse at center, rgba(140, 140, 140, 0.35) 0%, transparent 70%);
+    animation: smoke-rise-1 4.5s ease-out infinite;
+  }
+
+  .smoke-2 {
+    left: 25px;
+    width: 20px;
+    height: 20px;
+    background: radial-gradient(ellipse at center, rgba(130, 130, 130, 0.4) 0%, transparent 70%);
+    animation: smoke-rise-2 5s ease-out infinite 1s;
+  }
+
+  .smoke-3 {
+    left: 8px;
+    width: 18px;
+    height: 18px;
+    background: radial-gradient(ellipse at center, rgba(150, 150, 150, 0.3) 0%, transparent 70%);
+    animation: smoke-rise-3 4s ease-out infinite 0.5s;
+  }
+
+  /* Smaller wispy particles */
+  .smoke-4 {
+    left: 20px;
+    width: 14px;
+    height: 14px;
+    background: radial-gradient(ellipse at center, rgba(160, 160, 160, 0.25) 0%, transparent 65%);
+    animation: smoke-rise-4 3.5s ease-out infinite 1.5s;
+  }
+
+  .smoke-5 {
+    left: 12px;
+    width: 16px;
+    height: 16px;
+    background: radial-gradient(ellipse at center, rgba(145, 145, 145, 0.3) 0%, transparent 70%);
+    animation: smoke-rise-5 4.2s ease-out infinite 2s;
+  }
+
+  @keyframes smoke-rise-1 {
+    0% {
+      opacity: 0;
+      transform: translateY(0) scale(0.8);
+    }
+    10% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 0.25;
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-95px) scale(3) translateX(25px) rotate(15deg);
+    }
+  }
+
+  @keyframes smoke-rise-2 {
+    0% {
+      opacity: 0;
+      transform: translateY(0) scale(0.7);
+    }
+    10% {
+      opacity: 0.5;
+    }
+    60% {
+      opacity: 0.2;
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-85px) scale(2.8) translateX(-20px) rotate(-10deg);
+    }
+  }
+
+  @keyframes smoke-rise-3 {
+    0% {
+      opacity: 0;
+      transform: translateY(0) scale(0.6);
+    }
+    15% {
+      opacity: 0.45;
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-80px) scale(2.5) translateX(30px) rotate(20deg);
+    }
+  }
+
+  @keyframes smoke-rise-4 {
+    0% {
+      opacity: 0;
+      transform: translateY(0) scale(0.5);
+    }
+    20% {
+      opacity: 0.4;
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-70px) scale(2.2) translateX(-15px);
+    }
+  }
+
+  @keyframes smoke-rise-5 {
+    0% {
+      opacity: 0;
+      transform: translateY(0) scale(0.6);
+    }
+    15% {
+      opacity: 0.35;
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-90px) scale(2.6) translateX(10px) rotate(-5deg);
+    }
+  }
+
+  /* Ember */
+  .ember {
+    width: 10px;
+    height: 28px;
+    background: linear-gradient(to right, #ff4500 0%, #ff6b35 40%, #ffaa00 100%);
+    border-radius: 3px 0 0 3px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .ember-glow {
+    position: absolute;
+    inset: -4px;
+    background: radial-gradient(ellipse at left center, rgba(255, 100, 0, 0.6) 0%, transparent 60%);
+    border-radius: 6px 0 0 6px;
+    animation: ember-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes ember-pulse {
+    0%, 100% {
+      opacity: 0.8;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+  }
+
+  /* Ash */
+  .ash {
+    width: 24px;
+    height: 28px;
+    background: linear-gradient(to right, #6b6b6b, #8a8a8a, #7a7a7a, #999);
+    position: relative;
+  }
+
+  .ash::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.05) 3px,
+      rgba(0, 0, 0, 0.05) 4px
+    );
+  }
+
+  /* Paper */
+  .paper {
+    width: 180px;
+    height: 28px;
+    background: linear-gradient(to bottom, #fefefe 0%, #f8f6f2 30%, #fefefe 50%, #f5f3ef 80%, #fefefe 100%);
+    border-top: 1px solid rgba(0, 0, 0, 0.03);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .paper-lines {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 8px,
+      rgba(0, 0, 0, 0.02) 8px,
+      rgba(0, 0, 0, 0.02) 9px
+    );
+  }
+
+  /* Filter */
+  .filter {
+    width: 50px;
+    height: 28px;
+    background: linear-gradient(
+      to bottom,
+      #e8d4a8 0%,
+      #d4b896 20%,
+      #c9a86c 50%,
+      #d4b896 80%,
+      #e8d4a8 100%
+    );
+    border-radius: 0 4px 4px 0;
+    position: relative;
+  }
+
+  .filter::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 4px,
+      rgba(139, 90, 43, 0.1) 4px,
+      rgba(139, 90, 43, 0.1) 5px
+    );
+    border-radius: 0 4px 4px 0;
+  }
+
+  /* Stats */
+  .stat-block {
     display: flex;
     align-items: baseline;
     justify-content: center;
-    gap: 1rem;
-    margin-bottom: 2.5rem;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
   }
 
-  .hero-number {
+  .number {
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: clamp(6rem, 20vw, 12rem);
+    font-size: clamp(7rem, 22vw, 14rem);
     font-weight: 400;
     line-height: 0.85;
-    color: #c41e1e;
-    letter-spacing: -0.03em;
+    color: var(--accent);
+    letter-spacing: -0.04em;
+    animation: numberReveal 1s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s backwards;
   }
 
-  .hero-unit {
+  @keyframes numberReveal {
+    from {
+      opacity: 0;
+      transform: scale(0.7) translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  .unit {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    padding-bottom: 0.5rem;
+    padding-bottom: 1rem;
   }
 
   .unit-text {
     font-family: 'Playfair Display', Georgia, serif;
     font-size: clamp(1.5rem, 4vw, 2.5rem);
     font-style: italic;
-    color: var(--text-muted);
-    line-height: 1;
+    color: var(--text-secondary);
+    line-height: 1.1;
   }
 
   .unit-period {
-    font-size: 0.875rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
     color: var(--text-light);
     text-transform: uppercase;
     letter-spacing: 0.1em;
+    margin-top: 0.25rem;
   }
 
-  /* Cigarette Art */
-  .cigarette-art {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    margin-bottom: 2.5rem;
-    height: 80px;
-  }
-
-  .cig {
-    display: flex;
-    align-items: center;
-    height: 16px;
-    transform: rotate(-5deg);
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
-  }
-
-  .cig .ember {
-    width: 6px;
-    height: 16px;
-    background: linear-gradient(to right, #ff4500, #ff6b35, #ffaa00);
-    border-radius: 2px 0 0 2px;
-    box-shadow: 0 0 8px rgba(255, 69, 0, 0.8), 0 0 16px rgba(255, 69, 0, 0.4);
-    animation: glow 1.5s ease-in-out infinite alternate;
-  }
-
-  .cig .ash {
-    width: 20px;
-    height: 16px;
-    background: linear-gradient(to right, #888, #aaa, #999);
-    border-radius: 0;
-  }
-
-  .cig .paper {
-    width: 120px;
-    height: 16px;
-    background: linear-gradient(to bottom, #fefefe, #f5f2ed, #fefefe);
-    border-top: 1px solid rgba(0,0,0,0.05);
-    border-bottom: 1px solid rgba(0,0,0,0.05);
-  }
-
-  .cig .filter {
-    width: 35px;
-    height: 16px;
-    background: linear-gradient(to bottom, #e8d4a8, #d4b896, #c9a86c, #d4b896, #e8d4a8);
-    border-radius: 0 3px 3px 0;
-  }
-
-  /* Smoke animation */
-  .smoke {
-    position: absolute;
-    left: calc(50% - 100px);
-    top: 10px;
-    display: flex;
-    gap: 8px;
-  }
-
-  .smoke span {
-    display: block;
-    width: 8px;
-    height: 8px;
-    background: rgba(150, 150, 150, 0.3);
-    border-radius: 50%;
-    animation: rise 3s ease-out infinite;
-  }
-
-  .smoke span:nth-child(1) { animation-delay: 0s; }
-  .smoke span:nth-child(2) { animation-delay: 0.5s; left: 5px; }
-  .smoke span:nth-child(3) { animation-delay: 1s; left: -3px; }
-
-  @keyframes rise {
-    0% {
-      opacity: 0.6;
-      transform: translateY(0) scale(1);
-    }
-    100% {
-      opacity: 0;
-      transform: translateY(-50px) scale(2.5) translateX(10px);
-    }
-  }
-
-  @keyframes glow {
-    from { box-shadow: 0 0 8px rgba(255, 69, 0, 0.8), 0 0 16px rgba(255, 69, 0, 0.4); }
-    to { box-shadow: 0 0 12px rgba(255, 69, 0, 1), 0 0 24px rgba(255, 69, 0, 0.6); }
-  }
-
+  /* Punchline */
   .punchline {
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     font-weight: 400;
     color: var(--text);
-    margin-bottom: 0.75rem;
+    margin-bottom: 1.5rem;
     letter-spacing: -0.01em;
+    animation: fadeInUp 0.8s ease-out 0.6s backwards;
   }
 
-  .explanation {
-    font-size: 0.8125rem;
-    color: var(--text-light);
-    max-width: 380px;
-    margin: 0 auto 1.5rem;
-    line-height: 1.5;
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(15px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
-  .context-line {
+  /* Context */
+  .context {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 0.75rem;
     flex-wrap: wrap;
-    font-size: 0.875rem;
-    color: var(--text-muted);
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
   }
 
-  .context-sep {
+  .context-dot {
     color: var(--text-light);
   }
 
   .context-who {
-    color: #c41e1e;
-    font-weight: 500;
+    color: var(--accent);
+    font-weight: 600;
   }
 
+  /* Source */
+  .source {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    max-width: 360px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+
+  .source-cite {
+    font-style: italic;
+  }
+
+  /* Mobile */
   @media (max-width: 600px) {
-    .cigarette-hero {
+    .hero {
       padding: 3rem 1rem 2rem;
     }
 
-    .hero-number-container {
-      flex-direction: column;
-      gap: 0.25rem;
+    .cigarette-container {
+      height: 80px;
+      margin-bottom: 0.5rem;
+      transform: scale(0.85);
     }
 
-    .hero-unit {
+    .number {
+      line-height: 0.9;
+    }
+
+    .stat-block {
+      flex-direction: column;
+      gap: 0;
       align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .unit {
+      align-items: center;
+      padding-bottom: 0;
     }
 
     .punchline {
-      font-size: 1.375rem;
+      font-size: 1.25rem;
     }
 
-    .cig .paper {
-      width: 80px;
-    }
-
-    .context-line {
+    .context {
       flex-direction: column;
       gap: 0.25rem;
     }
 
-    .context-sep {
+    .context-dot {
       display: none;
     }
   }

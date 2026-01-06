@@ -1,260 +1,244 @@
 ---
 /**
  * What Now? — A Survival Guide
- *
- * Pure sarcasm, irony, and sardonic advice for dealing with
- * India's air quality situation.
+ * Visual, punchy, sardonic.
  */
 import CityLayout from '../layouts/CityLayout.astro';
-import { WHO, INDIA_NAAQS } from '../lib/constants';
 
 const title = "What Now? — A Survival Guide";
-const description = "Practical advice for surviving India's air quality. Results may vary. Mostly towards the 'not surviving' end.";
+const description = "Practical advice for surviving India's air quality. Results may vary.";
 
-// Sarcastic survival tips - tragicomedy edition
+// Survival tips with effectiveness scores
 const survivalTips = [
-  {
-    tip: "Invest in a good N95 mask",
-    reality: "Finally, a fashion accessory that says 'I've given up on systemic change but not on life itself.' Pro tip: The blue surgical mask your uncle wears under his nose? That's just a chin diaper.",
-    icon: "😷"
-  },
-  {
-    tip: "Buy a HEPA air purifier",
-    reality: "₹15,000 to create a 10x10 bubble of first-world air in your bedroom. Step outside to buy groceries? LOL. But hey, at least you'll die well-rested.",
-    icon: "🏠"
-  },
-  {
-    tip: "Check the AQI before going outside",
-    reality: "Start each morning by learning exactly how many cigarettes you'll smoke today just by existing. Great for anxiety! Even better for that sense of impending doom.",
-    icon: "📱"
-  },
-  {
-    tip: "Exercise indoors on bad air days",
-    reality: "Skip jogging when AQI hits 300. Which is November through February. And most of March. You know what, just buy a treadmill and stare at a wall.",
-    icon: "🏃"
-  },
-  {
-    tip: "Keep windows closed",
-    reality: "Transform your home into a sealed bunker. Never feel the morning breeze again. Wonder if this is what living on Mars will feel like, except Mars has better PR.",
-    icon: "🪟"
-  },
-  {
-    tip: "Stay hydrated",
-    reality: "Doctors recommend 8 glasses of water a day. This will not filter PM2.5 from your bloodstream, but you'll have great skin while your lungs deteriorate.",
-    icon: "💧"
-  },
-  {
-    tip: "Eat antioxidant-rich foods",
-    reality: "Kale smoothies: now scientifically proven to make you feel superior while doing absolutely nothing about the 5 cigarettes worth of air you inhaled on your commute.",
-    icon: "🥦"
-  },
-  {
-    tip: "Limit outdoor time during peak hours",
-    reality: "Peak pollution hours: 6 AM to midnight. Off-peak hours: when you should be sleeping. Optimal outdoor time: never. You're welcome.",
-    icon: "🌅"
-  },
+  { tip: "N95 Mask", score: 85, verdict: "Actually works" },
+  { tip: "HEPA Purifier", score: 80, verdict: "If you can afford it" },
+  { tip: "Check AQI Daily", score: 50, verdict: "Know your poison" },
+  { tip: "Exercise Indoors", score: 45, verdict: "Treadmill life" },
+  { tip: "Close Windows", score: 25, verdict: "Bunker mode" },
+  { tip: "Stay Hydrated", score: 5, verdict: "Placebo at best" },
+  { tip: "Eat Kale", score: 3, verdict: "Feel-good theater" },
 ];
 
-// Sarcastic civic action tips - tragicomedy edition
-const actionTips = [
-  {
-    action: "Vote for candidates who prioritize environment",
-    reality: "Find a politician whose priority list goes: 1. Temples 2. Cricket 3. Caste 4. Potholes 5-97. Other stuff 98. Environment. We'll wait.",
-    icon: "🗳️"
-  },
-  {
-    action: "Write to your local MLA",
-    reality: "Your heartfelt letter will join thousands of others in a pile that is, ironically, probably being burned right now. Adding to the problem. Chef's kiss.",
-    icon: "✉️"
-  },
-  {
-    action: "Use public transport",
-    reality: "Trade your AC car for a diesel bus with open windows in traffic. Inhale democracy directly. Your carbon footprint shrinks while your tumor risk grows. Fair trade!",
-    icon: "🚌"
-  },
-  {
-    action: "Carpool with colleagues",
-    reality: "Four people dying slowly in one car instead of four cars. Efficiency! Plus you can share your trauma and bond over the particulate matter entering your collective bloodstreams.",
-    icon: "🚗"
-  },
-  {
-    action: "Plant trees",
-    reality: "One tree absorbs 22 kg CO2/year. Delhi emits 38 million tonnes. Quick math: you only need 1.7 billion trees. That's 2 trees per person in India. Easy! Start digging.",
-    icon: "🌳"
-  },
-  {
-    action: "Reduce your carbon footprint",
-    reality: "Give up your car, AC, and flights while Adani opens new coal plants. Your sacrifice matters! (Statistically: no, but emotionally: sure.)",
-    icon: "👣"
-  },
-  {
-    action: "Raise awareness on social media",
-    reality: "Post an infographic. Change your profile frame. Tag the PM. Get 47 likes from people who already agree with you. Revolution achieved.",
-    icon: "📲"
-  },
-  {
-    action: "File a PIL",
-    reality: "Courts have been hearing pollution cases since 1985. Thirty-nine years of hearings. Surely case #4,847 will be the one that fixes everything.",
-    icon: "⚖️"
-  },
-  {
-    action: "Follow odd-even rules",
-    reality: "Drive on odd days only. Take Uber on even days. Uber is also a car. But it's someone else's car, so it doesn't count. Logic!",
-    icon: "🔢"
-  },
-  {
-    action: "Emigrate",
-    reality: "The only item on this list that actually works. Downsides: visa, money, leaving everything you know. Upside: breathing. Choose wisely.",
-    icon: "✈️"
-  },
-];
-
-// The hard truths
-const hardTruths = [
-  "71% of India's air pollution comes from sources you have zero control over: industry, power plants, construction, and crop burning.",
-  "Individual actions account for less than 15% of urban air pollution. The rest requires policy changes.",
-  "The cheapest air purifier costs more than a month's minimum wage. Clean air is a luxury product.",
-  "Our national air quality standards are 8× weaker than WHO guidelines. We're not even trying to meet our own low bar.",
-  "There is no safe level of PM2.5 exposure. Every breath does damage. The question is only how much.",
-];
+// The gap visualization
+const theGap = {
+  you: ["N95 mask", "Air purifier", "Monitor AQI", "Hide indoors"],
+  policy: ["Emission standards", "Clean energy", "Stubble solutions", "Law enforcement"],
+};
 ---
 
 <CityLayout title={title} description={description}>
   <div class="survival-page">
-    <!-- Hero -->
-    <header class="page-hero">
+
+    <!-- Visual Hero -->
+    <header class="hero">
+      <div class="hero-visual">
+        <svg class="lungs-icon" viewBox="0 0 120 100" fill="none">
+          <!-- Left Lung (Damaged) -->
+          <path d="M45 15 C25 15 10 35 10 60 C10 80 20 90 35 90 C45 90 52 82 52 70 L52 30 C52 22 50 15 45 15Z"
+                fill="#71717a" stroke="#525252" stroke-width="2"/>
+          <!-- Right Lung (Healthy) -->
+          <path d="M75 15 C95 15 110 35 110 60 C110 80 100 90 85 90 C75 90 68 82 68 70 L68 30 C68 22 70 15 75 15Z"
+                fill="#86efac" stroke="#166534" stroke-width="2"/>
+          <!-- Trachea -->
+          <path d="M55 5 L55 25 M65 5 L65 25 M55 25 Q60 30 52 40 M65 25 Q60 30 68 40"
+                stroke="#737373" stroke-width="3" fill="none"/>
+          <!-- Labels -->
+          <text x="32" y="98" text-anchor="middle" fill="#525252" font-size="8" font-weight="600">YOURS</text>
+          <text x="88" y="98" text-anchor="middle" fill="#166534" font-size="8" font-weight="600">THEIRS</text>
+        </svg>
+      </div>
       <h1>What Now?</h1>
-      <p class="hero-subtitle">A Survival Guide for the Apocalypse</p>
-      <p class="hero-note">(The slow, wheezing kind)</p>
+      <p class="hero-sub">You've seen the numbers. Here's what you can do about them.</p>
+      <p class="hero-kicker">Spoiler: Not much.</p>
     </header>
 
-    <!-- Intro -->
-    <div class="intro-box">
-      <p>
-        You've seen the numbers. You know you're inhaling cigarettes.
-        Now what? Here's the advice everyone gives, and why it's mostly theater.
-      </p>
-    </div>
+    <!-- Effectiveness Meter Section -->
+    <section class="meters-section">
+      <h2>Protection Effectiveness</h2>
+      <p class="section-sub">Ranked by actual impact on your survival</p>
 
-    <!-- Section 1: Survival Tips -->
-    <section class="tips-section">
-      <div class="section-header">
-        <h2>🫁 How to Deal With Bad Air Quality</h2>
-        <p class="section-tagline">Tips that technically help but won't save you</p>
-      </div>
-
-      <div class="tips-grid">
-        {survivalTips.map((item) => (
-          <div class="tip-card">
-            <div class="tip-header">
-              <span class="tip-icon">{item.icon}</span>
-              <h3 class="tip-title">{item.tip}</h3>
+      <div class="meters">
+        {survivalTips.map((item, i) => (
+          <div class="meter-row">
+            <div class="meter-rank">#{i + 1}</div>
+            <div class="meter-content">
+              <div class="meter-header">
+                <span class="meter-name">{item.tip}</span>
+                <span class="meter-verdict">{item.verdict}</span>
+              </div>
+              <div class="meter-bar">
+                <div class="meter-fill" style={`width: ${item.score}%`} data-score={item.score}></div>
+                <span class="meter-score">{item.score}%</span>
+              </div>
             </div>
-            <p class="tip-reality">{item.reality}</p>
           </div>
         ))}
       </div>
 
-      <div class="section-footer">
-        <p>These tips are like bringing a water gun to a forest fire. Technically helpful. Practically inadequate.</p>
+      <div class="meters-note">
+        <p>100% would be "breathing clean air." We don't have that option.</p>
       </div>
     </section>
 
-    <!-- Divider -->
-    <div class="section-divider">
-      <span class="divider-text">But wait, there's more!</span>
-    </div>
+    <!-- The Big Visual: You vs Policy -->
+    <section class="the-gap">
+      <h2>The Gap</h2>
 
-    <!-- Section 2: Civic Action -->
-    <section class="tips-section action-section">
-      <div class="section-header">
-        <h2>🗳️ What Can You Do to Change This?</h2>
-        <p class="section-tagline">Feel-good activities ranked by actual impact</p>
-      </div>
-
-      <div class="tips-grid">
-        {actionTips.map((item) => (
-          <div class="tip-card action-card">
-            <div class="tip-header">
-              <span class="tip-icon">{item.icon}</span>
-              <h3 class="tip-title">{item.action}</h3>
-            </div>
-            <p class="tip-reality">{item.reality}</p>
+      <div class="gap-visual">
+        <div class="gap-column you">
+          <div class="gap-header">
+            <span class="gap-icon">🛡️</span>
+            <h3>What You Can Do</h3>
           </div>
-        ))}
-      </div>
-
-      <div class="section-footer">
-        <p>
-          "Be the change you want to see in the world" is great advice when the change
-          doesn't require dismantling industrial policy and agricultural subsidies.
-        </p>
-      </div>
-    </section>
-
-    <!-- Hard Truths -->
-    <section class="truths-section">
-      <h2>The Hard Truths</h2>
-      <p class="truths-intro">Things we'd rather not say, but someone should:</p>
-      <ul class="truths-list">
-        {hardTruths.map((truth) => (
-          <li>{truth}</li>
-        ))}
-      </ul>
-    </section>
-
-    <!-- The Real Answer -->
-    <section class="real-answer">
-      <h2>So What Actually Works?</h2>
-      <div class="answer-grid">
-        <div class="answer-card">
-          <h3>Short Term (You)</h3>
           <ul>
-            <li>N95 masks (properly fitted)</li>
-            <li>HEPA purifiers (if you can afford them)</li>
-            <li>Limit outdoor exposure on bad days</li>
-            <li>Monitor AQI obsessively</li>
+            {theGap.you.map(item => <li>{item}</li>)}
           </ul>
-          <p class="answer-note">This protects you. It doesn't fix anything.</p>
+          <div class="gap-verdict">
+            <span class="verdict-label">Impact</span>
+            <div class="verdict-bar">
+              <div class="verdict-fill" style="width: 15%"></div>
+            </div>
+            <span class="verdict-pct">~15%</span>
+          </div>
         </div>
-        <div class="answer-card">
-          <h3>Long Term (Policy)</h3>
+
+        <div class="gap-arrow">
+          <svg viewBox="0 0 40 80" fill="none">
+            <path d="M20 0 L20 60 M10 50 L20 60 L30 50" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          <span>The suffocation zone</span>
+        </div>
+
+        <div class="gap-column policy">
+          <div class="gap-header">
+            <span class="gap-icon">🏛️</span>
+            <h3>What Policy Must Do</h3>
+          </div>
           <ul>
-            <li>Stricter emission standards</li>
-            <li>Transition to clean energy</li>
-            <li>Solutions for stubble burning</li>
-            <li>Actual enforcement of existing laws</li>
+            {theGap.policy.map(item => <li>{item}</li>)}
           </ul>
-          <p class="answer-note">This fixes the problem. It requires political will.</p>
+          <div class="gap-verdict">
+            <span class="verdict-label">Impact</span>
+            <div class="verdict-bar">
+              <div class="verdict-fill policy-fill" style="width: 85%"></div>
+            </div>
+            <span class="verdict-pct">~85%</span>
+          </div>
         </div>
       </div>
-      <p class="answer-conclusion">
-        The gap between these two columns is where we all slowly suffocate.
+
+      <p class="gap-conclusion">
+        You control 15%. They control 85%.
+        <strong>Guess which one gets blamed?</strong>
       </p>
+    </section>
+
+    <!-- Hard Numbers -->
+    <section class="hard-numbers">
+      <div class="number-card big">
+        <span class="number">71%</span>
+        <span class="context">of pollution from sources you can't control</span>
+      </div>
+      <div class="number-card">
+        <span class="number">8×</span>
+        <span class="context">India's standards are weaker than WHO</span>
+      </div>
+      <div class="number-card">
+        <span class="number">₹15K</span>
+        <span class="context">cheapest purifier (more than minimum wage)</span>
+      </div>
+      <div class="number-card">
+        <span class="number">0</span>
+        <span class="context">safe level of PM2.5 exposure</span>
+      </div>
+    </section>
+
+    <!-- Civic Action Theater -->
+    <section class="action-theater">
+      <h2>Civic Action Theater</h2>
+      <p class="section-sub">Things that feel productive but mostly aren't</p>
+
+      <div class="action-grid">
+        <div class="action-item">
+          <div class="action-icon">✉️</div>
+          <h4>Write to your MLA</h4>
+          <p>Your letter joins thousands being burned right now. Ironic.</p>
+          <div class="action-meter" style="--fill: 5%"></div>
+        </div>
+        <div class="action-item">
+          <div class="action-icon">🌳</div>
+          <h4>Plant trees</h4>
+          <p>You only need 1.7 billion. That's 2 per person. Start digging.</p>
+          <div class="action-meter" style="--fill: 8%"></div>
+        </div>
+        <div class="action-item">
+          <div class="action-icon">📱</div>
+          <h4>Post on social media</h4>
+          <p>47 likes from people who already agree. Revolution.</p>
+          <div class="action-meter" style="--fill: 2%"></div>
+        </div>
+        <div class="action-item">
+          <div class="action-icon">⚖️</div>
+          <h4>File a PIL</h4>
+          <p>Courts have been hearing cases since 1985. 39 years.</p>
+          <div class="action-meter" style="--fill: 12%"></div>
+        </div>
+        <div class="action-item highlight">
+          <div class="action-icon">✈️</div>
+          <h4>Emigrate</h4>
+          <p>The only thing on this list that actually works.</p>
+          <div class="action-meter" style="--fill: 95%"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- The Only Real Advice -->
+    <section class="real-advice">
+      <div class="advice-content">
+        <h2>The Only Real Advice</h2>
+        <div class="advice-list">
+          <div class="advice-item">
+            <span class="advice-num">1</span>
+            <div>
+              <strong>Buy an N95</strong>
+              <p>Not surgical. Not cloth. N95. Fitted properly.</p>
+            </div>
+          </div>
+          <div class="advice-item">
+            <span class="advice-num">2</span>
+            <div>
+              <strong>Get a HEPA purifier</strong>
+              <p>For your bedroom at minimum. Run it while you sleep.</p>
+            </div>
+          </div>
+          <div class="advice-item">
+            <span class="advice-num">3</span>
+            <div>
+              <strong>Check AQI before going out</strong>
+              <p>Not to feel better. To know what you're breathing.</p>
+            </div>
+          </div>
+          <div class="advice-item">
+            <span class="advice-num">4</span>
+            <div>
+              <strong>Get angry</strong>
+              <p>Don't let them tell you "it's just the season."</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- Final CTA -->
-    <div class="final-cta">
-      <h2>Don't Just Cope. Get Angry.</h2>
-      <p>
-        Anger is the appropriate response to this situation.
-        Normalize being furious about breathing poison.
-        Don't let anyone tell you "it's just the season" or "it's always been like this."
-      </p>
-      <p class="cta-kicker">
-        It hasn't. It shouldn't be. And it doesn't have to be.
-      </p>
+    <section class="final">
+      <h2>Don't Cope.<br/>Get Angry.</h2>
+      <p>Anger is the appropriate response to breathing poison.</p>
       <div class="cta-buttons">
-        <a href="/leaderboard" class="cta-btn primary">See the Leaderboard</a>
-        <a href="/" class="cta-btn secondary">Check Your City</a>
+        <a href="/" class="btn primary">Check Your City</a>
+        <a href="/marketplace" class="btn secondary">The Lung Exchange →</a>
       </div>
-    </div>
+    </section>
 
-    <!-- Quote -->
-    <blockquote class="closing-quote">
-      <p>"The definition of insanity is doing the same thing over and over again and expecting different results."</p>
-      <footer>— Not Albert Einstein, but still true</footer>
-    </blockquote>
   </div>
 </CityLayout>
 
@@ -264,346 +248,543 @@ const hardTruths = [
     margin: 0 auto;
   }
 
-  .page-hero {
+  /* Hero */
+  .hero {
     text-align: center;
-    margin-bottom: 2rem;
-    padding-bottom: 2rem;
+    padding: 2rem 0 3rem;
     border-bottom: 1px solid var(--border);
+    margin-bottom: 3rem;
   }
 
-  .page-hero h1 {
-    font-size: 3rem;
+  .hero-visual {
+    margin-bottom: 1.5rem;
+  }
+
+  .lungs-icon {
+    width: 160px;
+    height: 140px;
+  }
+
+  .hero h1 {
+    font-size: clamp(3rem, 10vw, 5rem);
     margin-bottom: 0.5rem;
+    letter-spacing: -0.04em;
   }
 
-  .hero-subtitle {
-    font-size: 1.25rem;
-    color: var(--text-muted);
+  .hero-sub {
+    font-size: 1.125rem;
+    color: var(--text-secondary);
     margin-bottom: 0.25rem;
   }
 
-  .hero-note {
-    font-size: 0.9375rem;
-    color: var(--text-light);
+  .hero-kicker {
+    font-size: 1rem;
+    color: var(--accent);
     font-style: italic;
   }
 
-  .intro-box {
-    background: rgba(185, 28, 28, 0.05);
-    border-left: 4px solid var(--accent);
-    padding: 1.5rem;
-    margin-bottom: 3rem;
-    border-radius: 0 8px 8px 0;
+  /* Meters Section */
+  .meters-section {
+    margin-bottom: 4rem;
   }
 
-  .intro-box p {
-    font-size: 1.125rem;
-    color: var(--text);
-    margin: 0;
-    line-height: 1.6;
-  }
-
-  /* Section Styling */
-  .tips-section {
-    margin-bottom: 3rem;
-  }
-
-  .section-header {
+  .meters-section h2,
+  .the-gap h2,
+  .action-theater h2 {
     text-align: center;
-    margin-bottom: 2rem;
-  }
-
-  .section-header h2 {
     font-size: 1.75rem;
     margin-bottom: 0.25rem;
   }
 
-  .section-tagline {
+  .section-sub {
+    text-align: center;
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+  }
+
+  .meters {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .meter-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: var(--bg-paper);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .meter-rank {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    color: var(--text-light);
+    width: 2.5rem;
+    flex-shrink: 0;
+  }
+
+  .meter-content {
+    flex: 1;
+  }
+
+  .meter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .meter-name {
+    font-weight: 600;
     font-size: 0.9375rem;
+  }
+
+  .meter-verdict {
+    font-size: 0.75rem;
     color: var(--text-light);
     font-style: italic;
   }
 
-  .tips-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+  .meter-bar {
+    height: 24px;
+    background: var(--bg);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
   }
 
-  .tip-card {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1.25rem;
-    transition: all 0.15s ease;
+  .meter-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
   }
 
-  .tip-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  }
+  .meter-fill[data-score="85"] { background: linear-gradient(90deg, #166534, #22c55e); }
+  .meter-fill[data-score="80"] { background: linear-gradient(90deg, #166534, #22c55e); }
+  .meter-fill[data-score="50"] { background: linear-gradient(90deg, #a3a322, #eab308); }
+  .meter-fill[data-score="45"] { background: linear-gradient(90deg, #a3a322, #eab308); }
+  .meter-fill[data-score="25"] { background: linear-gradient(90deg, #c45a20, #f97316); }
+  .meter-fill[data-score="5"] { background: linear-gradient(90deg, #991b1b, #ef4444); }
+  .meter-fill[data-score="3"] { background: linear-gradient(90deg, #991b1b, #ef4444); }
 
-  .action-card {
-    background: #faf8f5;
-  }
-
-  .tip-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-  }
-
-  .tip-icon {
-    font-size: 1.5rem;
-    line-height: 1;
-  }
-
-  .tip-title {
-    font-family: 'Inter', sans-serif;
-    font-size: 1rem;
+  .meter-score {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.75rem;
     font-weight: 600;
-    margin: 0;
     color: var(--text);
   }
 
-  .tip-reality {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    line-height: 1.6;
-    margin: 0;
-  }
-
-  .section-footer {
+  .meters-note {
     text-align: center;
     margin-top: 1.5rem;
     padding-top: 1.5rem;
     border-top: 1px dashed var(--border);
   }
 
-  .section-footer p {
-    font-size: 0.9375rem;
+  .meters-note p {
+    font-size: 0.875rem;
     color: var(--text-light);
     font-style: italic;
+  }
+
+  /* The Gap */
+  .the-gap {
+    margin-bottom: 4rem;
+    padding: 2.5rem;
+    background: var(--dark-bg);
+    border-radius: 16px;
+    color: white;
+  }
+
+  .the-gap h2 {
+    color: white;
+  }
+
+  .the-gap .section-sub {
+    color: rgba(255,255,255,0.5);
+  }
+
+  .gap-visual {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1.5rem;
+    align-items: stretch;
+    margin-bottom: 2rem;
+  }
+
+  .gap-column {
+    padding: 1.5rem;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.05);
+  }
+
+  .gap-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .gap-icon {
+    font-size: 1.5rem;
+  }
+
+  .gap-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .gap-column ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.5rem 0;
+  }
+
+  .gap-column li {
+    font-size: 0.875rem;
+    color: rgba(255,255,255,0.7);
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .gap-column li:last-child {
+    border-bottom: none;
+  }
+
+  .gap-verdict {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .verdict-label {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.4);
+    width: 3rem;
+  }
+
+  .verdict-bar {
+    flex: 1;
+    height: 8px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .verdict-fill {
+    height: 100%;
+    background: rgba(255,255,255,0.3);
+    border-radius: 4px;
+  }
+
+  .verdict-fill.policy-fill {
+    background: var(--accent);
+  }
+
+  .verdict-pct {
+    font-size: 0.875rem;
+    font-weight: 600;
+    width: 3rem;
+    text-align: right;
+  }
+
+  .gap-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.3);
+  }
+
+  .gap-arrow svg {
+    width: 40px;
+    height: 80px;
+    margin-bottom: 0.5rem;
+  }
+
+  .gap-arrow span {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+  }
+
+  .gap-conclusion {
+    text-align: center;
+    font-size: 1.125rem;
+    color: rgba(255,255,255,0.7);
+    margin: 0;
+  }
+
+  .gap-conclusion strong {
+    color: white;
+  }
+
+  /* Hard Numbers */
+  .hard-numbers {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 4rem;
+  }
+
+  .number-card {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    background: var(--bg-paper);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .number-card.big {
+    grid-column: span 4;
+    padding: 2rem;
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .number-card.big .number {
+    font-size: 4rem;
+    color: white;
+  }
+
+  .number-card.big .context {
+    color: rgba(255,255,255,0.8);
+  }
+
+  .number {
+    display: block;
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+
+  .context {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  /* Action Theater */
+  .action-theater {
+    margin-bottom: 4rem;
+  }
+
+  .action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+  }
+
+  .action-item {
+    padding: 1.25rem;
+    background: var(--bg-paper);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .action-item.highlight {
+    background: rgba(22, 101, 52, 0.05);
+    border-color: var(--severity-good);
+  }
+
+  .action-icon {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .action-item h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .action-item p {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    margin-bottom: 1rem;
+  }
+
+  .action-meter {
+    height: 4px;
+    background: var(--bg);
+    border-radius: 2px;
+    position: relative;
+  }
+
+  .action-meter::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: var(--fill);
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  .action-item.highlight .action-meter::after {
+    background: var(--severity-good);
+  }
+
+  /* Real Advice */
+  .real-advice {
+    margin-bottom: 4rem;
+    padding: 2.5rem;
+    background: var(--bg);
+    border-radius: 16px;
+  }
+
+  .real-advice h2 {
+    text-align: center;
+    font-size: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .advice-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
     max-width: 500px;
     margin: 0 auto;
   }
 
-  /* Divider */
-  .section-divider {
-    text-align: center;
-    padding: 2rem 0;
+  .advice-item {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
   }
 
-  .divider-text {
-    background: var(--bg);
-    padding: 0.5rem 1.5rem;
-    font-size: 0.875rem;
-    color: var(--text-light);
-    border: 1px dashed var(--border);
-    border-radius: 50px;
-  }
-
-  /* Hard Truths */
-  .truths-section {
-    background: #1a1a1a;
+  .advice-num {
+    width: 2rem;
+    height: 2rem;
+    background: var(--text);
     color: white;
-    padding: 2rem;
-    border-radius: 12px;
-    margin-bottom: 3rem;
-  }
-
-  .truths-section h2 {
-    text-align: center;
-    margin-bottom: 0.5rem;
-  }
-
-  .truths-intro {
-    text-align: center;
-    color: rgba(255, 255, 255, 0.6);
-    margin-bottom: 1.5rem;
-    font-size: 0.9375rem;
-  }
-
-  .truths-list {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .truths-list li {
-    padding: 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    font-size: 0.9375rem;
-    color: rgba(255, 255, 255, 0.85);
-    line-height: 1.6;
-  }
-
-  .truths-list li:last-child {
-    border-bottom: none;
-  }
-
-  .truths-list li::before {
-    content: "→ ";
-    color: var(--accent);
-  }
-
-  /* Real Answer */
-  .real-answer {
-    margin-bottom: 3rem;
-  }
-
-  .real-answer h2 {
-    text-align: center;
-    margin-bottom: 1.5rem;
-  }
-
-  .answer-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-  }
-
-  .answer-card {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1.5rem;
-  }
-
-  .answer-card h3 {
-    font-family: 'Inter', sans-serif;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Playfair Display', serif;
     font-size: 1rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid var(--accent);
+    flex-shrink: 0;
   }
 
-  .answer-card ul {
-    margin: 0 0 1rem 1.25rem;
-    padding: 0;
+  .advice-item strong {
+    display: block;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
   }
 
-  .answer-card li {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    margin-bottom: 0.5rem;
-  }
-
-  .answer-note {
+  .advice-item p {
     font-size: 0.8125rem;
-    font-style: italic;
-    color: var(--text-light);
+    color: var(--text-secondary);
     margin: 0;
-    padding-top: 0.75rem;
-    border-top: 1px dashed var(--border);
   }
 
-  .answer-conclusion {
+  /* Final */
+  .final {
     text-align: center;
-    margin-top: 1.5rem;
-    font-size: 1rem;
-    color: var(--text);
-    font-style: italic;
+    padding: 3rem 2rem;
+    background: rgba(153, 27, 27, 0.05);
+    border: 1px solid rgba(153, 27, 27, 0.15);
+    border-radius: 16px;
   }
 
-  /* Final CTA */
-  .final-cta {
-    background: rgba(185, 28, 28, 0.05);
-    border: 1px solid rgba(185, 28, 28, 0.2);
-    border-radius: 12px;
-    padding: 2rem;
-    text-align: center;
-    margin-bottom: 2rem;
-  }
-
-  .final-cta h2 {
+  .final h2 {
+    font-size: 2rem;
     color: var(--accent);
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.2;
   }
 
-  .final-cta p {
+  .final p {
     font-size: 1rem;
-    color: var(--text-muted);
-    max-width: 600px;
-    margin: 0 auto 1rem;
-    line-height: 1.6;
-  }
-
-  .cta-kicker {
-    font-weight: 600;
-    color: var(--text) !important;
-    font-size: 1.125rem !important;
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
   }
 
   .cta-buttons {
     display: flex;
     gap: 1rem;
     justify-content: center;
-    margin-top: 1.5rem;
   }
 
-  .cta-btn {
-    padding: 0.75rem 1.5rem;
-    border-radius: 6px;
+  .btn {
+    padding: 0.875rem 1.75rem;
+    border-radius: 8px;
     font-weight: 600;
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
     text-decoration: none;
   }
 
-  .cta-btn.primary {
+  .btn.primary {
     background: var(--accent);
     color: white;
   }
 
-  .cta-btn.secondary {
+  .btn.secondary {
     background: white;
     color: var(--text);
     border: 1px solid var(--border);
   }
 
-  .cta-btn:hover {
-    opacity: 0.9;
-    text-decoration: none;
-  }
-
-  /* Closing Quote */
-  .closing-quote {
-    background: #faf8f5;
-    border-left: 4px solid var(--text-light);
-    padding: 1.5rem 2rem;
-    margin: 0;
-    border-radius: 0 8px 8px 0;
-  }
-
-  .closing-quote p {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.125rem;
-    font-style: italic;
-    color: var(--text);
-    margin: 0 0 0.75rem 0;
-  }
-
-  .closing-quote footer {
-    font-size: 0.875rem;
-    color: var(--text-light);
-  }
-
-  @media (max-width: 700px) {
-    .page-hero h1 {
-      font-size: 2.25rem;
-    }
-
-    .tips-grid {
+  /* Responsive */
+  @media (max-width: 768px) {
+    .gap-visual {
       grid-template-columns: 1fr;
     }
 
-    .answer-grid {
-      grid-template-columns: 1fr;
+    .gap-arrow {
+      flex-direction: row;
+      padding: 1rem 0;
+    }
+
+    .gap-arrow svg {
+      transform: rotate(90deg);
+      width: 60px;
+      height: 30px;
+    }
+
+    .gap-arrow span {
+      writing-mode: horizontal-tb;
+    }
+
+    .hard-numbers {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .number-card.big {
+      grid-column: span 2;
     }
 
     .cta-buttons {
       flex-direction: column;
+    }
+  }
+
+  @media (max-width: 500px) {
+    .hard-numbers {
+      grid-template-columns: 1fr;
+    }
+
+    .number-card.big {
+      grid-column: span 1;
     }
   }
 </style>

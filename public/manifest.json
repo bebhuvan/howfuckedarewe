@@ -1,0 +1,55 @@
+{
+  "name": "How Fucked Are We",
+  "short_name": "HFAW",
+  "description": "India's air quality crisis, visualized. No sugarcoating.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#991b1b",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["health", "news", "environment"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Delhi Air Quality",
+      "short_name": "Delhi",
+      "url": "/delhi",
+      "description": "Check Delhi's current air quality"
+    },
+    {
+      "name": "Mumbai Air Quality",
+      "short_name": "Mumbai",
+      "url": "/mumbai",
+      "description": "Check Mumbai's current air quality"
+    },
+    {
+      "name": "Bangalore Air Quality",
+      "short_name": "Bangalore",
+      "url": "/bangalore",
+      "description": "Check Bangalore's current air quality"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

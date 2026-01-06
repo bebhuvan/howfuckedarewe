@@ -28,11 +28,11 @@
 
         <div class="source-card">
           <h3>Real-time Air Quality Data</h3>
-          <p class="claim">We pull data from CPCB monitoring stations in Delhi, Mumbai, Kolkata, Bangalore, and Chennai via the World Air Quality Index Project (WAQI) API.</p>
+          <p class="claim">We pull data from CPCB monitoring stations across 10 major Indian cities via the World Air Quality Index Project (WAQI) API.</p>
           <div class="source-details">
             <p><strong>Source:</strong> World Air Quality Index Project (WAQI)</p>
             <p><strong>Original data:</strong> Primarily CPCB (Central Pollution Control Board), plus other government and research stations aggregated by WAQI</p>
-            <p><strong>Current coverage:</strong> ~65 stations across 5 cities</p>
+            <p><strong>Current coverage:</strong> ~100+ stations across 10 cities (Delhi, Mumbai, Kolkata, Bangalore, Chennai, Hyderabad, Ahmedabad, Patna, Lucknow, Agra)</p>
             <p><strong>Update frequency:</strong> Hourly</p>
             <a href="https://aqicn.org/" target="_blank" rel="noopener">WAQI Data →</a>
           </div>
@@ -340,6 +340,159 @@
       </section>
 
       <section class="methodology-section">
+        <h2>Historical Trends & National Aggregates</h2>
+
+        <div class="source-card">
+          <h3>The "How Have We Been Getting Fucked?" Chart</h3>
+          <p class="claim">Shows 30-day national PM2.5 trends with population-weighted averages across major Indian cities.</p>
+          <div class="source-details">
+            <p><strong>What you see:</strong> A bar chart showing daily national average PM2.5 for the last 30 days, with a reference line at the WHO guideline (5 µg/m³).</p>
+            <p><strong>Colors indicate severity:</strong></p>
+            <ul>
+              <li><span style="color: #22c55e;">■</span> Green (≤12 µg/m³) — Within US EPA "Good" range</li>
+              <li><span style="color: #eab308;">■</span> Yellow (12-35 µg/m³) — Unhealthy for sensitive groups</li>
+              <li><span style="color: #f97316;">■</span> Orange (35-55 µg/m³) — Unhealthy</li>
+              <li><span style="color: #dc2626;">■</span> Red (>55 µg/m³) — Very unhealthy to hazardous</li>
+            </ul>
+            <p><strong>Stats shown:</strong></p>
+            <ul>
+              <li><strong>30-day avg:</strong> Simple average of daily weighted PM2.5</li>
+              <li><strong>Days above WHO:</strong> Count of days where average exceeded 5 µg/m³</li>
+              <li><strong>Worst day:</strong> Highest PM2.5 reading in the period</li>
+              <li><strong>vs last week:</strong> Percentage change comparing last 7 days to previous 7 days</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="source-card">
+          <h3>Population-Weighted Averaging</h3>
+          <p class="claim">"National average" isn't a simple mean—it's weighted by population exposed.</p>
+          <div class="source-details">
+            <p><strong>Why this matters:</strong> Delhi's PM2.5 matters more than a smaller city's because more people are breathing it. A simple average would underrepresent the true population health burden.</p>
+            <p><strong>Formula:</strong></p>
+            <pre class="code-block">weighted_avg = Σ(city_pm25 × city_population) ÷ Σ(city_population)</pre>
+            <p><strong>Cities included:</strong> Delhi, Mumbai, Kolkata, Bangalore, Chennai, Hyderabad, Ahmedabad, Patna, Lucknow, Agra</p>
+            <p><strong>Combined population:</strong> ~150 million people</p>
+          </div>
+        </div>
+
+        <div class="source-card">
+          <h3>Consecutive Days Above WHO ("The Streak")</h3>
+          <p class="claim">Counts how many days in a row national PM2.5 has exceeded the WHO guideline of 5 µg/m³.</p>
+          <div class="source-details">
+            <p><strong>Why we show this:</strong> It's one thing to say "air is bad." It's another to say "we haven't had a single safe day in 47 days." The streak counter makes the chronic nature of the problem visceral.</p>
+            <p><strong>Calculation:</strong> Starting from today, count backwards until we find a day where weighted average PM2.5 ≤ 5 µg/m³. In practice, this number is often... large.</p>
+          </div>
+        </div>
+
+        <div class="source-card">
+          <h3>Year-over-Year Comparison</h3>
+          <p class="claim">Compares current 30-day period to the same period last year.</p>
+          <div class="source-details">
+            <p><strong>What it shows:</strong> Whether air quality is better or worse than the same time last year. Seasonality matters (winter is worse), so comparing equivalent periods is more meaningful.</p>
+            <p><strong>Limitation:</strong> Requires at least 1 year of historical data to display. May not show in early data collection phases.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="methodology-section">
+        <h2>Data Architecture</h2>
+
+        <div class="source-card">
+          <h3>Data Pipeline Overview</h3>
+          <div class="source-details">
+            <p>We use a multi-stage pipeline to collect, aggregate, and serve historical data:</p>
+            <pre class="code-block">
+┌─────────────────────────────────────────────────┐
+│              DATA FLOW                          │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  [OpenAQ API] ──backfill──► [D1: readings]     │
+│       │                          │              │
+│       │                          ▼              │
+│  [WAQI API] ───hourly───► [D1: city_snapshots] │
+│                                  │              │
+│                                  ▼              │
+│                   [D1: daily_aggregates]        │
+│                                  │              │
+│                                  ▼              │
+│             [D1: national_daily_aggregates]     │
+│                                  │              │
+│                                  ▼              │
+│             [Homepage: Historical Trends]       │
+│                                                 │
+└─────────────────────────────────────────────────┘</pre>
+          </div>
+        </div>
+
+        <div class="source-card">
+          <h3>Data Sources</h3>
+          <div class="source-details">
+            <p><strong>Real-time (WAQI):</strong> World Air Quality Index API provides hourly readings from CPCB stations. Used for live dashboard and ongoing data collection.</p>
+            <p><strong>Historical backfill (OpenAQ):</strong> OpenAQ v3 API provides historical PM2.5 data going back several years. Used to populate historical trends before our data collection started.</p>
+            <p><strong>Why two sources?</strong> WAQI has better real-time coverage and station information. OpenAQ has deeper historical archives. We use WAQI for ongoing collection and OpenAQ for historical backfill.</p>
+            <a href="https://aqicn.org/" target="_blank" rel="noopener">WAQI API →</a>
+            <a href="https://openaq.org/" target="_blank" rel="noopener">OpenAQ API →</a>
+          </div>
+        </div>
+
+        <div class="source-card">
+          <h3>Database Schema</h3>
+          <div class="source-details">
+            <p><strong>Storage:</strong> Cloudflare D1 (SQLite at the edge)</p>
+            <p><strong>Key tables:</strong></p>
+            <ul>
+              <li><code>city_snapshots</code> — Hourly snapshots of each city's PM2.5</li>
+              <li><code>daily_aggregates</code> — Daily min/max/avg per city</li>
+              <li><code>national_daily_aggregates</code> — Pre-computed national averages</li>
+              <li><code>openaq_stations</code> — Mapping of OpenAQ stations to our cities</li>
+              <li><code>ingestion_log</code> — Audit trail of data collection runs</li>
+            </ul>
+            <p><strong>Why pre-compute?</strong> Calculating population-weighted averages across millions of readings on every page load would be slow. We pre-compute daily aggregates via background workers.</p>
+          </div>
+        </div>
+
+        <div class="source-card">
+          <h3>Background Workers</h3>
+          <div class="source-details">
+            <p>Three Cloudflare Workers handle data collection and aggregation:</p>
+            <p><strong>1. Ingestion Worker</strong> (hourly cron)</p>
+            <ul>
+              <li>Fetches current PM2.5 from WAQI for all cities</li>
+              <li>Validates data quality (bounds, freshness, anomalies)</li>
+              <li>Stores in <code>city_snapshots</code> and <code>readings</code></li>
+            </ul>
+            <p><strong>2. Aggregator Worker</strong> (hourly cron, 15min offset)</p>
+            <ul>
+              <li>Computes daily aggregates from city snapshots</li>
+              <li>Calculates population-weighted national average</li>
+              <li>Stores in <code>daily_aggregates</code> and <code>national_daily_aggregates</code></li>
+            </ul>
+            <p><strong>3. Backfill Worker</strong> (manual HTTP trigger)</p>
+            <ul>
+              <li>Imports historical data from OpenAQ</li>
+              <li>Maps OpenAQ stations to our cities by geocoordinates</li>
+              <li>Designed for one-time historical import</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="source-card">
+          <h3>Station-to-City Mapping</h3>
+          <div class="source-details">
+            <p><strong>Challenge:</strong> OpenAQ has thousands of Indian stations with inconsistent naming. We need to map them to our cities.</p>
+            <p><strong>Solution:</strong> Geographic proximity matching:</p>
+            <ul>
+              <li>For each OpenAQ station, calculate distance to our city centers</li>
+              <li>If within 50km radius, assign to that city</li>
+              <li>Multiple stations per city are averaged</li>
+            </ul>
+            <p><strong>Manual overrides:</strong> Some stations have known city assignments stored in the mapping table.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="methodology-section">
         <h2>Known Limitations</h2>
 
         <div class="source-card limitations">
@@ -536,6 +689,19 @@
     font-weight: 600;
     color: var(--text);
     background: rgba(0,0,0,0.02);
+  }
+
+  .code-block {
+    background: #1a1a1a;
+    color: #e5e5e5;
+    padding: 1rem;
+    border-radius: 4px;
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-size: 0.75rem;
+    overflow-x: auto;
+    white-space: pre;
+    line-height: 1.5;
+    margin: 0.75rem 0;
   }
 
   .limitations ul {
