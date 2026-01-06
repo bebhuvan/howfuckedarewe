@@ -35,6 +35,10 @@ import {
 
 const WAQI_BASE_URL = 'https://api.waqi.info';
 
+// Rate limiting: max concurrent requests to avoid WAQI API throttling
+const MAX_CONCURRENT_REQUESTS = 5;
+const REQUEST_DELAY_MS = 100; // Delay between batches
+
 /**
  * Get WAQI API token from environment
  */
@@ -92,20 +96,38 @@ export async function fetchStation(stationId: number): Promise<WAQIStation | nul
 }
 
 /**
- * Fetch data for multiple stations in parallel
+ * Delay utility for rate limiting
+ */
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Fetch data for multiple stations with rate limiting
+ * Processes requests in batches to avoid WAQI API throttling
  */
 export async function fetchStations(stationIds: number[]): Promise<Map<number, WAQIStation>> {
   const results = new Map<number, WAQIStation>();
 
-  // Fetch all stations in parallel
-  const promises = stationIds.map(async (id) => {
-    const data = await fetchStation(id);
-    if (data) {
-      results.set(id, data);
-    }
-  });
+  // Process in batches to avoid rate limiting
+  for (let i = 0; i < stationIds.length; i += MAX_CONCURRENT_REQUESTS) {
+    const batch = stationIds.slice(i, i + MAX_CONCURRENT_REQUESTS);
 
-  await Promise.all(promises);
+    const batchPromises = batch.map(async (id) => {
+      const data = await fetchStation(id);
+      if (data) {
+        results.set(id, data);
+      }
+    });
+
+    await Promise.all(batchPromises);
+
+    // Add delay between batches (except for the last one)
+    if (i + MAX_CONCURRENT_REQUESTS < stationIds.length) {
+      await delay(REQUEST_DELAY_MS);
+    }
+  }
+
   return results;
 }
 
@@ -365,11 +387,25 @@ export async function fetchCityData(city: CityConfig): Promise<CitySnapshot> {
 }
 
 /**
- * Fetch data for multiple cities in parallel
+ * Fetch data for multiple cities with controlled concurrency
+ * Processes cities in small batches to avoid WAQI API throttling
  */
 export async function fetchAllCitiesData(cities: CityConfig[]): Promise<CitySnapshot[]> {
-  const promises = cities.map((city) => fetchCityData(city));
-  return Promise.all(promises);
+  const results: CitySnapshot[] = [];
+  const CITIES_BATCH_SIZE = 2; // Process 2 cities at a time
+
+  for (let i = 0; i < cities.length; i += CITIES_BATCH_SIZE) {
+    const batch = cities.slice(i, i + CITIES_BATCH_SIZE);
+    const batchResults = await Promise.all(batch.map((city) => fetchCityData(city)));
+    results.push(...batchResults);
+
+    // Small delay between city batches
+    if (i + CITIES_BATCH_SIZE < cities.length) {
+      await delay(150);
+    }
+  }
+
+  return results;
 }
 
 // ============================================================================

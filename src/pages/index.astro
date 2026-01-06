@@ -198,7 +198,7 @@ function getColorForPm25(pm25: number | null): string {
           <span class="pill-label">cigarettes/day equivalent</span>
         </div>
         <div class="stat-pill">
-          <span class="pill-value">{(nationalMetrics.dailyLifeLostMinutes / 60).toFixed(1)}h</span>
+          <span class="pill-value">{nationalMetrics.hoursLostEquivalentPerDay.toFixed(1)}h</span>
           <span class="pill-label">life lost per person today</span>
         </div>
         <div class="stat-pill">
