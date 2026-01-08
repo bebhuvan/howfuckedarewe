@@ -115,13 +115,11 @@ export const CHENNAI: CityConfig = {
   tagline: "Filter coffee won't filter this air.",
   stations: [
     { id: 13739, name: 'Kodungaiyur', area: 'Kodungaiyur' },
-    { id: 13738, name: 'Perungudi', area: 'Perungudi' },
     { id: 13740, name: 'Arumbakkam', area: 'Arumbakkam' },
     { id: 11859, name: 'Manali Village', area: 'Manali' },
-    { id: 11279, name: 'Velachery Res. Area', area: 'Velachery' },
     { id: 8185, name: 'Manali', area: 'Manali' },
+    { id: 11279, name: 'Velachery Res. Area', area: 'Velachery' },
     { id: 13737, name: 'Royapuram', area: 'Royapuram' },
-    { id: 14144, name: 'Gandhi Nagar Ennore', area: 'Ennore' },
   ],
 };
 
@@ -158,15 +156,14 @@ export const HYDERABAD: CityConfig = {
   timezone: 'Asia/Kolkata',
   tagline: 'Biryani with a side of particulate matter.',
   stations: [
-    { id: 8700, name: 'Zoo Park', area: 'Nehru Zoological Park' },
-    { id: 11224, name: 'Bollaram', area: 'Bollaram' },
-    { id: 11225, name: 'ICRISAT', area: 'Patancheru' },
-    { id: 11226, name: 'IDA Pashamylaram', area: 'Pashamylaram' },
-    { id: 11227, name: 'Sanathnagar', area: 'Sanathnagar' },
-    { id: 11228, name: 'Central University', area: 'Gachibowli' },
-    { id: 11229, name: 'Kompally', area: 'Kompally' },
-    { id: 11230, name: 'Nacharam', area: 'Nacharam' },
-    { id: 11231, name: 'Charminar', area: 'Charminar' },
+    { id: 8677, name: 'Zoo Park', area: 'Bahadurpura West' },
+    { id: 8182, name: 'Sanathnagar', area: 'Sanathnagar' },
+    { id: 14135, name: 'New Malakpet', area: 'Malakpet' },
+    { id: 14125, name: 'Somajiguda', area: 'Somajiguda' },
+    { id: 9144, name: 'IDA Pashamylaram', area: 'Pashamylaram' },
+    { id: 11284, name: 'Central University', area: 'Gachibowli' },
+    { id: 11305, name: 'ICRISAT Patancheru', area: 'Patancheru' },
+    { id: 11295, name: 'Bollaram Industrial Area', area: 'Bollaram' },
   ],
 };
 
@@ -180,13 +177,13 @@ export const AHMEDABAD: CityConfig = {
   timezone: 'Asia/Kolkata',
   tagline: 'Vibrant Gujarat. Vibrating alveoli.',
   stations: [
-    { id: 12451, name: 'Phase-4 GIDC Vatva', area: 'Vatva' },
     { id: 13749, name: 'Gyaspur', area: 'Gyaspur' },
     { id: 8192, name: 'Maninagar', area: 'Maninagar' },
     { id: 13748, name: 'Rakhial', area: 'Rakhial' },
     { id: 13746, name: 'SAC ISRO Satellite', area: 'Satellite' },
     { id: 13750, name: 'Chandkheda', area: 'Chandkheda' },
-    { id: 13747, name: 'Pirana', area: 'Pirana' },
+    { id: 12451, name: 'Phase-4 GIDC Vatva', area: 'Vatva' },
+    { id: 13745, name: 'SVPI Airport Hansol', area: 'Hansol' },
   ],
 };
 
@@ -206,7 +203,7 @@ export const PATNA: CityConfig = {
     { id: 8674, name: 'IGSC Planetarium Complex', area: 'Planetarium' },
     { id: 12888, name: 'DRM Office Danapur', area: 'Danapur' },
     { id: 12887, name: 'Govt. High School Shikarpur', area: 'Shikarpur' },
-    { id: 12886, name: 'Srikrishnapuri', area: 'Srikrishnapuri' },
+
   ],
 };
 
@@ -240,11 +237,10 @@ export const AGRA: CityConfig = {
   tagline: 'The Taj Mahal is turning yellow. So are your lungs.',
   stations: [
     { id: 8186, name: 'Sanjay Palace', area: 'Sanjay Palace' },
-    { id: 13754, name: 'Manoharpur', area: 'Manoharpur' },
     { id: 13873, name: 'Rohta', area: 'Rohta' },
+    { id: 13754, name: 'Manoharpur', area: 'Manoharpur' },
+    { id: 13752, name: 'Shahjahan Garden', area: 'Shahjahan Garden' },
     { id: 13753, name: 'Sector-3B Avas Vikas Colony', area: 'Avas Vikas' },
-    { id: 13752, name: 'Bodla', area: 'Bodla' },
-    { id: 13751, name: 'Rambagh', area: 'Rambagh' },
   ],
 };
 

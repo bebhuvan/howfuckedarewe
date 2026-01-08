@@ -3,45 +3,88 @@
  * City Page — The Full Picture
  *
  * A visceral, sardonic look at what you're breathing.
+ * 
+ * Data Architecture (v2):
+ * - Production: Reads from D1 first (< 50ms)
+ * - Fallback: Live WAQI API for fresh data if D1 stale
  */
 import CityLayout from '../layouts/CityLayout.astro';
-import CigaretteHero from '../components/CigaretteHero.astro';
-import DamageCard from '../components/DamageCard.astro';
-import FuckedMeter from '../components/FuckedMeter.astro';
-import HardStats from '../components/HardStats.astro';
-import RiskContext from '../components/RiskContext.astro';
-import LiveDeathCounter from '../components/LiveDeathCounter.astro';
-import LivePollutantCocktail from '../components/LivePollutantCocktail.astro';
-import LungDamage from '../components/LungDamage.astro';
-import ScheduledDamage from '../components/ScheduledDamage.astro';
-import AreaBreakdown from '../components/AreaBreakdown.astro';
-import DataQualityBadge from '../components/DataQualityBadge.astro';
-import CityVariance from '../components/CityVariance.astro';
-import GlobalComparison from '../components/GlobalComparison.astro';
-import DominantPollutant from '../components/DominantPollutant.astro';
+import CigaretteHero from '../components/cards/CigaretteHero.astro';
+import DamageCard from '../components/cards/DamageCard.astro';
+import FuckedMeter from '../components/cards/FuckedMeter.astro';
+import HardStats from '../components/analysis/HardStats.astro';
+import RiskContext from '../components/cards/RiskContext.astro';
+import LiveDeathCounter from '../components/analysis/LiveDeathCounter.astro';
+import LivePollutantCocktail from '../components/cards/LivePollutantCocktail.astro';
+import LungDamage from '../components/analysis/LungDamage.astro';
+import ScheduledDamage from '../components/analysis/ScheduledDamage.astro';
+import AreaBreakdown from '../components/analysis/AreaBreakdown.astro';
+import DataQualityBadge from '../components/ui/DataQualityBadge.astro';
+import CityVariance from '../components/cards/CityVariance.astro';
+import GlobalComparison from '../components/cards/GlobalComparison.astro';
+import DominantPollutant from '../components/cards/DominantPollutant.astro';
 
 import { ALL_CITIES, getCityBySlug } from '../lib/cities';
 import { fetchCityData } from '../lib/waqi';
+import { getCitySnapshot } from '../lib/db';
 import { estimateAnnualDeaths } from '../lib/calculations';
 import type { CityConfig, CitySnapshot } from '../lib/types';
 
-// SSR: Fetch live data on each request (no prerendering)
-// This ensures data is always fresh from WAQI API
+// SSR: No prerendering, but D1 is fast enough
 export const prerender = false;
 
 // Get city from URL params
 const { city: citySlug } = Astro.params;
-
-// Look up city config
 const cityConfig = citySlug ? getCityBySlug(citySlug) : null;
 
-// Return 404 if city not found
 if (!cityConfig) {
   return Astro.redirect('/404');
 }
 
-// Fetch live data from WAQI
-const snapshot: CitySnapshot = await fetchCityData(cityConfig);
+// WAQI token with fallback for dev
+const WAQI_TOKEN = import.meta.env.WAQI_API_TOKEN || 
+  Astro.locals.runtime?.env?.WAQI_API_TOKEN ||
+  "f9c3a63cafeffbe1bae0286e46e8df56c80f87a6";
+
+// D1-first: Try cached data for speed
+const db = Astro.locals.runtime?.env?.DB;
+let snapshot: CitySnapshot | null = null;
+
+if (db && !import.meta.env.DEV) {
+  try {
+    snapshot = await getCitySnapshot(db, citySlug!);
+    if (snapshot) {
+      console.log(`[${citySlug}] Got snapshot from D1`);
+    }
+  } catch (e) {
+    console.warn(`[${citySlug}] D1 read failed:`, e);
+  }
+}
+
+// Fallback to live API (dev mode or D1 miss)
+if (!snapshot && WAQI_TOKEN) {
+  console.log(`[${citySlug}] Fetching from WAQI API...`);
+  snapshot = await fetchCityData(cityConfig, WAQI_TOKEN);
+}
+
+// Handle complete failure
+if (!snapshot) {
+  snapshot = {
+    city: cityConfig,
+    timestamp: new Date().toISOString(),
+    stations: [],
+    validStationCount: 0,
+    totalStationCount: cityConfig.stations.length,
+    avgPm25: null,
+    minPm25: null,
+    maxPm25: null,
+    metrics: null,
+    pollutants: { pm25: null, pm10: null, o3: null, no2: null, so2: null, co: null },
+    dominantPollutant: null,
+    forecast: [],
+    dataQuality: 'unavailable',
+  };
+}
 
 // Page metadata
 const title = `${cityConfig.name} Air Quality — How Fucked Are We`;
@@ -56,8 +99,8 @@ const annualDeaths = snapshot.avgPm25
 
 // Calculate min/max PM2.5 from stations for variance component
 const stationPm25Values = snapshot.stations
-  .filter(s => s.pm25 !== null && s.pm25 !== undefined)
-  .map(s => s.pm25 as number);
+  .filter(s => s.pm25Concentration !== null && s.pm25Concentration !== undefined)
+  .map(s => s.pm25Concentration as number);
 const minPm25 = stationPm25Values.length > 0 ? Math.min(...stationPm25Values) : null;
 const maxPm25 = stationPm25Values.length > 0 ? Math.max(...stationPm25Values) : null;
 

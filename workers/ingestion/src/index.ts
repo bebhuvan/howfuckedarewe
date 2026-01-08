@@ -1,8 +1,8 @@
 /**
- * AQI Data Ingestion Worker
+ * AQI Data Ingestion Worker v2
  *
  * Scheduled Cloudflare Worker that:
- * 1. Fetches air quality data from WAQI API hourly
+ * 1. Fetches air quality data from WAQI API hourly for ALL stations
  * 2. Stores raw readings in D1
  * 3. Computes and stores city-level aggregates
  * 4. Updates daily aggregates
@@ -10,7 +10,7 @@
  * Runs on cron: 0 * * * * (every hour at minute 0)
  */
 
-import { CITIES, WAQI_CONFIG, METRICS } from './config';
+import { CITIES, WAQI_CONFIG, METRICS, type CityConfig, type StationConfig } from './config';
 import type { Env, WaqiResponse, StationReading, CitySnapshot } from './types';
 
 export default {
@@ -25,7 +25,7 @@ export default {
     console.log(`[${new Date().toISOString()}] Starting scheduled ingestion...`);
 
     try {
-      const results = await ingestAllCities(env);
+      const results = await ingestAllCities(env, 'scheduled');
       console.log(`[${new Date().toISOString()}] Ingestion complete:`, results);
     } catch (error) {
       console.error(`[${new Date().toISOString()}] Ingestion failed:`, error);
@@ -54,7 +54,7 @@ export default {
       }
 
       try {
-        const results = await ingestAllCities(env);
+        const results = await ingestAllCities(env, 'manual');
         return new Response(JSON.stringify({ success: true, results }), {
           headers: { 'Content-Type': 'application/json' },
         });
@@ -74,58 +74,118 @@ export default {
       });
     }
 
-    return new Response('AQI Ingestion Worker', { status: 200 });
+    return new Response('AQI Ingestion Worker v2 - Multi-Station', { status: 200 });
   },
 };
 
 /**
  * Main ingestion function - fetches and stores data for all cities
  */
-async function ingestAllCities(env: Env): Promise<Record<string, any>> {
+async function ingestAllCities(env: Env, source: string = 'scheduled'): Promise<Record<string, any>> {
   const results: Record<string, any> = {};
   const timestamp = new Date().toISOString();
   const hourTimestamp = truncateToHour(timestamp);
 
-  for (const city of CITIES) {
+  // START LOGGING
+  let logId: number | null = null;
+  try {
+    logId = await createIngestionLog(env.DB, source, timestamp);
+  } catch (e) {
+    console.error('Failed to create ingestion log:', e);
+  }
+
+  let totalRecords = 0;
+  let citiesProcessed = 0;
+
+  // SHARDING LOGIC
+  // Cloudflare Workers has a CPU limit, so we split the work.
+  // Even Hours: First 50% of cities
+  // Odd Hours: Last 50% of cities
+  // Manual trigger: All cities (source === 'manual')
+
+  const currentHour = new Date().getHours();
+  console.log(`Current hour: ${currentHour}, Source: ${source}`);
+
+  let citiesToProcess: typeof CITIES;
+
+  if (source === 'manual') {
+    // Manual trigger always runs everything
+    citiesToProcess = CITIES;
+    console.log(`Manual trigger: Processing ALL ${CITIES.length} cities.`);
+  } else {
+    // Scheduled trigger uses sharding
+    const half = Math.ceil(CITIES.length / 2);
+    if (currentHour % 2 === 0) {
+      // Even hours: First half
+      citiesToProcess = CITIES.slice(0, half);
+      console.log(`Even hour (${currentHour}): Processing first ${half} cities.`);
+    } else {
+      // Odd hours: Second half
+      citiesToProcess = CITIES.slice(half);
+      console.log(`Odd hour (${currentHour}): Processing last ${CITIES.length - half} cities.`);
+    }
+  }
+
+  for (const city of citiesToProcess) {
     try {
-      console.log(`Ingesting ${city.name}...`);
-
-      // Fetch from WAQI
-      const waqiData = await fetchWaqiData(city.waqiId, env.WAQI_API_TOKEN);
-
-      if (!waqiData || waqiData.status !== 'ok') {
-        results[city.slug] = { success: false, error: 'WAQI API error' };
-        continue;
-      }
+      console.log(`Ingesting ${city.name} (${city.stations.length} stations)...`);
 
       // Get or create city record
       const cityId = await ensureCity(env.DB, city);
 
-      // Process station data
-      const stations = extractStations(waqiData);
-      const readings: StationReading[] = [];
+      // Fetch ALL stations for this city with batching
+      const stationDataMap = await fetchStationsBatched(city.stations, env.WAQI_API_TOKEN);
 
-      for (const station of stations) {
-        const stationId = await ensureStation(env.DB, cityId, station);
-        const reading = await insertReading(env.DB, stationId, station, timestamp);
-        if (reading) readings.push(reading);
+      const readings: StationReading[] = [];
+      let latestStationTime = timestamp;
+
+      for (const stationConfig of city.stations) {
+        const rawData = stationDataMap.get(stationConfig.id);
+        if (!rawData || rawData.status !== 'ok' || !rawData.data) continue;
+
+        const stationId = await ensureStation(env.DB, cityId, {
+          waqiId: String(stationConfig.id),
+          name: stationConfig.name,
+          area: stationConfig.area,
+          latitude: rawData.data.city?.geo?.[0],
+          longitude: rawData.data.city?.geo?.[1],
+        });
+
+        const reading = await insertReading(env.DB, stationId, stationConfig.area, rawData.data, timestamp);
+        if (reading) {
+          readings.push(reading);
+          // Track the actual data timestamp
+          if (rawData.data.time?.iso) {
+            latestStationTime = rawData.data.time.iso;
+          }
+        }
       }
 
-      // Compute and store city snapshot
-      const snapshot = await computeCitySnapshot(env.DB, cityId, readings, hourTimestamp);
+      // Compute and store city snapshot using actual data timestamp
+      const snapshot = await computeCitySnapshot(env.DB, cityId, readings, hourTimestamp, city.stations.length);
 
       // Update daily aggregate
       await updateDailyAggregate(env.DB, cityId, hourTimestamp);
 
       results[city.slug] = {
         success: true,
-        stations: readings.length,
+        totalStations: city.stations.length,
+        validStations: readings.length,
         avgPm25: snapshot?.avgPm25,
+        dataTimestamp: latestStationTime,
       };
+
+      totalRecords += readings.length;
+      citiesProcessed++;
     } catch (error) {
       console.error(`Error ingesting ${city.name}:`, error);
       results[city.slug] = { success: false, error: String(error) };
     }
+  }
+
+  // END LOGGING
+  if (logId) {
+    await updateIngestionLog(env.DB, logId, 'completed', citiesProcessed, totalRecords);
   }
 
   return results;
@@ -158,17 +218,47 @@ function getBackoffDelay(attempt: number): number {
 }
 
 /**
+ * Fetch multiple stations with batching and rate limiting
+ */
+async function fetchStationsBatched(
+  stations: StationConfig[],
+  token: string
+): Promise<Map<number, WaqiResponse>> {
+  const results = new Map<number, WaqiResponse>();
+
+  for (let i = 0; i < stations.length; i += WAQI_CONFIG.maxConcurrent) {
+    const batch = stations.slice(i, i + WAQI_CONFIG.maxConcurrent);
+
+    const promises = batch.map(async (station) => {
+      const data = await fetchWaqiData(station.id, token);
+      if (data) {
+        results.set(station.id, data);
+      }
+    });
+
+    await Promise.all(promises);
+
+    // Delay between batches
+    if (i + WAQI_CONFIG.maxConcurrent < stations.length) {
+      await sleep(WAQI_CONFIG.delayBetweenBatchesMs);
+    }
+  }
+
+  return results;
+}
+
+/**
  * Fetch data from WAQI API with retry logic
  */
-async function fetchWaqiData(stationId: string, token: string): Promise<WaqiResponse | null> {
-  const url = `${WAQI_CONFIG.baseUrl}/feed/${stationId}/?token=${token}`;
+async function fetchWaqiData(stationId: number, token: string): Promise<WaqiResponse | null> {
+  const url = `${WAQI_CONFIG.baseUrl}/feed/@${stationId}/?token=${token}`;
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
     try {
       if (attempt > 0) {
         const delay = getBackoffDelay(attempt - 1);
-        console.log(`WAQI retry attempt ${attempt}/${RETRY_CONFIG.maxRetries} after ${Math.round(delay)}ms delay`);
+        console.log(`WAQI retry for station ${stationId} attempt ${attempt}/${RETRY_CONFIG.maxRetries} after ${Math.round(delay)}ms delay`);
         await sleep(delay);
       }
 
@@ -206,7 +296,7 @@ async function fetchWaqiData(stationId: string, token: string): Promise<WaqiResp
         continue;
       }
 
-      return data;
+      return data as WaqiResponse;
     } catch (error) {
       lastError = error as Error;
       console.error(`WAQI fetch error (attempt ${attempt + 1}):`, error);
@@ -218,42 +308,14 @@ async function fetchWaqiData(stationId: string, token: string): Promise<WaqiResp
     }
   }
 
-  console.error(`WAQI fetch failed after ${RETRY_CONFIG.maxRetries + 1} attempts:`, lastError);
+  console.error(`WAQI fetch failed for station ${stationId} after ${RETRY_CONFIG.maxRetries + 1} attempts:`, lastError);
   return null;
-}
-
-/**
- * Extract station readings from WAQI response
- */
-function extractStations(data: WaqiResponse): any[] {
-  const stations: any[] = [];
-
-  // Main station
-  if (data.data) {
-    stations.push({
-      waqiId: String(data.data.idx),
-      name: data.data.city?.name || 'Unknown',
-      latitude: data.data.city?.geo?.[0],
-      longitude: data.data.city?.geo?.[1],
-      pm25: data.data.iaqi?.pm25?.v,
-      pm10: data.data.iaqi?.pm10?.v,
-      o3: data.data.iaqi?.o3?.v,
-      no2: data.data.iaqi?.no2?.v,
-      so2: data.data.iaqi?.so2?.v,
-      co: data.data.iaqi?.co?.v,
-      aqi: data.data.aqi,
-      dominantPollutant: data.data.dominentpol,
-      recordedAt: data.data.time?.iso,
-    });
-  }
-
-  return stations;
 }
 
 /**
  * Ensure city exists in database, return ID
  */
-async function ensureCity(db: D1Database, city: typeof CITIES[0]): Promise<number> {
+async function ensureCity(db: D1Database, city: CityConfig): Promise<number> {
   const existing = await db
     .prepare('SELECT id FROM cities WHERE slug = ?')
     .bind(city.slug)
@@ -266,7 +328,7 @@ async function ensureCity(db: D1Database, city: typeof CITIES[0]): Promise<numbe
       INSERT INTO cities (slug, name, local_name, state, population, waqi_station_id)
       VALUES (?, ?, ?, ?, ?, ?)
     `)
-    .bind(city.slug, city.name, city.localName, city.state, city.population, city.waqiId)
+    .bind(city.slug, city.name, city.localName, city.state, city.population, city.stations[0]?.id.toString() || '')
     .run();
 
   return result.meta.last_row_id as number;
@@ -275,7 +337,13 @@ async function ensureCity(db: D1Database, city: typeof CITIES[0]): Promise<numbe
 /**
  * Ensure station exists in database, return ID
  */
-async function ensureStation(db: D1Database, cityId: number, station: any): Promise<number> {
+async function ensureStation(db: D1Database, cityId: number, station: {
+  waqiId: string;
+  name: string;
+  area: string;
+  latitude?: number;
+  longitude?: number;
+}): Promise<number> {
   const existing = await db
     .prepare('SELECT id FROM stations WHERE waqi_id = ?')
     .bind(station.waqiId)
@@ -300,10 +368,21 @@ async function ensureStation(db: D1Database, cityId: number, station: any): Prom
 async function insertReading(
   db: D1Database,
   stationId: number,
-  station: any,
+  area: string,
+  data: WaqiResponse['data'],
   timestamp: string
 ): Promise<StationReading | null> {
-  const recordedAt = station.recordedAt || timestamp;
+  if (!data) return null;
+
+  const recordedAt = data.time?.iso || timestamp;
+  const pm25 = data.iaqi?.pm25?.v ?? null;
+  const pm10 = data.iaqi?.pm10?.v ?? null;
+  const o3 = data.iaqi?.o3?.v ?? null;
+  const no2 = data.iaqi?.no2?.v ?? null;
+  const so2 = data.iaqi?.so2?.v ?? null;
+  const co = data.iaqi?.co?.v ?? null;
+  const aqi = typeof data.aqi === 'number' ? data.aqi : null;
+  const dominantPollutant = data.dominentpol || null;
 
   try {
     await db
@@ -315,27 +394,28 @@ async function insertReading(
       .bind(
         stationId,
         recordedAt,
-        station.pm25,
-        station.pm10,
-        station.o3,
-        station.no2,
-        station.so2,
-        station.co,
-        station.aqi,
-        station.dominantPollutant
+        pm25,
+        pm10,
+        o3,
+        no2,
+        so2,
+        co,
+        aqi,
+        dominantPollutant
       )
       .run();
 
     return {
       stationId,
-      pm25: station.pm25,
-      pm10: station.pm10,
-      o3: station.o3,
-      no2: station.no2,
-      so2: station.so2,
-      co: station.co,
-      aqi: station.aqi,
-      dominantPollutant: station.dominantPollutant,
+      area,
+      pm25,
+      pm10,
+      o3,
+      no2,
+      so2,
+      co,
+      aqi,
+      dominantPollutant,
       recordedAt,
     };
   } catch (error) {
@@ -351,7 +431,8 @@ async function computeCitySnapshot(
   db: D1Database,
   cityId: number,
   readings: StationReading[],
-  hourTimestamp: string
+  hourTimestamp: string,
+  totalStationCount: number
 ): Promise<CitySnapshot | null> {
   const validReadings = readings.filter((r) => r.pm25 !== null && r.pm25 !== undefined);
 
@@ -394,10 +475,10 @@ async function computeCitySnapshot(
     avgNo2,
     avgSo2,
     avgCo,
-    totalStations: readings.length,
+    totalStations: totalStationCount,
     validStations: validReadings.length,
     dominantPollutant,
-    qualityStatus: validReadings.length >= readings.length * 0.8 ? 'healthy' : 'degraded',
+    qualityStatus: validReadings.length >= totalStationCount * 0.5 ? 'healthy' : 'degraded',
   };
 
   try {
@@ -421,7 +502,7 @@ async function computeCitySnapshot(
         avgNo2,
         avgSo2,
         avgCo,
-        readings.length,
+        totalStationCount,
         validReadings.length,
         dominantPollutant,
         snapshot.qualityStatus
@@ -474,9 +555,9 @@ async function updateDailyAggregate(
   });
 
   // Compute health metrics
-  const cigarettesEquivalent = avgPm25 / METRICS.CIGARETTE_PM25_EQUIVALENT;
-  const yearsLostPerYear = Math.max(0, (avgPm25 - METRICS.WHO_GUIDELINE) / 10) * METRICS.AQLI_YEARS_PER_10UG;
-  const whoViolation = avgPm25 / METRICS.WHO_GUIDELINE;
+  const cigarettesEquivalent = avgPm25 !== null ? avgPm25 / METRICS.CIGARETTE_PM25_EQUIVALENT : 0;
+  const yearsLostPerYear = avgPm25 !== null ? Math.max(0, (avgPm25 - METRICS.WHO_GUIDELINE) / 10) * METRICS.AQLI_YEARS_PER_10UG : 0;
+  const whoViolation = avgPm25 !== null ? avgPm25 / METRICS.WHO_GUIDELINE : 0;
 
   try {
     await db
@@ -523,16 +604,22 @@ async function getIngestionStats(env: Env): Promise<Record<string, any>> {
 
   const cityCounts = await env.DB
     .prepare(`
-      SELECT c.name, COUNT(cs.id) as snapshot_count
+      SELECT c.name, COUNT(cs.id) as snapshot_count,
+             (SELECT COUNT(*) FROM stations s WHERE s.city_id = c.id) as station_count
       FROM cities c
       LEFT JOIN city_snapshots cs ON c.id = cs.city_id
       GROUP BY c.id
     `)
-    .all<{ name: string; snapshot_count: number }>();
+    .all<{ name: string; snapshot_count: number; station_count: number }>();
+
+  const totalStations = await env.DB
+    .prepare('SELECT COUNT(*) as count FROM stations')
+    .first<{ count: number }>();
 
   return {
     totalReadings: totalReadings?.count || 0,
     totalSnapshots: totalSnapshots?.count || 0,
+    totalStations: totalStations?.count || 0,
     latestSnapshot: latestSnapshot?.recorded_at,
     cityCounts: cityCounts.results,
   };
@@ -548,4 +635,47 @@ function truncateToHour(isoString: string): string {
 function average(arr: number[]): number | null {
   if (arr.length === 0) return null;
   return arr.reduce((a, b) => a + b, 0) / arr.length;
+}
+
+/**
+ * Create a new ingestion log entry
+ */
+async function createIngestionLog(db: D1Database, source: string, startedAt: string): Promise<number> {
+  const result = await db.prepare(`
+    INSERT INTO ingestion_logs (started_at, status, source)
+    VALUES (?, 'running', ?)
+  `).bind(startedAt, source).run();
+
+  return result.meta.last_row_id as number;
+}
+
+/**
+ * Update ingestion log upon completion
+ */
+async function updateIngestionLog(
+  db: D1Database,
+  id: number,
+  status: 'completed' | 'failed',
+  cities: number,
+  records: number,
+  error?: string
+): Promise<void> {
+  let query = `
+    UPDATE ingestion_logs 
+    SET completed_at = ?, status = ?, cities_processed = ?, records_processed = ?
+    WHERE id = ?
+  `;
+
+  const completedAt = new Date().toISOString();
+
+  if (error) {
+    query = `
+      UPDATE ingestion_logs 
+      SET completed_at = ?, status = ?, cities_processed = ?, records_processed = ?, error = ?
+      WHERE id = ?
+    `;
+    await db.prepare(query).bind(completedAt, status, cities, records, error, id).run();
+  } else {
+    await db.prepare(query).bind(completedAt, status, cities, records, id).run();
+  }
 }

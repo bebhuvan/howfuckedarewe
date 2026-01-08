@@ -1,0 +1,311 @@
+---
+/**
+ * Damage Card Component — REDESIGNED
+ *
+ * The arithmetic of breathing. Three time horizons.
+ * TODAY. THIS YEAR. LIFETIME.
+ * Clear, relatable, devastating.
+ */
+import type { AirQualityMetrics } from "../../lib/types";
+
+interface Props {
+  metrics: AirQualityMetrics;
+}
+
+const { metrics } = Astro.props;
+
+// Calculate damage at different time scales
+const yearsLost = metrics.yearsLost;
+const monthsLost = yearsLost * 12;
+const daysLostPerYear = yearsLost * 365;
+const hoursLostToday =
+  metrics.hoursLostEquivalentPerDay || (yearsLost * 365 * 24) / 365;
+
+// Cigarettes are visceral
+const cigsPerDay = metrics.cigarettesPerDay;
+const cigsPerYear = cigsPerDay * 365;
+const packsPerYear = cigsPerYear / 20;
+---
+
+<section class="damage-card">
+  <header class="card-header">
+    <h3 class="card-title">The Arithmetic of Breathing</h3>
+    <p class="card-subtitle">
+      What today's air costs you, whether you like it or not
+    </p>
+  </header>
+
+  <div class="damage-grid">
+    <!-- TODAY -->
+    <div class="damage-column today">
+      <div class="column-label">Today</div>
+      <div class="damage-stat primary">
+        <span class="stat-number">{cigsPerDay.toFixed(1)}</span>
+        <span class="stat-unit">cigarettes</span>
+      </div>
+      <div class="damage-stat secondary">
+        <span class="stat-number">{hoursLostToday.toFixed(1)}</span>
+        <span class="stat-unit">hours of life</span>
+      </div>
+      <p class="damage-kicker">Just by existing. You're welcome.</p>
+    </div>
+
+    <!-- THIS YEAR -->
+    <div class="damage-column year">
+      <div class="column-label">This Year</div>
+      <div class="damage-stat primary">
+        <span class="stat-number">{packsPerYear.toFixed(0)}</span>
+        <span class="stat-unit">packs of cigarettes</span>
+      </div>
+      <div class="damage-stat secondary">
+        <span class="stat-number">{daysLostPerYear.toFixed(1)}</span>
+        <span class="stat-unit">days of life</span>
+      </div>
+      <p class="damage-kicker">That's a holiday you'll never take.</p>
+    </div>
+
+    <!-- LIFETIME -->
+    <div class="damage-column lifetime">
+      <div class="column-label">Lifetime</div>
+      <div class="damage-stat primary">
+        <span class="stat-number"
+          >{
+            monthsLost >= 12 ? yearsLost.toFixed(1) : monthsLost.toFixed(0)
+          }</span
+        >
+        <span class="stat-unit"
+          >{monthsLost >= 12 ? "years" : "months"} gone</span
+        >
+      </div>
+      <div class="damage-explainer">
+        {
+          yearsLost >= 2
+            ? `That's ${yearsLost.toFixed(0)} birthdays you won't see.`
+            : monthsLost >= 6
+              ? `Half a year. Poof.`
+              : `A few months. Still adds up.`
+        }
+      </div>
+      <p class="damage-kicker">
+        If you breathe this air your whole life. Which, ironically, will be
+        shorter.
+      </p>
+    </div>
+  </div>
+
+  <footer class="card-footer">
+    <div class="methodology">
+      <p class="methodology-text">
+        These aren't scare tactics. They're calculations based on peer-reviewed
+        research from Berkeley Earth and the AQLI.
+      </p>
+      <a href="/methodology" class="methodology-link">
+        How we calculated this →
+      </a>
+    </div>
+  </footer>
+</section>
+
+<style>
+  .damage-card {
+    background: linear-gradient(180deg, #0d0d0d 0%, #1a1a1a 100%);
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    margin-bottom: 2.5rem;
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .damage-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(to right, transparent, #f97316, transparent);
+  }
+
+  .card-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .card-title {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 500;
+    color: white;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .card-subtitle {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+  }
+
+  .damage-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .damage-column {
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .damage-column.today {
+    border-top: 3px solid #eab308;
+  }
+
+  .damage-column.year {
+    border-top: 3px solid #f97316;
+  }
+
+  .damage-column.lifetime {
+    border-top: 3px solid #ef4444;
+  }
+
+  .column-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 1rem;
+  }
+
+  .damage-stat {
+    margin-bottom: 0.75rem;
+  }
+
+  .damage-stat.primary .stat-number {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 3rem;
+    font-weight: 400;
+    line-height: 1;
+    display: block;
+  }
+
+  .today .damage-stat.primary .stat-number {
+    color: #eab308;
+  }
+
+  .year .damage-stat.primary .stat-number {
+    color: #f97316;
+  }
+
+  .lifetime .damage-stat.primary .stat-number {
+    color: #ef4444;
+  }
+
+  .damage-stat.primary .stat-unit {
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.7);
+    display: block;
+    margin-top: 0.25rem;
+  }
+
+  .damage-stat.secondary {
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    margin-bottom: 1rem;
+  }
+
+  .damage-stat.secondary .stat-number {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 1.5rem;
+    color: white;
+    display: block;
+  }
+
+  .damage-stat.secondary .stat-unit {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    display: block;
+  }
+
+  .damage-explainer {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0.75rem;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 6px;
+    margin-bottom: 1rem;
+  }
+
+  .damage-kicker {
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.35);
+    font-style: italic;
+    margin: auto 0 0 0;
+    line-height: 1.4;
+  }
+
+  .card-footer {
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .methodology {
+    text-align: center;
+  }
+
+  .methodology-text {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin: 0 0 0.75rem 0;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .methodology-link {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.6);
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    display: inline-block;
+    transition: all 0.2s ease;
+  }
+
+  .methodology-link:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  @media (max-width: 768px) {
+    .damage-card {
+      padding: 2rem 1.5rem;
+    }
+
+    .damage-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .damage-column {
+      padding: 1.25rem;
+    }
+
+    .damage-stat.primary .stat-number {
+      font-size: 2.5rem;
+    }
+
+    .card-title {
+      font-size: 1.5rem;
+    }
+  }
+</style>

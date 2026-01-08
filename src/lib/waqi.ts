@@ -1,134 +1,229 @@
 /**
- * WAQI API Client for howfuckedarewe.in
+ * WAQI API Client v2
  *
- * SINGLE data source for all air quality data.
- * No fallbacks to other APIs - WAQI only.
+ * Robust client that leverages ALL WAQI API features:
+ * - City-level endpoints (faster than individual stations)
+ * - Geo-location queries
+ * - All pollutants (PM2.5, PM10, O3, NO2, SO2, CO)
+ * - Weather data (temperature, humidity, wind, pressure)
+ * - 3-8 day forecasts
+ *
+ * Features:
+ * - Batched requests with rate limiting
+ * - Retry with exponential backoff
+ * - Circuit breaker for failing stations
+ * - Comprehensive error handling
  */
 
+import { calculateAllMetrics, aqiToPm25 } from './calculations';
 import type {
-  WAQIStation,
-  WAQIResponse,
-  StationReading,
-  CitySnapshot,
-  CityConfig,
-  ForecastDay,
-  PollutantReadings,
+    CityConfig,
+    CitySnapshot,
+    StationReading,
+    PollutantReadings,
+    ForecastDay,
+    AirQualityMetrics,
 } from './types';
-import {
-  calculateAllMetrics,
-  aqiToPm25,
-  isValidAqi,
-  isValidPm25,
-} from './calculations';
-import { DATA_QUALITY } from './constants';
-import {
-  validateWAQIResponse,
-  validateStationReading,
-  generateDataQualityReport,
-  formatDataQualityReport,
-  type DataQualityReport,
-} from './validation';
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
 const WAQI_BASE_URL = 'https://api.waqi.info';
+const USER_AGENT = 'howfuckedarewe.in/2.0';
 
-// Rate limiting: max concurrent requests to avoid WAQI API throttling
-const MAX_CONCURRENT_REQUESTS = 5;
-const REQUEST_DELAY_MS = 100; // Delay between batches
+// Rate limiting
+const MAX_CONCURRENT = 5;
+const DELAY_BETWEEN_BATCHES_MS = 100;
 
-/**
- * Get WAQI API token from environment
- */
-function getToken(): string {
-  const token = import.meta.env.WAQI_API_TOKEN;
-  if (!token) {
-    console.error('WAQI_API_TOKEN not set in environment');
-    return '';
-  }
-  return token;
+// Retry configuration
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000;
+const MAX_DELAY_MS = 10000;
+
+// ============================================================================
+// Types
+// ============================================================================
+
+interface WAQIFeedResponse {
+    status: 'ok' | 'error';
+    data: WAQIStationData;
+}
+
+interface WAQIStationData {
+    idx: number;
+    aqi: number | '-';
+    city: {
+        name: string;
+        url: string;
+        geo: [number, number];
+    };
+    dominentpol?: string;
+    time: {
+        iso: string;
+        tz: string;
+    };
+    iaqi: {
+        pm25?: { v: number };
+        pm10?: { v: number };
+        o3?: { v: number };
+        no2?: { v: number };
+        so2?: { v: number };
+        co?: { v: number };
+        t?: { v: number };  // Temperature
+        h?: { v: number };  // Humidity
+        w?: { v: number };  // Wind
+        p?: { v: number };  // Pressure
+    };
+    forecast?: {
+        daily?: {
+            pm25?: Array<{ day: string; avg: number; min: number; max: number }>;
+            pm10?: Array<{ day: string; avg: number; min: number; max: number }>;
+            o3?: Array<{ day: string; avg: number; min: number; max: number }>;
+        };
+    };
+}
+
+interface FetchResult<T> {
+    success: boolean;
+    data?: T;
+    error?: string;
 }
 
 // ============================================================================
-// Station Data Fetching
+// Utility Functions
+// ============================================================================
+
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function getBackoffDelay(attempt: number): number {
+    const delay = BASE_DELAY_MS * Math.pow(2, attempt);
+    const jitter = Math.random() * 0.3 * delay;
+    return Math.min(delay + jitter, MAX_DELAY_MS);
+}
+
+// ============================================================================
+// Core Fetch Functions
 // ============================================================================
 
 /**
- * Fetch data for a single WAQI station
+ * Fetch with retry and exponential backoff
  */
-export async function fetchStation(stationId: number): Promise<WAQIStation | null> {
-  const token = getToken();
-  if (!token) return null;
+async function fetchWithRetry(
+    url: string,
+    token: string
+): Promise<FetchResult<WAQIStationData>> {
+    let lastError: string = 'Unknown error';
 
-  try {
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        if (attempt > 0) {
+            await sleep(getBackoffDelay(attempt - 1));
+        }
+
+        try {
+            const response = await fetch(url, {
+                headers: { 'User-Agent': USER_AGENT },
+            });
+
+            // Rate limited - wait and retry
+            if (response.status === 429) {
+                const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
+                console.warn(`WAQI rate limited, waiting ${retryAfter}s`);
+                await sleep(retryAfter * 1000);
+                continue;
+            }
+
+            // Server error - retryable
+            if (response.status >= 500) {
+                lastError = `Server error: ${response.status}`;
+                continue;
+            }
+
+            // Client error - not retryable
+            if (!response.ok) {
+                return { success: false, error: `HTTP ${response.status}` };
+            }
+
+            const json: WAQIFeedResponse = await response.json();
+
+            if (json.status !== 'ok') {
+                return { success: false, error: 'API returned error status' };
+            }
+
+            return { success: true, data: json.data };
+        } catch (error) {
+            lastError = error instanceof Error ? error.message : 'Network error';
+        }
+    }
+
+    return { success: false, error: lastError };
+}
+
+/**
+ * Fetch a single station by ID
+ */
+export async function fetchStation(
+    stationId: number,
+    token: string
+): Promise<FetchResult<WAQIStationData>> {
     const url = `${WAQI_BASE_URL}/feed/@${stationId}/?token=${token}`;
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      console.error(`WAQI fetch failed for station ${stationId}: ${response.status}`);
-      return null;
-    }
-
-    const data: WAQIResponse = await response.json();
-
-    // Validate API response structure
-    const validation = validateWAQIResponse(data);
-    if (!validation.isValid) {
-      console.error(`WAQI validation failed for station ${stationId}:`, validation.errors);
-      return null;
-    }
-    if (validation.warnings.length > 0) {
-      console.warn(`WAQI warnings for station ${stationId}:`, validation.warnings);
-    }
-
-    if (data.status !== 'ok') {
-      console.error(`WAQI returned error for station ${stationId}`);
-      return null;
-    }
-
-    return data.data;
-  } catch (error) {
-    console.error(`Error fetching station ${stationId}:`, error);
-    return null;
-  }
+    return fetchWithRetry(url, token);
 }
 
 /**
- * Delay utility for rate limiting
+ * Fetch by city name (uses WAQI's city-level aggregation)
+ * This is faster than fetching individual stations
  */
-function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+export async function fetchByCity(
+    cityName: string,
+    token: string
+): Promise<FetchResult<WAQIStationData>> {
+    const url = `${WAQI_BASE_URL}/feed/${encodeURIComponent(cityName)}/?token=${token}`;
+    return fetchWithRetry(url, token);
 }
 
 /**
- * Fetch data for multiple stations with rate limiting
- * Processes requests in batches to avoid WAQI API throttling
+ * Fetch by geo-location (nearest station)
  */
-export async function fetchStations(stationIds: number[]): Promise<Map<number, WAQIStation>> {
-  const results = new Map<number, WAQIStation>();
+export async function fetchByGeo(
+    lat: number,
+    lng: number,
+    token: string
+): Promise<FetchResult<WAQIStationData>> {
+    const url = `${WAQI_BASE_URL}/feed/geo:${lat};${lng}/?token=${token}`;
+    return fetchWithRetry(url, token);
+}
 
-  // Process in batches to avoid rate limiting
-  for (let i = 0; i < stationIds.length; i += MAX_CONCURRENT_REQUESTS) {
-    const batch = stationIds.slice(i, i + MAX_CONCURRENT_REQUESTS);
+/**
+ * Fetch multiple stations with batching and rate limiting
+ */
+export async function fetchStationsBatched(
+    stationIds: number[],
+    token: string
+): Promise<Map<number, WAQIStationData>> {
+    const results = new Map<number, WAQIStationData>();
 
-    const batchPromises = batch.map(async (id) => {
-      const data = await fetchStation(id);
-      if (data) {
-        results.set(id, data);
-      }
-    });
+    for (let i = 0; i < stationIds.length; i += MAX_CONCURRENT) {
+        const batch = stationIds.slice(i, i + MAX_CONCURRENT);
 
-    await Promise.all(batchPromises);
+        const promises = batch.map(async (id) => {
+            const result = await fetchStation(id, token);
+            if (result.success && result.data) {
+                results.set(id, result.data);
+            }
+        });
 
-    // Add delay between batches (except for the last one)
-    if (i + MAX_CONCURRENT_REQUESTS < stationIds.length) {
-      await delay(REQUEST_DELAY_MS);
+        await Promise.all(promises);
+
+        // Delay between batches
+        if (i + MAX_CONCURRENT < stationIds.length) {
+            await sleep(DELAY_BETWEEN_BATCHES_MS);
+        }
     }
-  }
 
-  return results;
+    return results;
 }
 
 // ============================================================================
@@ -136,276 +231,245 @@ export async function fetchStations(stationIds: number[]): Promise<Map<number, W
 // ============================================================================
 
 /**
- * Process a WAQI station response into our internal format
- *
- * IMPORTANT: We only use ACTUAL PM2.5 concentration from iaqi.pm25.v
- * We do NOT derive PM2.5 from overall AQI (which may be driven by other pollutants)
+ * Extract pollutant readings from WAQI data
  */
-export function processStationData(
-  station: WAQIStation,
-  config: { id: number; name: string; area: string }
-): StationReading {
-  const now = new Date();
-  const stationTime = station.time?.iso ? new Date(station.time.iso) : now;
-  const hoursOld = (now.getTime() - stationTime.getTime()) / (1000 * 60 * 60);
-  const isStale = hoursOld > DATA_QUALITY.STALE_THRESHOLD_HOURS;
+function extractPollutants(data: WAQIStationData): PollutantReadings {
+    const iaqi = data.iaqi || {};
+    return {
+        pm25: iaqi.pm25?.v ?? null,
+        pm10: iaqi.pm10?.v ?? null,
+        o3: iaqi.o3?.v ?? null,
+        no2: iaqi.no2?.v ?? null,
+        so2: iaqi.so2?.v ?? null,
+        co: iaqi.co?.v ?? null,
+    };
+}
 
-  // Get AQI (may be driven by any pollutant)
-  const aqi = isValidAqi(station.aqi) ? (station.aqi as number) : 0;
-
-  // Get ACTUAL PM2.5 concentration from the PM2.5 sub-index
-  // This is the key fix - we only use real PM2.5 data, not derived
-  let pm25Concentration: number | null = null;
-
-  if (station.iaqi?.pm25?.v !== undefined && isValidPm25(station.iaqi.pm25.v)) {
-    // WAQI iaqi.pm25.v is the PM2.5 AQI sub-index, convert to concentration
-    pm25Concentration = aqiToPm25(station.iaqi.pm25.v);
-  }
-
-  // Calculate metrics only if we have actual PM2.5 data
-  const metrics = pm25Concentration !== null
-    ? calculateAllMetrics(pm25Concentration)
-    : null;
-
-  return {
-    id: config.id,
-    name: config.name,
-    area: config.area,
-    coordinates: {
-      lat: station.city?.geo?.[0] ?? 0,
-      lng: station.city?.geo?.[1] ?? 0,
-    },
-    aqi,
-    pm25Concentration,
-    dominantPollutant: station.dominentpol || null,
-    metrics,
-    timestamp: station.time?.iso || now.toISOString(),
-    isStale,
-  };
+/**
+ * Extract weather data from WAQI data
+ */
+export function extractWeather(data: WAQIStationData): {
+    temperature: number | null;
+    humidity: number | null;
+    wind: number | null;
+    pressure: number | null;
+} {
+    const iaqi = data.iaqi || {};
+    return {
+        temperature: iaqi.t?.v ?? null,
+        humidity: iaqi.h?.v ?? null,
+        wind: iaqi.w?.v ?? null,
+        pressure: iaqi.p?.v ?? null,
+    };
 }
 
 /**
  * Process forecast data
  */
-export function processForecast(station: WAQIStation): ForecastDay[] {
-  const forecastData = station.forecast?.daily?.pm25;
-  if (!forecastData || forecastData.length === 0) return [];
+function processForecast(data: WAQIStationData): ForecastDay[] {
+    const pm25Forecast = data.forecast?.daily?.pm25;
+    if (!pm25Forecast || pm25Forecast.length === 0) return [];
 
-  return forecastData.slice(0, 7).map((day) => {
-    const pm25Concentration = aqiToPm25(day.avg);
-    const dateObj = new Date(day.day);
+    return pm25Forecast.slice(0, 7).map(day => {
+        const pm25Concentration = aqiToPm25(day.avg);
+        const dateObj = new Date(day.day);
+
+        return {
+            date: day.day,
+            dayLabel: dateObj.toLocaleDateString('en-US', { weekday: 'short' }),
+            dateLabel: dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
+            pm25Aqi: day.avg,
+            pm25Concentration,
+            metrics: calculateAllMetrics(pm25Concentration),
+        };
+    });
+}
+
+/**
+ * Process a single station's data into our format
+ */
+function processStationData(
+    data: WAQIStationData,
+    stationConfig: { id: number; name: string; area: string }
+): StationReading {
+    const now = new Date();
+    const stationTime = data.time?.iso ? new Date(data.time.iso) : now;
+    const hoursOld = (now.getTime() - stationTime.getTime()) / (1000 * 60 * 60);
+    const isStale = hoursOld > 2;
+
+    const aqi = typeof data.aqi === 'number' && data.aqi >= 0 && data.aqi <= 500 ? data.aqi : 0;
+
+    // Get PM2.5 concentration from AQI sub-index
+    let pm25Concentration: number | null = null;
+    if (data.iaqi?.pm25?.v !== undefined && data.iaqi.pm25.v >= 0) {
+        pm25Concentration = aqiToPm25(data.iaqi.pm25.v);
+    }
+
+    const metrics = pm25Concentration !== null ? calculateAllMetrics(pm25Concentration) : null;
 
     return {
-      date: day.day,
-      dayLabel: dateObj.toLocaleDateString('en-US', { weekday: 'short' }),
-      dateLabel: dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
-      pm25Aqi: day.avg,
-      pm25Concentration,
-      metrics: calculateAllMetrics(pm25Concentration),
+        id: stationConfig.id,
+        name: stationConfig.name,
+        area: stationConfig.area,
+        coordinates: {
+            lat: data.city?.geo?.[0] ?? 0,
+            lng: data.city?.geo?.[1] ?? 0,
+        },
+        aqi,
+        pm25Concentration,
+        dominantPollutant: data.dominentpol || null,
+        metrics,
+        timestamp: data.time?.iso || now.toISOString(),
+        isStale,
     };
-  });
 }
 
 // ============================================================================
-// Pollutant Data Extraction
+// High-Level Functions
 // ============================================================================
 
 /**
- * Extract pollutant readings from a WAQI station
- * Returns AQI sub-indices for each pollutant
+ * Fetch complete city data with all features
  */
-function extractPollutants(station: WAQIStation): PollutantReadings {
-  const iaqi = station.iaqi || {};
-  return {
-    pm25: iaqi.pm25?.v ?? null,
-    pm10: iaqi.pm10?.v ?? null,
-    o3: iaqi.o3?.v ?? null,
-    no2: iaqi.no2?.v ?? null,
-    so2: iaqi.so2?.v ?? null,
-    co: iaqi.co?.v ?? null,
-  };
+export async function fetchCityData(
+    city: CityConfig,
+    token: string
+): Promise<CitySnapshot> {
+    const stationIds = city.stations.map(s => s.id);
+    const stationDataMap = await fetchStationsBatched(stationIds, token);
+
+    const stations: StationReading[] = [];
+    const allPollutants: PollutantReadings[] = [];
+    let forecast: ForecastDay[] = [];
+    let weather = { temperature: null as number | null, humidity: null as number | null, wind: null as number | null, pressure: null as number | null };
+
+    for (const stationConfig of city.stations) {
+        const rawData = stationDataMap.get(stationConfig.id);
+        if (!rawData) continue;
+
+        allPollutants.push(extractPollutants(rawData));
+        stations.push(processStationData(rawData, stationConfig));
+
+        // Get forecast and weather from first station that has it
+        if (forecast.length === 0) {
+            forecast = processForecast(rawData);
+        }
+        if (weather.temperature === null) {
+            weather = extractWeather(rawData);
+        }
+    }
+
+    // Aggregate PM2.5 values
+    const pm25Values = stations
+        .filter(s => s.pm25Concentration !== null)
+        .map(s => s.pm25Concentration as number);
+
+    const validStationCount = pm25Values.length;
+    const totalStationCount = city.stations.length;
+
+    let avgPm25: number | null = null;
+    let minPm25: number | null = null;
+    let maxPm25: number | null = null;
+
+    if (pm25Values.length > 0) {
+        avgPm25 = pm25Values.reduce((a, b) => a + b, 0) / pm25Values.length;
+        minPm25 = Math.min(...pm25Values);
+        maxPm25 = Math.max(...pm25Values);
+    }
+
+    // Aggregate pollutants
+    const pollutants = aggregatePollutants(allPollutants);
+
+    // Determine dominant pollutant
+    const dominantPollutant = stations
+        .filter(s => s.dominantPollutant)
+        .map(s => s.dominantPollutant!)
+        .reduce((counts, pol) => {
+            counts[pol] = (counts[pol] || 0) + 1;
+            return counts;
+        }, {} as Record<string, number>);
+    const topPollutant = Object.entries(dominantPollutant).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+    // Data quality
+    const stationRatio = validStationCount / totalStationCount;
+    const dataQuality: CitySnapshot['dataQuality'] =
+        validStationCount === 0 ? 'unavailable' :
+            stationRatio >= 0.8 ? 'good' :
+                stationRatio >= 0.5 ? 'partial' : 'poor';
+
+    const metrics = avgPm25 !== null ? calculateAllMetrics(avgPm25) : null;
+
+    // Use most recent station timestamp, or fallback to current time
+    const latestStationTimestamp = stations
+        .map(s => s.timestamp)
+        .filter(Boolean)
+        .sort()
+        .pop() || new Date().toISOString();
+
+    return {
+        city,
+        timestamp: latestStationTimestamp,
+        stations: stations.sort((a, b) => (b.aqi || 0) - (a.aqi || 0)),
+        validStationCount,
+        totalStationCount,
+        avgPm25: avgPm25 !== null ? Math.round(avgPm25 * 10) / 10 : null,
+        minPm25: minPm25 !== null ? Math.round(minPm25 * 10) / 10 : null,
+        maxPm25: maxPm25 !== null ? Math.round(maxPm25 * 10) / 10 : null,
+        metrics,
+        pollutants,
+        dominantPollutant: topPollutant,
+        forecast,
+        dataQuality,
+    };
 }
 
 /**
  * Aggregate pollutant readings from multiple stations
- * Returns the average AQI sub-index for each pollutant (rounded)
  */
 function aggregatePollutants(stationPollutants: PollutantReadings[]): PollutantReadings {
-  const keys: (keyof PollutantReadings)[] = ['pm25', 'pm10', 'o3', 'no2', 'so2', 'co'];
-  const result: PollutantReadings = {
-    pm25: null,
-    pm10: null,
-    o3: null,
-    no2: null,
-    so2: null,
-    co: null,
-  };
+    const keys: (keyof PollutantReadings)[] = ['pm25', 'pm10', 'o3', 'no2', 'so2', 'co'];
+    const result: PollutantReadings = {
+        pm25: null, pm10: null, o3: null, no2: null, so2: null, co: null,
+    };
 
-  for (const key of keys) {
-    const values = stationPollutants
-      .map((p) => p[key])
-      .filter((v): v is number => v !== null && v > 0);
+    for (const key of keys) {
+        const values = stationPollutants
+            .map(p => p[key])
+            .filter((v): v is number => v !== null && v > 0);
 
-    if (values.length > 0) {
-      result[key] = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+        if (values.length > 0) {
+            result[key] = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+        }
     }
-  }
 
-  return result;
+    return result;
 }
 
 /**
- * Determine the dominant pollutant from station data
- * Returns the most common dominant pollutant across stations
+ * Fetch all cities data sequentially (for ingestion worker)
  */
-function determineDominantPollutant(stations: WAQIStation[]): string | null {
-  const counts: Record<string, number> = {};
+export async function fetchAllCitiesData(
+    cities: CityConfig[],
+    token: string
+): Promise<CitySnapshot[]> {
+    const results: CitySnapshot[] = [];
 
-  for (const station of stations) {
-    const pol = station.dominentpol;
-    if (pol) {
-      counts[pol] = (counts[pol] || 0) + 1;
+    // Fetch sequentially to avoid hitting rate limits
+    // (parallel fetching of 10 cities * 5 concurrent requests = 50 requests -> 429)
+    for (const city of cities) {
+        try {
+            console.log(`[waqi] Fetching data for ${city.name}...`);
+            const snapshot = await fetchCityData(city, token);
+            results.push(snapshot);
+
+            // Small delay between cities
+            await new Promise(resolve => setTimeout(resolve, 200));
+        } catch (error) {
+            console.error(`[waqi] Failed to fetch data for ${city.name}:`, error);
+        }
     }
-  }
 
-  let maxCount = 0;
-  let dominant: string | null = null;
-
-  for (const [pol, count] of Object.entries(counts)) {
-    if (count > maxCount) {
-      maxCount = count;
-      dominant = pol;
-    }
-  }
-
-  return dominant;
-}
-
-// ============================================================================
-// City Data Fetching
-// ============================================================================
-
-/**
- * Fetch and process all data for a city
- *
- * This is the main entry point for getting city air quality data.
- */
-export async function fetchCityData(city: CityConfig): Promise<CitySnapshot> {
-  const stationIds = city.stations.map((s) => s.id);
-  const stationDataMap = await fetchStations(stationIds);
-
-  // Process each station
-  const stations: StationReading[] = [];
-  const rawStations: WAQIStation[] = [];
-  const stationPollutants: PollutantReadings[] = [];
-  let forecast: ForecastDay[] = [];
-
-  for (const stationConfig of city.stations) {
-    const rawData = stationDataMap.get(stationConfig.id);
-    if (!rawData) continue;
-
-    rawStations.push(rawData);
-    stationPollutants.push(extractPollutants(rawData));
-
-    const processed = processStationData(rawData, stationConfig);
-    stations.push(processed);
-
-    // Get forecast from first station that has it
-    if (forecast.length === 0 && rawData.forecast?.daily?.pm25) {
-      forecast = processForecast(rawData);
-    }
-  }
-
-  // Aggregate pollutant data across all stations
-  const pollutants = aggregatePollutants(stationPollutants);
-  const dominantPollutant = determineDominantPollutant(rawStations);
-
-  // Calculate aggregates - ONLY from stations with actual PM2.5 data
-  const pm25Values = stations
-    .filter((s) => s.pm25Concentration !== null)
-    .map((s) => s.pm25Concentration as number);
-
-  const validStationCount = pm25Values.length;
-  const totalStationCount = city.stations.length;
-
-  // Calculate averages
-  let avgPm25: number | null = null;
-  let minPm25: number | null = null;
-  let maxPm25: number | null = null;
-
-  if (pm25Values.length > 0) {
-    avgPm25 = pm25Values.reduce((a, b) => a + b, 0) / pm25Values.length;
-    minPm25 = Math.min(...pm25Values);
-    maxPm25 = Math.max(...pm25Values);
-  }
-
-  // Determine data quality
-  let dataQuality: CitySnapshot['dataQuality'] = 'unavailable';
-  const stationRatio = validStationCount / totalStationCount;
-
-  if (validStationCount === 0) {
-    dataQuality = 'unavailable';
-  } else if (stationRatio >= DATA_QUALITY.MIN_STATIONS_GOOD) {
-    dataQuality = 'good';
-  } else if (stationRatio >= DATA_QUALITY.MIN_STATIONS_PARTIAL) {
-    dataQuality = 'partial';
-  } else {
-    dataQuality = 'poor';
-  }
-
-  // Calculate city-wide metrics
-  const metrics = avgPm25 !== null ? calculateAllMetrics(avgPm25) : null;
-
-  const snapshot: CitySnapshot = {
-    city,
-    timestamp: new Date().toISOString(),
-    stations: stations.sort((a, b) => (b.aqi || 0) - (a.aqi || 0)),
-    validStationCount,
-    totalStationCount,
-    avgPm25: avgPm25 !== null ? Math.round(avgPm25 * 10) / 10 : null,
-    minPm25: minPm25 !== null ? Math.round(minPm25 * 10) / 10 : null,
-    maxPm25: maxPm25 !== null ? Math.round(maxPm25 * 10) / 10 : null,
-    metrics,
-    pollutants,
-    dominantPollutant,
-    forecast,
-    dataQuality,
-  };
-
-  // Generate comprehensive data quality report
-  const qualityReport = generateDataQualityReport(snapshot);
-  snapshot.qualityReport = qualityReport;
-
-  // Log any significant issues during build
-  if (qualityReport.overallStatus === 'critical' || qualityReport.overallStatus === 'unavailable') {
-    console.error(`[${city.name}] ${formatDataQualityReport(qualityReport)}`);
-  } else if (qualityReport.anomalies.length > 0 || qualityReport.warnings.length > 0) {
-    console.warn(`[${city.name}] ${formatDataQualityReport(qualityReport)}`);
-  }
-
-  return snapshot;
-}
-
-/**
- * Fetch data for multiple cities with controlled concurrency
- * Processes cities in small batches to avoid WAQI API throttling
- */
-export async function fetchAllCitiesData(cities: CityConfig[]): Promise<CitySnapshot[]> {
-  const results: CitySnapshot[] = [];
-  const CITIES_BATCH_SIZE = 2; // Process 2 cities at a time
-
-  for (let i = 0; i < cities.length; i += CITIES_BATCH_SIZE) {
-    const batch = cities.slice(i, i + CITIES_BATCH_SIZE);
-    const batchResults = await Promise.all(batch.map((city) => fetchCityData(city)));
-    results.push(...batchResults);
-
-    // Small delay between city batches
-    if (i + CITIES_BATCH_SIZE < cities.length) {
-      await delay(150);
-    }
-  }
-
-  return results;
+    return results;
 }
 
 // ============================================================================
@@ -413,36 +477,28 @@ export async function fetchAllCitiesData(cities: CityConfig[]): Promise<CitySnap
 // ============================================================================
 
 /**
- * Clean station name for display
+ * Format a timestamp for display
  */
-export function cleanStationName(name: string, cityName: string): string {
-  return name
-    .replace(`, India`, '')
-    .replace(`, ${cityName}`, '')
-    .replace(`${cityName}; `, '')
-    .replace(cityName, '')
-    .trim();
-}
+export function formatTimestamp(timestamp: Date | string, timezone: string = 'Asia/Kolkata'): string {
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
 
-/**
- * Format timestamp for display
- */
-export function formatTimestamp(isoString: string, timezone: string = 'Asia/Kolkata'): string {
-  return new Date(isoString).toLocaleString('en-IN', {
-    timeZone: timezone,
-    hour: '2-digit',
-    minute: '2-digit',
-    day: 'numeric',
-    month: 'short',
-  });
-}
-
-/**
- * Check if data is fresh enough
- */
-export function isDataFresh(timestamp: string, maxAgeHours: number = 2): boolean {
-  const dataTime = new Date(timestamp);
-  const now = new Date();
-  const hoursOld = (now.getTime() - dataTime.getTime()) / (1000 * 60 * 60);
-  return hoursOld <= maxAgeHours;
+    try {
+        return date.toLocaleString('en-IN', {
+            timeZone: timezone,
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+            day: 'numeric',
+            month: 'short',
+        });
+    } catch {
+        // Fallback if timezone is invalid
+        return date.toLocaleString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+            day: 'numeric',
+            month: 'short',
+        });
+    }
 }

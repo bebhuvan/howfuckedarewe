@@ -1,289 +1,466 @@
 /**
- * D1 Database Client
+ * D1 Database Module v2
  *
- * Provides typed queries for the AQI historical database.
- * Used by Astro pages to fetch current and historical data.
+ * Clean, robust database access for the AQI website.
+ * All queries in one place for easy maintenance.
  */
 
-import type { CityConfig } from './types';
+import { getCityBySlug, ALL_CITIES } from './cities';
+import { calculateAllMetrics, aqiToPm25 } from './calculations';
+import type { CitySnapshot, CityConfig, PollutantReadings, StationReading } from './types';
 
-// Database row types (matching schema)
-export interface CityRow {
-  id: number;
-  slug: string;
-  name: string;
-  local_name: string | null;
-  state: string;
-  population: number | null;
-  waqi_station_id: string | null;
-}
+// ============================================================================
+// Types for D1 Rows
+// ============================================================================
 
 export interface CitySnapshotRow {
-  id: number;
-  city_id: number;
-  recorded_at: string;
-  avg_pm25: number | null;
-  min_pm25: number | null;
-  max_pm25: number | null;
-  median_pm25: number | null;
-  avg_pm10: number | null;
-  avg_o3: number | null;
-  avg_no2: number | null;
-  avg_so2: number | null;
-  avg_co: number | null;
-  total_stations: number;
-  valid_stations: number;
-  dominant_pollutant: string | null;
-  quality_status: string | null;
+    city_id: number;
+    recorded_at: string;
+    avg_pm25: number | null;
+    min_pm25: number | null;
+    max_pm25: number | null;
+    median_pm25: number | null;
+    avg_pm10: number | null;
+    avg_o3: number | null;
+    avg_no2: number | null;
+    avg_so2: number | null;
+    avg_co: number | null;
+    total_stations: number;
+    valid_stations: number;
+    dominant_pollutant: string | null;
+    quality_status: string | null;
+    slug: string;
+    name: string;
+    local_name: string | null;
+    state: string;
+    population: number;
 }
 
 export interface DailyAggregateRow {
-  id: number;
-  city_id: number;
-  date: string;
-  avg_pm25: number | null;
-  min_pm25: number | null;
-  max_pm25: number | null;
-  peak_hour: number | null;
-  peak_pm25: number | null;
-  cigarettes_equivalent: number | null;
-  years_lost_per_year: number | null;
-  who_violation_factor: number | null;
-  hours_with_data: number;
+    date: string;
+    avg_pm25: number;
+    min_pm25: number;
+    max_pm25: number;
+    peak_hour: number;
+    cigarettes_equivalent: number;
+    who_violation_factor: number;
+}
+
+// ============================================================================
+// City Snapshot Queries
+// ============================================================================
+
+/**
+ * Get latest snapshot for all cities (for homepage)
+ */
+export async function getLatestCitySnapshots(db: D1Database): Promise<CitySnapshot[]> {
+    try {
+        const result = await db.prepare(`
+      SELECT
+        cs.city_id,
+        cs.recorded_at,
+        cs.avg_pm25,
+        cs.min_pm25,
+        cs.max_pm25,
+        cs.median_pm25,
+        cs.avg_pm10,
+        cs.avg_o3,
+        cs.avg_no2,
+        cs.avg_so2,
+        cs.avg_co,
+        cs.total_stations,
+        cs.valid_stations,
+        cs.dominant_pollutant,
+        cs.quality_status,
+        c.slug,
+        c.name,
+        c.local_name,
+        c.state,
+        c.population
+      FROM city_snapshots cs
+      JOIN cities c ON cs.city_id = c.id
+      WHERE cs.recorded_at = (
+        SELECT MAX(recorded_at)
+        FROM city_snapshots
+        WHERE city_id = cs.city_id
+      )
+      ORDER BY cs.avg_pm25 DESC NULLS LAST
+    `).all<CitySnapshotRow>();
+
+        if (!result.results || result.results.length === 0) {
+            return [];
+        }
+
+        return result.results.map(row => transformRowToSnapshot(row)).filter(Boolean) as CitySnapshot[];
+    } catch (error) {
+        console.error('[db] getLatestCitySnapshots error:', error);
+        return [];
+    }
 }
 
 /**
- * Get the latest snapshot for a city
+ * Get snapshot for a single city (with station data)
  */
-export async function getLatestCitySnapshot(
-  db: D1Database,
-  citySlug: string
-): Promise<CitySnapshotRow | null> {
-  const result = await db
-    .prepare(`
-      SELECT cs.*
+export async function getCitySnapshot(db: D1Database, slug: string): Promise<CitySnapshot | null> {
+    try {
+        // Get the city snapshot
+        const result = await db.prepare(`
+      SELECT
+        cs.city_id,
+        cs.recorded_at,
+        cs.avg_pm25,
+        cs.min_pm25,
+        cs.max_pm25,
+        cs.median_pm25,
+        cs.avg_pm10,
+        cs.avg_o3,
+        cs.avg_no2,
+        cs.avg_so2,
+        cs.avg_co,
+        cs.total_stations,
+        cs.valid_stations,
+        cs.dominant_pollutant,
+        cs.quality_status,
+        c.slug,
+        c.name,
+        c.local_name,
+        c.state,
+        c.population
       FROM city_snapshots cs
       JOIN cities c ON cs.city_id = c.id
       WHERE c.slug = ?
       ORDER BY cs.recorded_at DESC
       LIMIT 1
-    `)
-    .bind(citySlug)
-    .first<CitySnapshotRow>();
+    `).bind(slug).first<CitySnapshotRow>();
 
-  return result || null;
-}
+        if (!result) return null;
 
-/**
- * Get snapshots for the last N hours for a city
- */
-export async function getCitySnapshotsLastHours(
-  db: D1Database,
-  citySlug: string,
-  hours: number = 24
-): Promise<CitySnapshotRow[]> {
-  const result = await db
-    .prepare(`
-      SELECT cs.*
-      FROM city_snapshots cs
-      JOIN cities c ON cs.city_id = c.id
+        // Get station readings for this snapshot time (or most recent readings per station)
+        const stationReadings = await db.prepare(`
+      SELECT 
+        s.id as station_id,
+        s.name as station_name,
+        s.waqi_id,
+        s.latitude,
+        s.longitude,
+        r.pm25,
+        r.pm10,
+        r.o3,
+        r.no2,
+        r.so2,
+        r.co,
+        r.aqi,
+        r.dominant_pollutant,
+        r.recorded_at
+      FROM stations s
+      JOIN cities c ON s.city_id = c.id
+      LEFT JOIN readings r ON s.id = r.station_id 
+        AND r.recorded_at = (
+          SELECT MAX(r2.recorded_at) 
+          FROM readings r2 
+          WHERE r2.station_id = s.id
+        )
       WHERE c.slug = ?
-        AND cs.recorded_at >= datetime('now', '-' || ? || ' hours')
-      ORDER BY cs.recorded_at ASC
-    `)
-    .bind(citySlug, hours)
-    .all<CitySnapshotRow>();
+      ORDER BY r.pm25 DESC NULLS LAST
+    `).bind(slug).all<{
+            station_id: number;
+            station_name: string;
+            waqi_id: string;
+            latitude: number | null;
+            longitude: number | null;
+            pm25: number | null;
+            pm10: number | null;
+            o3: number | null;
+            no2: number | null;
+            so2: number | null;
+            co: number | null;
+            aqi: number | null;
+            dominant_pollutant: string | null;
+            recorded_at: string | null;
+        }>();
 
-  return result.results || [];
+        return transformRowToSnapshot(result, stationReadings.results || []);
+    } catch (error) {
+        console.error(`[db] getCitySnapshot error for ${slug}:`, error);
+        return null;
+    }
 }
 
+// ============================================================================
+// Historical Data Queries
+// ============================================================================
+
 /**
- * Get daily aggregates for the last N days for a city
+ * Get daily aggregates for a city
  */
 export async function getCityDailyAggregates(
-  db: D1Database,
-  citySlug: string,
-  days: number = 30
+    db: D1Database,
+    slug: string,
+    days: number = 30
 ): Promise<DailyAggregateRow[]> {
-  const result = await db
-    .prepare(`
-      SELECT da.*
+    try {
+        const result = await db.prepare(`
+      SELECT
+        da.date,
+        da.avg_pm25,
+        da.min_pm25,
+        da.max_pm25,
+        da.peak_hour,
+        da.cigarettes_equivalent,
+        da.who_violation_factor
       FROM daily_aggregates da
       JOIN cities c ON da.city_id = c.id
       WHERE c.slug = ?
         AND da.date >= date('now', '-' || ? || ' days')
       ORDER BY da.date ASC
-    `)
-    .bind(citySlug, days)
-    .all<DailyAggregateRow>();
+    `).bind(slug, days).all<DailyAggregateRow>();
 
-  return result.results || [];
+        return result.results || [];
+    } catch (error) {
+        console.error(`[db] getCityDailyAggregates error for ${slug}:`, error);
+        return [];
+    }
 }
 
 /**
- * Get latest snapshots for all cities
+ * Get national daily aggregates
  */
-export async function getAllCitiesLatestSnapshots(
-  db: D1Database
-): Promise<(CitySnapshotRow & { city_slug: string; city_name: string })[]> {
-  const result = await db
-    .prepare(`
-      SELECT cs.*, c.slug as city_slug, c.name as city_name
-      FROM city_snapshots cs
-      JOIN cities c ON cs.city_id = c.id
-      WHERE cs.recorded_at = (
-        SELECT MAX(cs2.recorded_at)
-        FROM city_snapshots cs2
-        WHERE cs2.city_id = cs.city_id
-      )
-      ORDER BY cs.avg_pm25 DESC
-    `)
-    .all<CitySnapshotRow & { city_slug: string; city_name: string }>();
-
-  return result.results || [];
-}
-
-/**
- * Get historical comparison (same day last year, last month, last week)
- */
-export async function getHistoricalComparison(
-  db: D1Database,
-  citySlug: string
-): Promise<{
-  today: DailyAggregateRow | null;
-  lastWeek: DailyAggregateRow | null;
-  lastMonth: DailyAggregateRow | null;
-  lastYear: DailyAggregateRow | null;
-}> {
-  const [today, lastWeek, lastMonth, lastYear] = await Promise.all([
-    db
-      .prepare(`
-        SELECT da.*
-        FROM daily_aggregates da
-        JOIN cities c ON da.city_id = c.id
-        WHERE c.slug = ? AND da.date = date('now')
-      `)
-      .bind(citySlug)
-      .first<DailyAggregateRow>(),
-    db
-      .prepare(`
-        SELECT da.*
-        FROM daily_aggregates da
-        JOIN cities c ON da.city_id = c.id
-        WHERE c.slug = ? AND da.date = date('now', '-7 days')
-      `)
-      .bind(citySlug)
-      .first<DailyAggregateRow>(),
-    db
-      .prepare(`
-        SELECT da.*
-        FROM daily_aggregates da
-        JOIN cities c ON da.city_id = c.id
-        WHERE c.slug = ? AND da.date = date('now', '-1 month')
-      `)
-      .bind(citySlug)
-      .first<DailyAggregateRow>(),
-    db
-      .prepare(`
-        SELECT da.*
-        FROM daily_aggregates da
-        JOIN cities c ON da.city_id = c.id
-        WHERE c.slug = ? AND da.date = date('now', '-1 year')
-      `)
-      .bind(citySlug)
-      .first<DailyAggregateRow>(),
-  ]);
-
-  return {
-    today: today || null,
-    lastWeek: lastWeek || null,
-    lastMonth: lastMonth || null,
-    lastYear: lastYear || null,
-  };
-}
-
-/**
- * Get worst days in the last N days
- */
-export async function getWorstDays(
-  db: D1Database,
-  citySlug: string,
-  days: number = 30,
-  limit: number = 5
-): Promise<DailyAggregateRow[]> {
-  const result = await db
-    .prepare(`
-      SELECT da.*
-      FROM daily_aggregates da
-      JOIN cities c ON da.city_id = c.id
-      WHERE c.slug = ?
-        AND da.date >= date('now', '-' || ? || ' days')
-        AND da.avg_pm25 IS NOT NULL
-      ORDER BY da.avg_pm25 DESC
-      LIMIT ?
-    `)
-    .bind(citySlug, days, limit)
-    .all<DailyAggregateRow>();
-
-  return result.results || [];
-}
-
-/**
- * Get statistics summary for a city
- */
-export async function getCityStats(
-  db: D1Database,
-  citySlug: string,
-  days: number = 30
-): Promise<{
-  avgPm25: number | null;
-  minPm25: number | null;
-  maxPm25: number | null;
-  daysAboveWho: number;
-  totalDays: number;
-}> {
-  const result = await db
-    .prepare(`
+export async function getNationalDailyAggregates(
+    db: D1Database,
+    days: number = 30
+): Promise<any[]> {
+    try {
+        const result = await db.prepare(`
       SELECT
-        AVG(da.avg_pm25) as avg_pm25,
-        MIN(da.min_pm25) as min_pm25,
-        MAX(da.max_pm25) as max_pm25,
-        SUM(CASE WHEN da.avg_pm25 > 5 THEN 1 ELSE 0 END) as days_above_who,
-        COUNT(*) as total_days
+        date,
+        AVG(avg_pm25) as avg_pm25,
+        MIN(min_pm25) as min_pm25,
+        MAX(max_pm25) as max_pm25,
+        SUM(population) as population_covered
       FROM daily_aggregates da
       JOIN cities c ON da.city_id = c.id
-      WHERE c.slug = ?
-        AND da.date >= date('now', '-' || ? || ' days')
-        AND da.avg_pm25 IS NOT NULL
-    `)
-    .bind(citySlug, days)
-    .first<{
-      avg_pm25: number | null;
-      min_pm25: number | null;
-      max_pm25: number | null;
-      days_above_who: number;
-      total_days: number;
-    }>();
+      WHERE da.date >= date('now', '-' || ? || ' days')
+      GROUP BY da.date
+      ORDER BY da.date ASC
+    `).bind(days).all();
 
-  return {
-    avgPm25: result?.avg_pm25 || null,
-    minPm25: result?.min_pm25 || null,
-    maxPm25: result?.max_pm25 || null,
-    daysAboveWho: result?.days_above_who || 0,
-    totalDays: result?.total_days || 0,
-  };
+        return result.results || [];
+    } catch (error) {
+        console.error('[db] getNationalDailyAggregates error:', error);
+        return [];
+    }
+}
+
+// ============================================================================
+// Data Freshness Checks
+// ============================================================================
+
+/**
+ * Check if we have recent data (within specified hours)
+ */
+export async function hasRecentData(db: D1Database, maxAgeHours: number = 2): Promise<boolean> {
+    try {
+        const result = await db.prepare(`
+      SELECT MAX(recorded_at) as latest
+      FROM city_snapshots
+    `).first<{ latest: string | null }>();
+
+        if (!result?.latest) return false;
+
+        const latestTime = new Date(result.latest);
+        const now = new Date();
+        const hoursOld = (now.getTime() - latestTime.getTime()) / (1000 * 60 * 60);
+
+        return hoursOld <= maxAgeHours;
+    } catch (error) {
+        console.error('[db] hasRecentData error:', error);
+        return false;
+    }
 }
 
 /**
- * Check if D1 has any data (for graceful fallback)
+ * Get timestamp of last ingestion
  */
-export async function hasHistoricalData(db: D1Database): Promise<boolean> {
-  try {
-    const result = await db
-      .prepare('SELECT COUNT(*) as count FROM city_snapshots')
-      .first<{ count: number }>();
-    return (result?.count || 0) > 0;
-  } catch {
-    return false;
-  }
+export async function getLastIngestionTime(db: D1Database): Promise<string | null> {
+    try {
+        const result = await db.prepare(`
+      SELECT MAX(recorded_at) as latest
+      FROM city_snapshots
+    `).first<{ latest: string | null }>();
+
+        return result?.latest || null;
+    } catch (error) {
+        return null;
+    }
+}
+
+// ============================================================================
+// Write Operations (for ingestion worker)
+// ============================================================================
+
+/**
+ * Store a city snapshot
+ */
+export async function storeCitySnapshot(
+    db: D1Database,
+    cityId: number,
+    snapshot: {
+        avgPm25: number | null;
+        minPm25: number | null;
+        maxPm25: number | null;
+        medianPm25: number | null;
+        avgPm10: number | null;
+        avgO3: number | null;
+        avgNo2: number | null;
+        avgSo2: number | null;
+        avgCo: number | null;
+        totalStations: number;
+        validStations: number;
+        dominantPollutant: string | null;
+    },
+    timestamp: string
+): Promise<void> {
+    try {
+        await db.prepare(`
+      INSERT OR REPLACE INTO city_snapshots
+      (city_id, recorded_at, avg_pm25, min_pm25, max_pm25, median_pm25,
+       avg_pm10, avg_o3, avg_no2, avg_so2, avg_co,
+       total_stations, valid_stations, dominant_pollutant, quality_status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+            cityId,
+            timestamp,
+            snapshot.avgPm25,
+            snapshot.minPm25,
+            snapshot.maxPm25,
+            snapshot.medianPm25,
+            snapshot.avgPm10,
+            snapshot.avgO3,
+            snapshot.avgNo2,
+            snapshot.avgSo2,
+            snapshot.avgCo,
+            snapshot.totalStations,
+            snapshot.validStations,
+            snapshot.dominantPollutant,
+            snapshot.validStations >= snapshot.totalStations * 0.8 ? 'healthy' : 'degraded'
+        ).run();
+    } catch (error) {
+        console.error('[db] storeCitySnapshot error:', error);
+        throw error;
+    }
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+interface StationReadingRow {
+    station_id: number;
+    station_name: string;
+    waqi_id: string;
+    latitude: number | null;
+    longitude: number | null;
+    pm25: number | null;
+    pm10: number | null;
+    o3: number | null;
+    no2: number | null;
+    so2: number | null;
+    co: number | null;
+    aqi: number | null;
+    dominant_pollutant: string | null;
+    recorded_at: string | null;
+}
+
+function transformRowToSnapshot(
+    row: CitySnapshotRow,
+    stationRows: StationReadingRow[] = []
+): CitySnapshot | null {
+    const cityConfig = getCityBySlug(row.slug);
+
+    const city: CityConfig = cityConfig || {
+        slug: row.slug,
+        name: row.name,
+        localName: row.local_name || undefined,
+        state: row.state,
+        population: row.population,
+        coordinates: { lat: 0, lng: 0 },
+        tagline: '',
+        timezone: 'Asia/Kolkata',
+        stations: [],
+    };
+
+    const pollutants: PollutantReadings = {
+        pm25: row.avg_pm25 !== null ? Math.round(row.avg_pm25) : null,
+        pm10: row.avg_pm10 !== null ? Math.round(row.avg_pm10) : null,
+        o3: row.avg_o3 !== null ? Math.round(row.avg_o3) : null,
+        no2: row.avg_no2 !== null ? Math.round(row.avg_no2) : null,
+        so2: row.avg_so2 !== null ? Math.round(row.avg_so2) : null,
+        co: row.avg_co !== null ? Math.round(row.avg_co) : null,
+    };
+
+    const metrics = row.avg_pm25 !== null ? calculateAllMetrics(row.avg_pm25) : null;
+
+    // Transform station reading rows into StationReading objects
+    const stations: StationReading[] = stationRows
+        .filter(sr => sr.pm25 !== null || sr.aqi !== null)
+        .map(sr => {
+            // Get PM2.5 concentration - either direct from reading or convert from AQI
+            let pm25Concentration: number | null = null;
+            if (sr.pm25 !== null) {
+                pm25Concentration = aqiToPm25(sr.pm25);
+            }
+
+            // Find area name from city config if available
+            const stationConfig = cityConfig?.stations.find(
+                s => s.id.toString() === sr.waqi_id || s.name === sr.station_name
+            );
+            const area = stationConfig?.area || sr.station_name;
+
+            const stationMetrics = pm25Concentration !== null
+                ? calculateAllMetrics(pm25Concentration)
+                : null;
+
+            const now = new Date();
+            const recordedTime = sr.recorded_at ? new Date(sr.recorded_at) : now;
+            const hoursOld = (now.getTime() - recordedTime.getTime()) / (1000 * 60 * 60);
+
+            return {
+                id: sr.station_id,
+                name: sr.station_name,
+                area,
+                coordinates: {
+                    lat: sr.latitude || 0,
+                    lng: sr.longitude || 0,
+                },
+                aqi: sr.aqi || 0,
+                pm25Concentration,
+                dominantPollutant: sr.dominant_pollutant,
+                metrics: stationMetrics,
+                timestamp: sr.recorded_at || row.recorded_at,
+                isStale: hoursOld > 2,
+            };
+        })
+        .sort((a, b) => (b.aqi || 0) - (a.aqi || 0));
+
+    const stationRatio = row.total_stations > 0 ? row.valid_stations / row.total_stations : 0;
+    const dataQuality: CitySnapshot['dataQuality'] =
+        row.valid_stations === 0 ? 'unavailable' :
+            stationRatio >= 0.8 ? 'good' :
+                stationRatio >= 0.5 ? 'partial' : 'poor';
+
+    return {
+        city,
+        timestamp: row.recorded_at,
+        stations,
+        validStationCount: row.valid_stations,
+        totalStationCount: row.total_stations,
+        avgPm25: row.avg_pm25 !== null ? Math.round(row.avg_pm25 * 10) / 10 : null,
+        minPm25: row.min_pm25 !== null ? Math.round(row.min_pm25 * 10) / 10 : null,
+        maxPm25: row.max_pm25 !== null ? Math.round(row.max_pm25 * 10) / 10 : null,
+        metrics,
+        pollutants,
+        dominantPollutant: row.dominant_pollutant,
+        forecast: [],
+        dataQuality,
+    };
 }

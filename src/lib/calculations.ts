@@ -295,6 +295,65 @@ export function formatNumber(value: number, decimals: number = 1): string {
 }
 
 /**
+ * Format a number using Indian numbering system (lakhs and crores)
+ * 
+ * Examples:
+ * - 1500 -> "1,500"
+ * - 15000 -> "15,000"
+ * - 150000 -> "1.5 lakh"
+ * - 1500000 -> "15 lakh"
+ * - 21000000 -> "2.1 crore"
+ */
+export function formatIndianNumber(value: number, options?: {
+  useWords?: boolean;  // Use "lakh" and "crore" instead of just commas
+  decimals?: number;   // Decimal places for lakhs/crores
+}): string {
+  const { useWords = true, decimals = 1 } = options || {};
+
+  if (!Number.isFinite(value) || value < 0) return '0';
+
+  // For small numbers, just use Indian locale formatting
+  if (value < 100000 || !useWords) {
+    return value.toLocaleString('en-IN');
+  }
+
+  // Crore (1,00,00,000 = 10 million)
+  if (value >= 10000000) {
+    const crores = value / 10000000;
+    return crores % 1 === 0
+      ? `${crores.toFixed(0)} crore`
+      : `${crores.toFixed(decimals)} crore`;
+  }
+
+  // Lakh (1,00,000 = 100 thousand)
+  if (value >= 100000) {
+    const lakhs = value / 100000;
+    return lakhs % 1 === 0
+      ? `${lakhs.toFixed(0)} lakh`
+      : `${lakhs.toFixed(decimals)} lakh`;
+  }
+
+  return value.toLocaleString('en-IN');
+}
+
+/**
+ * Format population in Indian style (always use words)
+ */
+export function formatPopulation(population: number): string {
+  return formatIndianNumber(population, { useWords: true, decimals: 1 });
+}
+
+/**
+ * Format deaths/counts in Indian style
+ */
+export function formatDeaths(deaths: number): string {
+  if (deaths < 100000) {
+    return deaths.toLocaleString('en-IN');
+  }
+  return formatIndianNumber(deaths, { useWords: true, decimals: 1 });
+}
+
+/**
  * Check if a value is a valid PM2.5 reading
  */
 export function isValidPm25(value: number | null | undefined): value is number {

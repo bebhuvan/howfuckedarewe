@@ -4,8 +4,8 @@
  *
  * How fucked are we? Refined, no emojis, still devastating.
  */
-import type { AirQualityMetrics } from '../lib/types';
-import { WHO, US_EPA, INDIA_NAAQS } from '../lib/constants';
+import type { AirQualityMetrics } from "../../lib/types";
+import { WHO, US_EPA, INDIA_NAAQS } from "../../lib/constants";
 
 interface Props {
   metrics: AirQualityMetrics;
@@ -14,7 +14,7 @@ interface Props {
 }
 
 const { metrics, cityName, pm25 } = Astro.props;
-const actualPm25 = pm25 ?? (metrics.whoViolation * WHO.PM25_ANNUAL);
+const actualPm25 = pm25 ?? metrics.whoViolation * WHO.PM25_ANNUAL;
 
 // Calculate ratios
 const whoFucked = actualPm25 / WHO.PM25_ANNUAL;
@@ -23,49 +23,75 @@ const indiaFucked = actualPm25 / INDIA_NAAQS.PM25_ANNUAL;
 
 // Determine verdict (no emojis)
 function getVerdict(whoRatio: number): { label: string; subtext: string } {
-  if (whoRatio <= 1) return {
-    label: 'Suspiciously Okay',
-    subtext: 'Either the sensors are broken or you should buy a lottery ticket.'
-  };
-  if (whoRatio <= 2) return {
-    label: 'Technically Survivable',
-    subtext: 'Your lungs are only mildly disappointed.'
-  };
-  if (whoRatio <= 4) return {
-    label: 'Cope Zone',
-    subtext: "You've normalized this. That's the problem."
-  };
-  if (whoRatio <= 8) return {
-    label: 'Very Fucked',
-    subtext: 'Other countries would issue health warnings. We issue press releases.'
-  };
-  if (whoRatio <= 15) return {
-    label: 'Extremely Fucked',
-    subtext: '"Stay indoors" assumes your indoors isn\'t also fucked.'
-  };
+  if (whoRatio <= 1)
+    return {
+      label: "Suspiciously Okay",
+      subtext:
+        "Either the sensors are broken or you should buy a lottery ticket.",
+    };
+  if (whoRatio <= 2)
+    return {
+      label: "Technically Survivable",
+      subtext: "Your lungs are only mildly disappointed.",
+    };
+  if (whoRatio <= 4)
+    return {
+      label: "Cope Zone",
+      subtext: "You've normalized this. That's the problem.",
+    };
+  if (whoRatio <= 8)
+    return {
+      label: "Very Fucked",
+      subtext:
+        "Other countries would issue health warnings. We issue press releases.",
+    };
+  if (whoRatio <= 15)
+    return {
+      label: "Extremely Fucked",
+      subtext: '"Stay indoors" assumes your indoors isn\'t also fucked.',
+    };
+  if (whoRatio <= 20)
+    return {
+      label: "Apocalyptic",
+      subtext: "If this was a movie, the credits would be rolling.",
+    };
   return {
-    label: 'LOL',
-    subtext: 'At this point, the air quality index is just dark comedy.'
+    label: "Off The Charts",
+    subtext: "Congratulations, you're breathing solid matter.",
   };
 }
 
 const verdict = getVerdict(whoFucked);
 
+// Calculate scale context message (moved from template)
+const scaleContext =
+  whoFucked <= 2
+    ? "Enjoy it while it lasts. It won't."
+    : whoFucked <= 4
+      ? "You've probably stopped noticing. That's the trap."
+      : whoFucked <= 8
+        ? "In any other country, this would be a scandal."
+        : whoFucked <= 15
+          ? "Your lungs would like a word. If they could talk."
+          : "Beyond satire. Welcome to the future.";
+
 // Global comparison
 const globalComparisons = [
-  { city: 'London', threshold: 25, would: 'issue health advisories' },
-  { city: 'Tokyo', threshold: 35, would: 'warn vulnerable groups' },
-  { city: 'Los Angeles', threshold: 35, would: 'declare unhealthy air day' },
-  { city: 'Sydney', threshold: 25, would: 'trigger emergency alerts' },
+  { city: "London", threshold: 25, would: "issue health advisories" },
+  { city: "Tokyo", threshold: 35, would: "warn vulnerable groups" },
+  { city: "Los Angeles", threshold: 35, would: "declare unhealthy air day" },
+  { city: "Sydney", threshold: 25, would: "trigger emergency alerts" },
 ];
 
-const triggered = globalComparisons.filter(c => actualPm25 >= c.threshold);
+const triggered = globalComparisons.filter((c) => actualPm25 >= c.threshold);
 ---
 
 <section class="fucked-index">
   <header class="section-header">
     <h2>The Fucked Index™</h2>
-    <p class="section-sub">A scientific* measurement of how fucked {cityName} is right now</p>
+    <p class="section-sub">
+      A scientific* measurement of how fucked {cityName} is right now
+    </p>
   </header>
 
   <!-- Main Display -->
@@ -89,7 +115,13 @@ const triggered = globalComparisons.filter(c => actualPm25 >= c.threshold);
         <div
           class="comp-fill"
           style={`width: ${Math.min(whoFucked * 5, 100)}%`}
-          data-severity={whoFucked > 8 ? 'extreme' : whoFucked > 4 ? 'high' : whoFucked > 2 ? 'medium' : 'low'}
+          data-severity={whoFucked > 8
+            ? "extreme"
+            : whoFucked > 4
+              ? "high"
+              : whoFucked > 2
+                ? "medium"
+                : "low"}
         >
           <span class="comp-value">{whoFucked.toFixed(1)}×</span>
         </div>
@@ -105,7 +137,13 @@ const triggered = globalComparisons.filter(c => actualPm25 >= c.threshold);
         <div
           class="comp-fill"
           style={`width: ${Math.min(epaFucked * 12, 100)}%`}
-          data-severity={epaFucked > 4 ? 'extreme' : epaFucked > 2 ? 'high' : epaFucked > 1 ? 'medium' : 'low'}
+          data-severity={epaFucked > 4
+            ? "extreme"
+            : epaFucked > 2
+              ? "high"
+              : epaFucked > 1
+                ? "medium"
+                : "low"}
         >
           <span class="comp-value">{epaFucked.toFixed(1)}×</span>
         </div>
@@ -121,57 +159,80 @@ const triggered = globalComparisons.filter(c => actualPm25 >= c.threshold);
         <div
           class="comp-fill"
           style={`width: ${Math.min(indiaFucked * 40, 100)}%`}
-          data-severity={indiaFucked > 1.5 ? 'extreme' : indiaFucked > 1 ? 'high' : 'low'}
+          data-severity={indiaFucked > 1.5
+            ? "extreme"
+            : indiaFucked > 1
+              ? "high"
+              : "low"}
         >
           <span class="comp-value">{indiaFucked.toFixed(1)}×</span>
         </div>
       </div>
       <p class="comp-note">
-        {indiaFucked > 1
-          ? "Failing even our own 8× looser standard."
-          : "Passing. Our standard is just 8× weaker than WHO's."}
+        {
+          indiaFucked > 1
+            ? "Failing even our own 8× looser standard."
+            : "Passing. Our standard is just 8× weaker than WHO's."
+        }
       </p>
     </div>
   </div>
 
   <!-- Global Alerts -->
-  {triggered.length > 0 && (
-    <div class="global-alerts">
-      <p class="alert-header">This level would trigger alerts in:</p>
-      <ul class="alert-list">
-        {triggered.map(t => (
-          <li><strong>{t.city}</strong> would {t.would}</li>
-        ))}
-      </ul>
-      <p class="alert-footer">Here, we call it "moderate" and suggest drinking more water.</p>
-    </div>
-  )}
+  {
+    triggered.length > 0 && (
+      <div class="global-alerts">
+        <p class="alert-header">This level would trigger alerts in:</p>
+        <ul class="alert-list">
+          {triggered.map((t) => (
+            <li>
+              <strong>{t.city}</strong> would {t.would}
+            </li>
+          ))}
+        </ul>
+        <p class="alert-footer">
+          Here, we call it "moderate" and suggest drinking more water.
+        </p>
+      </div>
+    )
+  }
 
-  <!-- Scale -->
+  <!-- Scale - where YOU are on the fucked spectrum -->
   <div class="scale-section">
+    <h4 class="scale-title">Where You Are on the Fucked Spectrum</h4>
     <div class="scale-wrapper">
-      <div class="scale-marker" style={`left: ${Math.min(Math.max((whoFucked / 20) * 100, 3), 97)}%`}>
-        <span class="marker-label">YOU</span>
-        <span class="marker-line"></span>
+      <div
+        class="scale-marker"
+        style={`left: ${Math.min(Math.max((whoFucked / 20) * 100, 5), 95)}%`}
+      >
+        <span class="marker-you">YOU ARE HERE</span>
+        <span class="marker-value">{whoFucked.toFixed(1)}×</span>
+        <span class="marker-arrow">▼</span>
       </div>
       <div class="scale-track">
-        <div class="zone zone-1"></div>
-        <div class="zone zone-2"></div>
-        <div class="zone zone-3"></div>
-        <div class="zone zone-4"></div>
-        <div class="zone zone-5"></div>
+        <div class="zone zone-1" data-label="Okay"></div>
+        <div class="zone zone-2" data-label="Cope"></div>
+        <div class="zone zone-3" data-label="Bad"></div>
+        <div class="zone zone-4" data-label="Fucked"></div>
+        <div class="zone zone-5" data-label="LOL"></div>
       </div>
       <div class="scale-labels">
-        <span>1×</span>
+        <span>1× WHO</span>
         <span>4×</span>
         <span>8×</span>
         <span>15×</span>
-        <span>20× WHO</span>
+        <span>20×+</span>
       </div>
     </div>
+    <p class="scale-context">
+      {scaleContext}
+    </p>
   </div>
 
-  <p class="footnote">*Not actually scientific. But neither is "moderate air quality" at 10× WHO limits.</p>
+  <p class="footnote">
+    *Not actually scientific. But neither is "moderate air quality" at 10× WHO
+    limits.
+  </p>
 </section>
 
 <style>
@@ -205,7 +266,8 @@ const triggered = globalComparisons.filter(c => actualPm25 >= c.threshold);
   }
 
   @keyframes pulse {
-    0%, 100% {
+    0%,
+    100% {
       transform: translateX(-50%) scale(1);
       box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7);
     }
@@ -227,7 +289,8 @@ const triggered = globalComparisons.filter(c => actualPm25 >= c.threshold);
   }
 
   @keyframes glowPulse {
-    0%, 100% {
+    0%,
+    100% {
       box-shadow: 0 0 5px rgba(153, 27, 27, 0.3);
     }
     50% {
@@ -269,7 +332,7 @@ const triggered = globalComparisons.filter(c => actualPm25 >= c.threshold);
   }
 
   .index-number {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: "Playfair Display", Georgia, serif;
     font-size: clamp(4rem, 12vw, 6rem);
     font-weight: 400;
     line-height: 1;
@@ -293,7 +356,7 @@ const triggered = globalComparisons.filter(c => actualPm25 >= c.threshold);
   }
 
   .verdict-text {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: "Playfair Display", Georgia, serif;
     font-size: 1.125rem;
     font-weight: 500;
     color: white;
@@ -350,17 +413,31 @@ const triggered = globalComparisons.filter(c => actualPm25 >= c.threshold);
     animation: barGrow 1s cubic-bezier(0.22, 1, 0.36, 1) 0.4s backwards;
   }
 
-  .comparison-item:nth-child(1) .comp-fill { animation-delay: 0.4s; }
-  .comparison-item:nth-child(2) .comp-fill { animation-delay: 0.55s; }
-  .comparison-item:nth-child(3) .comp-fill { animation-delay: 0.7s; }
+  .comparison-item:nth-child(1) .comp-fill {
+    animation-delay: 0.4s;
+  }
+  .comparison-item:nth-child(2) .comp-fill {
+    animation-delay: 0.55s;
+  }
+  .comparison-item:nth-child(3) .comp-fill {
+    animation-delay: 0.7s;
+  }
 
-  .comp-fill[data-severity="low"] { background: var(--severity-good); }
-  .comp-fill[data-severity="medium"] { background: var(--severity-moderate); }
-  .comp-fill[data-severity="high"] { background: var(--severity-bad); }
-  .comp-fill[data-severity="extreme"] { background: var(--severity-danger); }
+  .comp-fill[data-severity="low"] {
+    background: var(--severity-good);
+  }
+  .comp-fill[data-severity="medium"] {
+    background: var(--severity-moderate);
+  }
+  .comp-fill[data-severity="high"] {
+    background: var(--severity-bad);
+  }
+  .comp-fill[data-severity="extreme"] {
+    background: var(--severity-danger);
+  }
 
   .comp-value {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: "Playfair Display", Georgia, serif;
     font-size: 0.9375rem;
     font-weight: 500;
     color: white;
@@ -408,16 +485,23 @@ const triggered = globalComparisons.filter(c => actualPm25 >= c.threshold);
     border-top: 1px solid rgba(153, 27, 27, 0.1);
   }
 
-  /* Scale */
   .scale-section {
-    padding-top: 1.5rem;
+    padding-top: 2rem;
     border-top: 1px solid var(--border);
     margin-bottom: 1.5rem;
   }
 
+  .scale-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: center;
+    margin: 0 0 1.5rem 0;
+  }
+
   .scale-wrapper {
     position: relative;
-    padding-top: 2rem;
+    padding-top: 4.5rem;
   }
 
   .scale-marker {
@@ -428,49 +512,130 @@ const triggered = globalComparisons.filter(c => actualPm25 >= c.threshold);
     flex-direction: column;
     align-items: center;
     z-index: 2;
-    animation: markerDrop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.9s backwards;
+    animation: markerBounce 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.9s
+      backwards;
   }
 
-  .marker-label {
-    font-size: 0.625rem;
-    font-weight: 700;
-    color: var(--dark-bg);
+  @keyframes markerBounce {
+    from {
+      top: -20px;
+      opacity: 0;
+    }
+    to {
+      top: 0;
+      opacity: 1;
+    }
+  }
+
+  .marker-you {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #0d0d0d;
     background: #ffd700;
-    padding: 0.15rem 0.5rem;
-    border-radius: 3px;
-    margin-bottom: 2px;
-    animation: pulse 2s ease-in-out 1.5s infinite;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    white-space: nowrap;
+    letter-spacing: 0.05em;
+    box-shadow:
+      0 2px 8px rgba(255, 215, 0, 0.4),
+      0 0 20px rgba(255, 215, 0, 0.3);
+    animation: markerPulse 1.5s ease-in-out infinite;
   }
 
-  .marker-line {
-    width: 2px;
-    height: 40px;
-    background: var(--dark-bg);
+  @keyframes markerPulse {
+    0%,
+    100% {
+      box-shadow:
+        0 2px 8px rgba(255, 215, 0, 0.4),
+        0 0 20px rgba(255, 215, 0, 0.3);
+    }
+    50% {
+      box-shadow:
+        0 2px 12px rgba(255, 215, 0, 0.6),
+        0 0 30px rgba(255, 215, 0, 0.5);
+    }
+  }
+
+  .marker-value {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-top: 0.25rem;
+  }
+
+  .marker-arrow {
+    font-size: 1.25rem;
+    color: #ffd700;
+    line-height: 1;
+    margin-top: -0.125rem;
   }
 
   .scale-track {
     display: flex;
-    height: 20px;
-    border-radius: 4px;
+    height: 32px;
+    border-radius: 6px;
     overflow: hidden;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
   }
 
   .zone {
     height: 100%;
+    position: relative;
   }
 
-  .zone-1 { width: 5%; background: var(--severity-good); }
-  .zone-2 { width: 15%; background: var(--severity-moderate); }
-  .zone-3 { width: 20%; background: var(--severity-bad); }
-  .zone-4 { width: 35%; background: var(--severity-danger); }
-  .zone-5 { width: 25%; background: var(--severity-extreme); }
+  .zone::after {
+    content: attr(data-label);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.7);
+    white-space: nowrap;
+  }
+
+  .zone-1 {
+    width: 5%;
+    background: var(--severity-good);
+  }
+  .zone-2 {
+    width: 15%;
+    background: var(--severity-moderate);
+  }
+  .zone-3 {
+    width: 20%;
+    background: var(--severity-bad);
+  }
+  .zone-4 {
+    width: 35%;
+    background: var(--severity-danger);
+  }
+  .zone-5 {
+    width: 25%;
+    background: var(--severity-extreme);
+  }
 
   .scale-labels {
     display: flex;
     justify-content: space-between;
-    margin-top: 0.375rem;
-    font-size: 0.625rem;
+    margin-top: 0.5rem;
+    font-size: 0.6875rem;
     color: var(--text-light);
+  }
+
+  .scale-context {
+    text-align: center;
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin: 1rem 0 0 0;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 6px;
   }
 
   .footnote {

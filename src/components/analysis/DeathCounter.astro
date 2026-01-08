@@ -1,0 +1,414 @@
+---
+/**
+ * Death Counter Component — REDESIGNED
+ *
+ * Real-time counter showing estimated deaths from air pollution.
+ * Based on WHO/Lancet data. Now with maximum visual impact.
+ */
+import { INDIA_MORTALITY } from "../../lib/constants";
+
+interface Props {
+  annualDeaths?: number; // If provided, use city-specific estimate
+  cityName?: string;
+  showNational?: boolean;
+}
+
+const { annualDeaths, cityName, showNational = true } = Astro.props;
+
+// Deaths per second (national)
+const nationalDeathsPerSecond =
+  INDIA_MORTALITY.ANNUAL_DEATHS / (365 * 24 * 60 * 60);
+
+// Deaths per second (city-specific, if provided)
+const cityDeathsPerSecond = annualDeaths
+  ? annualDeaths / (365 * 24 * 60 * 60)
+  : null;
+
+// Estimated deaths since midnight (for initial display)
+const now = new Date();
+const secondsSinceMidnight =
+  now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+const deathsToday = Math.floor(nationalDeathsPerSecond * secondsSinceMidnight);
+
+// Calculate time for one death
+const secondsPerDeath = 1 / nationalDeathsPerSecond;
+const timePerDeath =
+  secondsPerDeath < 60
+    ? `${secondsPerDeath.toFixed(1)} seconds`
+    : `${(secondsPerDeath / 60).toFixed(1)} minutes`;
+---
+
+<section class="death-counter">
+  <div class="counter-content">
+    <!-- The shocking headline -->
+    <div class="counter-headline">
+      <span class="headline-prefix">Today alone,</span>
+      <span class="headline-emphasis">air pollution has killed</span>
+    </div>
+
+    <!-- The big number -->
+    <div
+      class="counter-value"
+      id="death-counter"
+      data-rate={nationalDeathsPerSecond}
+      data-start={deathsToday}
+    >
+      {deathsToday.toLocaleString("en-IN")}
+    </div>
+
+    <div class="counter-label">Indians</div>
+
+    <!-- The kicker -->
+    <div class="counter-kicker">
+      <span class="kicker-stat"
+        >That's one person every <strong>{timePerDeath}</strong>.</span
+      >
+      <span class="kicker-dark">We're making excellent progress.</span>
+    </div>
+
+    <!-- Source with methodology link -->
+    <div class="counter-source">
+      <span class="source-stat">21 lakh deaths/year</span>
+      <span class="source-cite">
+        <a
+          href="https://www.stateofglobalair.org/"
+          target="_blank"
+          rel="noopener">State of Global Air 2024</a
+        >
+        •
+        <a href="/methodology">Our methodology</a>
+      </span>
+    </div>
+
+    {
+      cityDeathsPerSecond && cityName && (
+        <div class="city-counter">
+          <span class="city-label">In {cityName} alone:</span>
+          <span
+            class="city-value"
+            id="city-death-counter"
+            data-rate={cityDeathsPerSecond}
+          >
+            ~
+            {Math.floor(
+              cityDeathsPerSecond * secondsSinceMidnight,
+            ).toLocaleString("en-IN")}
+          </span>
+          <span class="city-note">deaths today (and counting)</span>
+        </div>
+      )
+    }
+  </div>
+
+  <!-- The breakdown that makes it real -->
+  <div class="counter-breakdown">
+    <div class="breakdown-item">
+      <span class="breakdown-value"
+        >{INDIA_MORTALITY.UNDER_5_DAILY.toLocaleString("en-IN")}</span
+      >
+      <span class="breakdown-label">children under 5</span>
+      <span class="breakdown-context">die every single day</span>
+    </div>
+    <div class="breakdown-divider"></div>
+    <div class="breakdown-item">
+      <span class="breakdown-value"
+        >{
+          Math.round(nationalDeathsPerSecond * 60).toLocaleString("en-IN")
+        }</span
+      >
+      <span class="breakdown-label">people dead</span>
+      <span class="breakdown-context">in the time it takes to read this</span>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Real-time counter animation
+  const counter = document.getElementById("death-counter");
+  const cityCounter = document.getElementById("city-death-counter");
+
+  if (counter) {
+    const rate = parseFloat(counter.dataset.rate || "0");
+    let count = parseInt(counter.dataset.start || "0", 10);
+
+    setInterval(() => {
+      count += rate;
+      counter.textContent = Math.floor(count).toLocaleString("en-IN");
+    }, 1000);
+  }
+
+  if (cityCounter) {
+    const rate = parseFloat(cityCounter.dataset.rate || "0");
+    let count = 0;
+
+    // Get seconds since midnight
+    const now = new Date();
+    const secondsSinceMidnight =
+      now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+    count = rate * secondsSinceMidnight;
+
+    setInterval(() => {
+      count += rate;
+      cityCounter.textContent = `~${Math.floor(count).toLocaleString("en-IN")}`;
+    }, 1000);
+  }
+</script>
+
+<style>
+  .death-counter {
+    background: linear-gradient(180deg, #0d0d0d 0%, #1a1a1a 100%);
+    color: white;
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    margin-bottom: 2.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+      0 4px 6px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .death-counter::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(to right, transparent, #ef4444, transparent);
+  }
+
+  .death-counter::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(
+      circle,
+      rgba(239, 68, 68, 0.1) 0%,
+      transparent 70%
+    );
+    pointer-events: none;
+  }
+
+  .counter-headline {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .headline-prefix {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .headline-emphasis {
+    font-size: 1.25rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+  }
+
+  .counter-value {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: clamp(4rem, 15vw, 7rem);
+    font-weight: 500;
+    color: #ef4444;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 40px rgba(239, 68, 68, 0.3);
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%,
+    100% {
+      text-shadow: 0 0 40px rgba(239, 68, 68, 0.3);
+    }
+    50% {
+      text-shadow: 0 0 60px rgba(239, 68, 68, 0.5);
+    }
+  }
+
+  .counter-label {
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 1.5rem;
+    font-weight: 400;
+  }
+
+  .counter-kicker {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.5rem;
+    background: rgba(239, 68, 68, 0.08);
+    border-radius: 8px;
+    border: 1px solid rgba(239, 68, 68, 0.15);
+  }
+
+  .kicker-stat {
+    font-size: 1.125rem;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .kicker-stat strong {
+    color: #ef4444;
+  }
+
+  .kicker-dark {
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.4);
+    font-style: italic;
+  }
+
+  .counter-source {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8125rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .source-stat {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .source-cite {
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  .source-cite a {
+    color: rgba(255, 255, 255, 0.5);
+    text-decoration: underline;
+    text-decoration-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .source-cite a:hover {
+    color: white;
+  }
+
+  .city-counter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .city-label {
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .city-value {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 2.5rem;
+    color: #ef4444;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .city-note {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    font-style: italic;
+  }
+
+  .counter-breakdown {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    gap: 0;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .breakdown-divider {
+    width: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 0 2rem;
+  }
+
+  .breakdown-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    max-width: 200px;
+  }
+
+  .breakdown-value {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 2rem;
+    font-weight: 500;
+    color: white;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+
+  .breakdown-label {
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 0.25rem;
+  }
+
+  .breakdown-context {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    font-style: italic;
+  }
+
+  @media (max-width: 600px) {
+    .death-counter {
+      padding: 2rem 1.5rem;
+    }
+
+    .counter-value {
+      font-size: 4rem;
+    }
+
+    .counter-label {
+      font-size: 1.25rem;
+    }
+
+    .counter-kicker {
+      padding: 0.75rem 1rem;
+    }
+
+    .kicker-stat {
+      font-size: 1rem;
+    }
+
+    .counter-breakdown {
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .breakdown-divider {
+      width: 60%;
+      height: 1px;
+      margin: 0 auto;
+    }
+
+    .breakdown-value {
+      font-size: 1.75rem;
+    }
+
+    .city-value {
+      font-size: 2rem;
+    }
+  }
+</style>

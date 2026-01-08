@@ -1,0 +1,323 @@
+---
+/**
+ * HardStats Component — REDESIGNED
+ *
+ * The raw numbers. Comparison against limits.
+ * Now with visible headers and methodology links.
+ */
+import {
+  formatPopulation,
+  formatDeaths,
+  calculateYearsLost,
+} from "../../lib/calculations";
+import { WHO, US_EPA, INDIA_NAAQS } from "../../lib/constants";
+
+import type { AirQualityMetrics } from "../../lib/types";
+
+interface Props {
+  metrics: AirQualityMetrics;
+  cityName: string;
+  population: number;
+  annualDeaths?: number | null;
+}
+
+const { metrics, cityName, population, annualDeaths } = Astro.props;
+const pm25 = metrics.pm25;
+
+// Calculate violation factors
+const whoViolation = (pm25 / WHO.PM25_ANNUAL).toFixed(1);
+const epaViolation = (pm25 / US_EPA.PM25_ANNUAL).toFixed(1);
+const indiaViolation = (pm25 / INDIA_NAAQS.PM25_ANNUAL).toFixed(1);
+
+// Calculate days lost
+const yearsLost = calculateYearsLost(pm25);
+const daysLost = yearsLost * 365;
+---
+
+<section class="hard-stats">
+  <div class="stats-header">
+    <h3 class="stats-title">How far over the limit?</h3>
+    <p class="stats-subtitle">
+      Comparing {cityName}'s air against safety standards
+    </p>
+  </div>
+
+  <div class="violation-grid">
+    <!-- WHO Limit -->
+    <div class="violation-card who">
+      <div class="card-top">
+        <span class="limit-label">WHO Limit</span>
+        <span class="limit-value">{WHO.PM25_ANNUAL} µg/m³</span>
+      </div>
+      <div class="violation-value">
+        {whoViolation}×
+      </div>
+      <div class="violation-context">over the safe limit</div>
+    </div>
+
+    <!-- US EPA Limit -->
+    <div class="violation-card us">
+      <div class="card-top">
+        <span class="limit-label">US EPA Limit</span>
+        <span class="limit-value">{US_EPA.PM25_ANNUAL} µg/m³</span>
+      </div>
+      <div class="violation-value">
+        {epaViolation}×
+      </div>
+      <div class="violation-context">over the US limit</div>
+    </div>
+
+    <!-- India Limit -->
+    <div class="violation-card india">
+      <div class="card-top">
+        <span class="limit-label">India Limit</span>
+        <span class="limit-value">{INDIA_NAAQS.PM25_ANNUAL} µg/m³</span>
+      </div>
+      <div class="violation-value">
+        {indiaViolation}×
+      </div>
+      <div class="violation-context">over our own limit</div>
+    </div>
+  </div>
+
+  <div class="population-context">
+    <div class="pop-stat">
+      <span class="pop-value">{population.toLocaleString("en-IN")}</span>
+      <span class="pop-label">people in {cityName}</span>
+    </div>
+    <div class="pop-divider"></div>
+    <div class="pop-stat">
+      <span class="pop-value"
+        >{
+          (daysLost * population).toLocaleString("en-IN", {
+            maximumFractionDigits: 0,
+          })
+        }</span
+      >
+      <span class="pop-label">total days of life lost annually</span>
+    </div>
+  </div>
+
+  <footer class="stats-footer">
+    <p class="methodology-note">
+      Calculated using annual average PM2.5 limits.
+      <a href="/methodology" class="methodology-link">Read our methodology →</a>
+    </p>
+  </footer>
+</section>
+
+<style>
+  .hard-stats {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .stats-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .stats-title {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 500;
+    color: var(--text);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .stats-subtitle {
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  .violation-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .violation-card {
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+  }
+
+  .violation-card:hover {
+    transform: translateY(-2px);
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  .violation-card.who {
+    border-color: rgba(239, 68, 68, 0.2);
+    background: rgba(239, 68, 68, 0.05);
+  }
+
+  .violation-card.us {
+    border-color: rgba(249, 115, 22, 0.2);
+    background: rgba(249, 115, 22, 0.05);
+  }
+
+  .violation-card.india {
+    border-color: rgba(234, 179, 8, 0.2);
+    background: rgba(234, 179, 8, 0.05);
+  }
+
+  .card-top {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .limit-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+  }
+
+  .limit-value {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+
+  .violation-value {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 2.5rem;
+    font-weight: 500;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+
+  .who .violation-value {
+    color: #ef4444;
+  }
+  .us .violation-value {
+    color: #f97316;
+  }
+  .india .violation-value {
+    color: #eab308;
+  }
+
+  .violation-context {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .population-context {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1.5rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+  }
+
+  .pop-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    flex: 1;
+  }
+
+  .pop-value {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+  }
+
+  .pop-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .pop-divider {
+    width: 1px;
+    height: 40px;
+    background: var(--border);
+    margin: 0 1.5rem;
+  }
+
+  .stats-footer {
+    text-align: center;
+  }
+
+  .methodology-note {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  .methodology-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+    margin-left: 0.25rem;
+  }
+
+  .methodology-link:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 600px) {
+    .hard-stats {
+      padding: 1.5rem;
+    }
+
+    .violation-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .violation-card {
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      text-align: left;
+    }
+
+    .card-top {
+      margin-bottom: 0;
+      align-items: flex-start;
+    }
+
+    .violation-value {
+      font-size: 2rem;
+      margin-bottom: 0;
+    }
+
+    .violation-context {
+      display: none;
+    }
+
+    .population-context {
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .pop-divider {
+      width: 50%;
+      height: 1px;
+      margin: 0;
+    }
+  }
+</style>

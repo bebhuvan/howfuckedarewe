@@ -1,0 +1,408 @@
+---
+/**
+ * City Variance Component — THE LUNG LOTTERY
+ *
+ * Where you live determines how fast you deteriorate.
+ * Redesigned for maximum impact and sardonic truth.
+ */
+
+import { WHO } from "../../lib/constants";
+
+interface Props {
+  minPm25: number;
+  maxPm25: number;
+  avgPm25: number;
+  cityName: string;
+}
+
+const { minPm25, maxPm25, avgPm25, cityName } = Astro.props;
+
+// Calculate the spread
+const spread = maxPm25 - minPm25;
+const spreadPercent = ((spread / avgPm25) * 100).toFixed(0);
+const worstVsBest = (maxPm25 / minPm25).toFixed(1);
+
+// Calculate life years difference
+const yearsLostBest = Math.max(0, (minPm25 - WHO.PM25_ANNUAL) / 10) * 0.98;
+const yearsLostWorst = Math.max(0, (maxPm25 - WHO.PM25_ANNUAL) / 10) * 0.98;
+const yearsDifference = yearsLostWorst - yearsLostBest;
+
+// Position of average on the bar (0-100%)
+const avgPosition = ((avgPm25 - minPm25) / spread) * 100;
+
+// Color based on severity
+function getColor(pm25: number): string {
+  if (pm25 <= 12) return "#22c55e";
+  if (pm25 <= 35) return "#eab308";
+  if (pm25 <= 55) return "#f97316";
+  return "#ef4444";
+}
+
+const minColor = getColor(minPm25);
+const maxColor = getColor(maxPm25);
+
+// Sardonic message based on spread
+function getMessage(): { headline: string; kicker: string } {
+  if (spread < 20)
+    return {
+      headline: "Equally distributed misery",
+      kicker: "At least you're all suffering together. Solidarity.",
+    };
+  if (spread < 50)
+    return {
+      headline: "Location matters",
+      kicker: "Some neighborhoods lucked out. Most didn't.",
+    };
+  if (spread < 100)
+    return {
+      headline: "Postal code as destiny",
+      kicker: "Your address is literally a life expectancy predictor.",
+    };
+  return {
+    headline: "Air quality roulette",
+    kicker: "Hope you picked the right spot when you chose where to live.",
+  };
+}
+
+const message = getMessage();
+---
+
+<section class="lung-lottery">
+  <header class="lottery-header">
+    <h3 class="lottery-title">The Lung Lottery</h3>
+    <p class="lottery-subtitle">
+      In {cityName}, where you live determines how fast you deteriorate
+    </p>
+  </header>
+
+  <div class="lottery-display">
+    <!-- The range visualization -->
+    <div class="range-visual">
+      <div class="range-bar">
+        <div
+          class="range-gradient"
+          style={`background: linear-gradient(to right, ${minColor}, ${maxColor});`}
+        >
+        </div>
+        <div
+          class="avg-marker"
+          style={`left: ${avgPosition}%;`}
+          title={`City average: ${avgPm25} µg/m³`}
+        >
+          <span class="avg-label">AVG</span>
+        </div>
+      </div>
+
+      <div class="range-endpoints">
+        <div class="endpoint best">
+          <span class="endpoint-emoji">😮‍💨</span>
+          <span class="endpoint-value" style={`color: ${minColor}`}
+            >{minPm25.toFixed(0)}</span
+          >
+          <span class="endpoint-unit">µg/m³</span>
+          <span class="endpoint-label">Best area</span>
+          <span class="endpoint-years"
+            >{yearsLostBest.toFixed(1)} years lost</span
+          >
+        </div>
+        <div class="endpoint worst">
+          <span class="endpoint-emoji">💀</span>
+          <span class="endpoint-value" style={`color: ${maxColor}`}
+            >{maxPm25.toFixed(0)}</span
+          >
+          <span class="endpoint-unit">µg/m³</span>
+          <span class="endpoint-label">Worst area</span>
+          <span class="endpoint-years"
+            >{yearsLostWorst.toFixed(1)} years lost</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- The verdict -->
+    <div class="lottery-verdict">
+      <h4 class="verdict-headline">{message.headline}</h4>
+      <p class="verdict-kicker">{message.kicker}</p>
+    </div>
+
+    <!-- The stats that hurt -->
+    <div class="lottery-stats">
+      <div class="stat-card">
+        <span class="stat-value">{spread.toFixed(0)}</span>
+        <span class="stat-unit">µg/m³</span>
+        <span class="stat-label">difference across {cityName}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value">{worstVsBest}×</span>
+        <span class="stat-label">worse in the worst vs best area</span>
+      </div>
+      {
+        yearsDifference > 0.5 && (
+          <div class="stat-card highlight">
+            <span class="stat-value">{yearsDifference.toFixed(1)}</span>
+            <span class="stat-unit">years</span>
+            <span class="stat-label">extra life lost in the worst area</span>
+          </div>
+        )
+      }
+    </div>
+  </div>
+
+  <footer class="lottery-footer">
+    <p class="footer-note">
+      Same city. Same sky. Different fates.
+      {
+        yearsDifference > 1
+          ? `Move to the right neighborhood and gain ${yearsDifference.toFixed(0)}+ years.`
+          : "Your postal code is your destiny."
+      }
+    </p>
+  </footer>
+</section>
+
+<style>
+  .lung-lottery {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .lung-lottery::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(to right, #22c55e, #eab308, #f97316, #ef4444);
+  }
+
+  .lottery-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .lottery-title {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 500;
+    margin: 0 0 0.5rem 0;
+    color: var(--text);
+  }
+
+  .lottery-subtitle {
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  .lottery-display {
+    margin-bottom: 1.5rem;
+  }
+
+  .range-visual {
+    margin-bottom: 2rem;
+  }
+
+  .range-bar {
+    position: relative;
+    height: 20px;
+    background: var(--border);
+    border-radius: 10px;
+    overflow: visible;
+    margin-bottom: 1rem;
+  }
+
+  .range-gradient {
+    height: 100%;
+    border-radius: 10px;
+    width: 100%;
+  }
+
+  .avg-marker {
+    position: absolute;
+    top: -10px;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .avg-marker::before {
+    content: "";
+    width: 4px;
+    height: 40px;
+    background: var(--text);
+    border-radius: 2px;
+  }
+
+  .avg-label {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text);
+    background: white;
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    margin-top: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .range-endpoints {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
+  }
+
+  .endpoint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    flex: 1;
+    max-width: 45%;
+  }
+
+  .endpoint.worst {
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .endpoint-emoji {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .endpoint-value {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 2.5rem;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .endpoint-unit {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-bottom: 0.25rem;
+  }
+
+  .endpoint-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+  }
+
+  .endpoint-years {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .lottery-verdict {
+    text-align: center;
+    padding: 1.25rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+  }
+
+  .verdict-headline {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 0.375rem 0;
+  }
+
+  .verdict-kicker {
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin: 0;
+  }
+
+  .lottery-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+  }
+
+  .stat-card {
+    text-align: center;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .stat-card.highlight {
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
+  .stat-value {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 2rem;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-card.highlight .stat-value {
+    color: #ef4444;
+  }
+
+  .stat-unit {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-top: 0.25rem;
+  }
+
+  .lottery-footer {
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .footer-note {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-align: center;
+    font-style: italic;
+    margin: 0;
+  }
+
+  @media (max-width: 600px) {
+    .lung-lottery {
+      padding: 1.5rem;
+    }
+
+    .lottery-title {
+      font-size: 1.5rem;
+    }
+
+    .endpoint-value {
+      font-size: 2rem;
+    }
+
+    .lottery-stats {
+      grid-template-columns: 1fr;
+    }
+
+    .stat-value {
+      font-size: 1.75rem;
+    }
+  }
+</style>

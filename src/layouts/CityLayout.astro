@@ -4,29 +4,35 @@
  *
  * Shared layout for all city pages and the All-India overview.
  */
-import Navigation from '../components/Navigation.astro';
+import Navigation from "../components/ui/Navigation.astro";
 
 interface Props {
   title: string;
   description: string;
-  currentSlug?: string;  // Current city slug (undefined for All India)
+  currentSlug?: string; // Current city slug (undefined for All India)
 }
 
 const { title, description, currentSlug } = Astro.props;
 ---
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <meta name="description" content={description} />
 
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#991b1b" />
     <meta name="color-scheme" content="light" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
     <meta name="apple-mobile-web-app-title" content="HFAW" />
     <meta name="application-name" content="How Fucked Are We" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -67,14 +73,17 @@ const { title, description, currentSlug } = Astro.props;
       onload="this.media='all'"
     />
     <noscript>
-      <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet"
+      />
     </noscript>
 
     <!-- Critical font fallback -->
     <style>
       @font-face {
-        font-family: 'Playfair Display Fallback';
-        src: local('Georgia'), local('Times New Roman');
+        font-family: "Playfair Display Fallback";
+        src: local("Georgia"), local("Times New Roman");
         font-weight: 400 600;
         font-display: swap;
         ascent-override: 97%;
@@ -83,8 +92,8 @@ const { title, description, currentSlug } = Astro.props;
         size-adjust: 105%;
       }
       @font-face {
-        font-family: 'Inter Fallback';
-        src: local('Helvetica Neue'), local('Arial');
+        font-family: "Inter Fallback";
+        src: local("Helvetica Neue"), local("Arial");
         font-weight: 400 600;
         font-display: swap;
         ascent-override: 90%;
@@ -96,14 +105,15 @@ const { title, description, currentSlug } = Astro.props;
 
     <!-- Service Worker Registration -->
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(reg => {
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("/sw.js")
+            .then((reg) => {
               // Check for updates periodically
               setInterval(() => reg.update(), 60 * 60 * 1000);
             })
-            .catch(err => console.warn('SW registration failed:', err));
+            .catch((err) => console.warn("SW registration failed:", err));
         });
       }
     </script>
@@ -125,10 +135,16 @@ const { title, description, currentSlug } = Astro.props;
           <span class="divider">|</span>
           <a href="/status">System Status</a>
           <span class="divider">|</span>
-          <a href="https://github.com/bebhuvan/howfuckedarewe" target="_blank" rel="noopener">GitHub</a>
+          <a
+            href="https://github.com/bebhuvan/howfuckedarewe"
+            target="_blank"
+            rel="noopener">GitHub</a
+          >
         </div>
         <p class="footer-attribution">
-          Data from <a href="https://aqicn.org/" target="_blank" rel="noopener">World Air Quality Index</a> (WAQI)
+          Data from <a href="https://aqicn.org/" target="_blank" rel="noopener"
+            >World Air Quality Index</a
+          > (WAQI)
         </p>
         <p class="footer-disclaimer">
           howfuckedarewe.in — Making the invisible visible since 2026
@@ -180,7 +196,12 @@ const { title, description, currentSlug } = Astro.props;
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'Inter', 'Inter Fallback', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family:
+      "Inter",
+      "Inter Fallback",
+      -apple-system,
+      BlinkMacSystemFont,
+      sans-serif;
     line-height: 1.65;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -203,8 +224,14 @@ const { title, description, currentSlug } = Astro.props;
     }
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Playfair Display', 'Playfair Display Fallback', Georgia, serif;
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family:
+      "Playfair Display", "Playfair Display Fallback", Georgia, serif;
     font-weight: 500;
     line-height: 1.2;
     letter-spacing: -0.02em;
@@ -229,7 +256,8 @@ const { title, description, currentSlug } = Astro.props;
   }
 
   .number-display {
-    font-family: 'Playfair Display', 'Playfair Display Fallback', Georgia, serif;
+    font-family:
+      "Playfair Display", "Playfair Display Fallback", Georgia, serif;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.03em;
   }

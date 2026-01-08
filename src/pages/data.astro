@@ -5,20 +5,22 @@
  * Global context for India's air pollution crisis.
  * Embedded OWID charts for interactive exploration.
  */
-import CityLayout from '../layouts/CityLayout.astro';
-import OWIDChart from '../components/OWIDChart.astro';
+import CityLayout from "../layouts/CityLayout.astro";
+import OWIDChart from "../components/charts/OWIDChart.astro";
 
 const title = "Data & Research — How Fucked Are We";
-const description = "Interactive charts showing India's air pollution crisis in global context. Deaths, trends, and uncomfortable truths.";
+const description =
+  "Interactive charts showing India's air pollution crisis in global context. Deaths, trends, and uncomfortable truths.";
 ---
 
 <CityLayout title={title} description={description}>
   <header class="page-header">
     <span class="page-label">Data & Research</span>
-    <h1>The Numbers Don't Lie.<br/>We Just Ignore Them.</h1>
+    <h1>The Numbers Don't Lie.<br />We Just Ignore Them.</h1>
     <p class="intro">
-      Every chart below tells the same story: India's air is killing us at unprecedented scale.
-      The data is from peer-reviewed global studies. The conclusions are unavoidable.
+      Every chart below tells the same story: India's air is killing us at
+      unprecedented scale. The data is from peer-reviewed global studies. The
+      conclusions are unavoidable.
     </p>
   </header>
 
@@ -52,9 +54,10 @@ const description = "Interactive charts showing India's air pollution crisis in 
 
     <div class="insight-box">
       <p>
-        <strong>India leads the world in air pollution deaths.</strong> Not because our air is always the worst globally,
-        but because 1.4 billion people are breathing it every single day. Scale matters.
-        China has cleaned up significantly since 2013. We haven't.
+        <strong>India leads the world in air pollution deaths.</strong> Not because
+        our air is always the worst globally, but because 1.4 billion people are breathing
+        it every single day. Scale matters. China has cleaned up significantly since
+        2013. We haven't.
       </p>
     </div>
 
@@ -62,7 +65,7 @@ const description = "Interactive charts showing India's air pollution crisis in 
       <OWIDChart
         slug="absolute-number-of-deaths-from-outdoor-air-pollution"
         tab="chart"
-        countries={['IND', 'CHN', 'BGD', 'PAK', 'IDN', 'NGA', 'USA', 'RUS']}
+        countries={["IND", "CHN", "BGD", "PAK", "IDN", "NGA", "USA", "RUS"]}
         title="Annual Deaths: India vs The World"
         caption="Click 'Change country' to add more nations. India's line is the one that doesn't come down."
         height={550}
@@ -89,9 +92,9 @@ const description = "Interactive charts showing India's air pollution crisis in 
 
     <div class="insight-box warning">
       <p>
-        <strong>Raw numbers favor large populations.</strong> Per capita rates reveal the actual risk of
-        breathing air in different countries. An Indian has 5× the chance of dying from air pollution
-        compared to a German—just from existing.
+        <strong>Raw numbers favor large populations.</strong> Per capita rates reveal
+        the actual risk of breathing air in different countries. An Indian has 5×
+        the chance of dying from air pollution compared to a German—just from existing.
       </p>
     </div>
 
@@ -99,7 +102,7 @@ const description = "Interactive charts showing India's air pollution crisis in 
       <OWIDChart
         slug="death-rate-from-air-pollution-per-100000"
         tab="chart"
-        countries={['IND', 'CHN', 'USA', 'DEU', 'JPN', 'GBR', 'BGD', 'PAK']}
+        countries={["IND", "CHN", "USA", "DEU", "JPN", "GBR", "BGD", "PAK"]}
         title="Death Rate per 100,000 People"
         caption="Germany: ~15. Japan: ~13. USA: ~12. India: ~75. This is not a typo."
         height={500}
@@ -117,8 +120,9 @@ const description = "Interactive charts showing India's air pollution crisis in 
     <div class="insight-box">
       <p>
         <strong>WHO says safe PM2.5 is 5 µg/m³.</strong> The global average is ~30.
-        India averages ~50 µg/m³—and that's the <em>average</em>. Delhi winters regularly
-        hit 300-500. The entire subcontinent—Pakistan, Bangladesh, Nepal—is choking together.
+        India averages ~50 µg/m³—and that's the <em>average</em>. Delhi winters
+        regularly hit 300-500. The entire subcontinent—Pakistan, Bangladesh,
+        Nepal—is choking together.
       </p>
     </div>
 
@@ -126,7 +130,7 @@ const description = "Interactive charts showing India's air pollution crisis in 
       <OWIDChart
         slug="pm25-air-pollution"
         tab="chart"
-        countries={['IND', 'CHN', 'BGD', 'PAK', 'NPL', 'USA', 'DEU', 'JPN']}
+        countries={["IND", "CHN", "BGD", "PAK", "NPL", "USA", "DEU", "JPN"]}
         title="Average PM2.5 Exposure (µg/m³)"
         caption="The WHO guideline (5 µg/m³) isn't even visible at this scale. That's the problem."
         height={500}
@@ -153,9 +157,12 @@ const description = "Interactive charts showing India's air pollution crisis in 
 
     <div class="insight-box accent">
       <p>
-        <strong>London's Great Smog of 1952 killed 12,000 people in 5 days.</strong>
-        It shocked Britain into action. Within years, they passed Clean Air Acts and transformed their city.
-        Today's Delhi is worse than 1950s London—and we've known about it for decades.
+        <strong
+          >London's Great Smog of 1952 killed 12,000 people in 5 days.</strong
+        >
+        It shocked Britain into action. Within years, they passed Clean Air Acts and
+        transformed their city. Today's Delhi is worse than 1950s London—and we've
+        known about it for decades.
       </p>
     </div>
 
@@ -178,16 +185,18 @@ const description = "Interactive charts showing India's air pollution crisis in 
 
     <div class="insight-box warning">
       <p>
-        <strong>Between 1990 and 2021, most countries reduced air pollution deaths.</strong>
-        China peaked around 2013 and has been declining. Europe, Americas, even parts of
-        Africa improved. India's death toll increased. We went backwards.
+        <strong
+          >Between 1990 and 2021, most countries reduced air pollution deaths.</strong
+        >
+        China peaked around 2013 and has been declining. Europe, Americas, even parts
+        of Africa improved. India's death toll increased. We went backwards.
       </p>
     </div>
 
     <div class="chart-card">
       <OWIDChart
         slug="outdoor-pollution-deaths-1990-2017"
-        countries={['IND', 'CHN', 'USA', 'DEU', 'GBR', 'JPN', 'BRA', 'IDN']}
+        countries={["IND", "CHN", "USA", "DEU", "GBR", "JPN", "BRA", "IDN"]}
         title="Deaths: 1990 vs 2021"
         caption="Countries above the diagonal got worse. Find India. It's way above."
         height={550}
@@ -198,7 +207,14 @@ const description = "Interactive charts showing India's air pollution crisis in 
       <OWIDChart
         slug="annual-deaths-from-outdoor-air-pollution-by-region"
         tab="chart"
-        countries={['IND', 'CHN', 'OWID_EUR', 'OWID_NAM', 'OWID_AFR', 'OWID_SAM']}
+        countries={[
+          "IND",
+          "CHN",
+          "OWID_EUR",
+          "OWID_NAM",
+          "OWID_AFR",
+          "OWID_SAM",
+        ]}
         title="Deaths by Region Over Time"
         caption="Europe and Americas stabilized. Asia—driven by India—keeps climbing."
         height={500}
@@ -216,16 +232,28 @@ const description = "Interactive charts showing India's air pollution crisis in 
     <div class="insight-box">
       <p>
         <strong>Air pollution is a disease of development gone wrong.</strong>
-        Rich countries once had terrible air—they cleaned it up. Poor countries have dirty air—
-        but less industry. India sits in the worst spot: the pollution of industrialization
-        without the wealth to escape it.
+        Rich countries once had terrible air—they cleaned it up. Poor countries have
+        dirty air— but less industry. India sits in the worst spot: the pollution
+        of industrialization without the wealth to escape it.
       </p>
     </div>
 
     <div class="chart-card">
       <OWIDChart
         slug="outdoor-pollution-rate-vs-gdp"
-        countries={['IND', 'CHN', 'USA', 'DEU', 'GBR', 'JPN', 'BGD', 'PAK', 'BRA', 'NGA', 'IDN']}
+        countries={[
+          "IND",
+          "CHN",
+          "USA",
+          "DEU",
+          "GBR",
+          "JPN",
+          "BGD",
+          "PAK",
+          "BRA",
+          "NGA",
+          "IDN",
+        ]}
         title="Death Rate vs GDP Per Capita"
         caption="India is an outlier: higher death rate than countries poorer AND richer than us."
         height={550}
@@ -236,7 +264,13 @@ const description = "Interactive charts showing India's air pollution crisis in 
       <OWIDChart
         slug="absolute-number-of-deaths-from-outdoor-air-pollution"
         tab="chart"
-        countries={['IND', 'High-income+countries', 'Low-income+countries', 'Lower-middle-income+countries', 'Upper-middle-income+countries']}
+        countries={[
+          "IND",
+          "High-income+countries",
+          "Low-income+countries",
+          "Lower-middle-income+countries",
+          "Upper-middle-income+countries",
+        ]}
         title="India vs World Bank Income Groups"
         caption="India alone rivals entire income brackets. One country. 2.1 million deaths."
         height={500}
@@ -254,8 +288,9 @@ const description = "Interactive charts showing India's air pollution crisis in 
     <div class="insight-box warning">
       <p>
         <strong>Air pollution is not an equal-opportunity killer.</strong>
-        Infants, children, and the elderly are hit hardest. The poor, who live near roads
-        and factories, suffer most. In India, nearly 1 in 10 deaths is from the air itself.
+        Infants, children, and the elderly are hit hardest. The poor, who live near
+        roads and factories, suffer most. In India, nearly 1 in 10 deaths is from
+        the air itself.
       </p>
     </div>
 
@@ -263,7 +298,7 @@ const description = "Interactive charts showing India's air pollution crisis in 
       <OWIDChart
         slug="number-outdoor-pollution-deaths-by-age"
         tab="chart"
-        countries={['IND']}
+        countries={["IND"]}
         title="India: Deaths by Age Group"
         caption="Children under 5 and adults over 70 are most vulnerable."
         height={500}
@@ -274,7 +309,7 @@ const description = "Interactive charts showing India's air pollution crisis in 
       <OWIDChart
         slug="share-deaths-outdoor-pollution"
         tab="chart"
-        countries={['IND', 'CHN', 'BGD', 'PAK', 'NPL', 'USA', 'DEU', 'GBR']}
+        countries={["IND", "CHN", "BGD", "PAK", "NPL", "USA", "DEU", "GBR"]}
         title="% of All Deaths From Outdoor Air Pollution"
         caption="Nearly 10% of Indian deaths are from air. In Germany, it's under 3%."
         height={500}
@@ -291,16 +326,27 @@ const description = "Interactive charts showing India's air pollution crisis in 
 
     <div class="insight-box accent">
       <p>
-        <strong>There is no safe level of PM2.5.</strong> Every microgram increases risk.
-        The relationship is clear: more pollution, more death. India sits firmly in the
-        danger zone—and has been there for decades.
+        <strong>There is no safe level of PM2.5.</strong> Every microgram increases
+        risk. The relationship is clear: more pollution, more death. India sits firmly
+        in the danger zone—and has been there for decades.
       </p>
     </div>
 
     <div class="chart-card featured">
       <OWIDChart
         slug="death-rate-from-pm25-vs-pm25-concentration"
-        countries={['IND', 'CHN', 'BGD', 'PAK', 'NPL', 'USA', 'DEU', 'GBR', 'JPN', 'NGA']}
+        countries={[
+          "IND",
+          "CHN",
+          "BGD",
+          "PAK",
+          "NPL",
+          "USA",
+          "DEU",
+          "GBR",
+          "JPN",
+          "NGA",
+        ]}
         title="Death Rate vs PM2.5 Concentration"
         caption="The correlation is damning. More PM2.5 = more deaths. Physics doesn't negotiate."
         height={550}
@@ -327,7 +373,7 @@ const description = "Interactive charts showing India's air pollution crisis in 
       <OWIDChart
         slug="death-rates-from-air-pollution"
         tab="chart"
-        countries={['IND', 'CHN', 'BGD', 'PAK', 'NPL', 'NGA', 'USA']}
+        countries={["IND", "CHN", "BGD", "PAK", "NPL", "NGA", "USA"]}
         title="Death Rate: Outdoor + Household Combined"
         caption="India's double burden: bad air outside AND inside."
         height={500}
@@ -339,24 +385,48 @@ const description = "Interactive charts showing India's air pollution crisis in 
   <section class="explore-section">
     <h2>Dig Deeper</h2>
     <p class="explore-intro">
-      All charts from <a href="https://ourworldindata.org/outdoor-air-pollution" target="_blank" rel="noopener">Our World in Data</a>,
-      using the Global Burden of Disease study (IHME). The data is peer-reviewed. The methodology is transparent.
-      The conclusions are uncomfortable.
+      All charts from <a
+        href="https://ourworldindata.org/outdoor-air-pollution"
+        target="_blank"
+        rel="noopener">Our World in Data</a
+      >, using the Global Burden of Disease study (IHME). The data is
+      peer-reviewed. The methodology is transparent. The conclusions are
+      uncomfortable.
     </p>
     <div class="explore-links">
-      <a href="https://ourworldindata.org/outdoor-air-pollution" target="_blank" rel="noopener" class="explore-link">
+      <a
+        href="https://ourworldindata.org/outdoor-air-pollution"
+        target="_blank"
+        rel="noopener"
+        class="explore-link"
+      >
         <span class="link-title">Outdoor Air Pollution</span>
         <span class="link-arrow">→</span>
       </a>
-      <a href="https://ourworldindata.org/indoor-air-pollution" target="_blank" rel="noopener" class="explore-link">
+      <a
+        href="https://ourworldindata.org/indoor-air-pollution"
+        target="_blank"
+        rel="noopener"
+        class="explore-link"
+      >
         <span class="link-title">Indoor Air Pollution</span>
         <span class="link-arrow">→</span>
       </a>
-      <a href="https://www.stateofglobalair.org/" target="_blank" rel="noopener" class="explore-link">
+      <a
+        href="https://www.stateofglobalair.org/"
+        target="_blank"
+        rel="noopener"
+        class="explore-link"
+      >
         <span class="link-title">State of Global Air</span>
         <span class="link-arrow">→</span>
       </a>
-      <a href="https://ghdx.healthdata.org/" target="_blank" rel="noopener" class="explore-link">
+      <a
+        href="https://ghdx.healthdata.org/"
+        target="_blank"
+        rel="noopener"
+        class="explore-link"
+      >
         <span class="link-title">IHME Data Exchange</span>
         <span class="link-arrow">→</span>
       </a>
@@ -427,7 +497,7 @@ const description = "Interactive charts showing India's air pollution crisis in 
   }
 
   .stat-number {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: "Playfair Display", Georgia, serif;
     font-size: 2.5rem;
     font-weight: 600;
     color: white;
@@ -474,7 +544,7 @@ const description = "Interactive charts showing India's air pollution crisis in 
   }
 
   .section-number {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: "Playfair Display", Georgia, serif;
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--accent);
@@ -613,7 +683,7 @@ const description = "Interactive charts showing India's air pollution crisis in 
   }
 
   .final-note p {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: "Playfair Display", Georgia, serif;
     font-size: 1.25rem;
     color: rgba(255, 255, 255, 0.9);
     margin-bottom: 1.5rem;

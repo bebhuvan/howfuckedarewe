@@ -50,6 +50,7 @@ export interface WaqiResponse {
 // Individual station reading
 export interface StationReading {
   stationId: number;
+  area: string;
   pm25: number | null;
   pm10: number | null;
   o3: number | null;

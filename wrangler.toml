@@ -19,3 +19,4 @@ database_id = "fd2739c3-9278-46ea-a4e3-b5cb357c1195"
 # Environment variables
 [vars]
 SITE_URL = "https://howfuckedarewe.in"
+WAQI_API_TOKEN = "f9c3a63cafeffbe1bae0286e46e8df56c80f87a6"

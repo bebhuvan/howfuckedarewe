@@ -136,10 +136,15 @@ CREATE INDEX IF NOT EXISTS idx_daily_aggregates_city_date ON daily_aggregates(ci
 CREATE INDEX IF NOT EXISTS idx_daily_aggregates_date ON daily_aggregates(date DESC);
 CREATE INDEX IF NOT EXISTS idx_stations_city ON stations(city_id);
 
--- Insert initial cities data
+-- Insert initial cities data (all 10 cities from config.ts)
 INSERT OR IGNORE INTO cities (slug, name, local_name, state, population, waqi_station_id) VALUES
-    ('delhi', 'Delhi', 'दिल्ली', 'Delhi', 32941000, '@7013'),
-    ('mumbai', 'Mumbai', 'मुंबई', 'Maharashtra', 21297000, '@8482'),
-    ('kolkata', 'Kolkata', 'কলকাতা', 'West Bengal', 15134000, '@12414'),
-    ('bangalore', 'Bangalore', 'ಬೆಂಗಳೂರು', 'Karnataka', 13193000, '@12407'),
-    ('chennai', 'Chennai', 'சென்னை', 'Tamil Nadu', 11503000, '@7614');
+    ('delhi', 'Delhi', 'दिल्ली', 'Delhi NCR', 32000000, '2553'),
+    ('mumbai', 'Mumbai', 'मुंबई', 'Maharashtra', 21000000, '13715'),
+    ('kolkata', 'Kolkata', 'কলকাতা', 'West Bengal', 15000000, '12746'),
+    ('bangalore', 'Bangalore', 'ಬೆಂಗಳೂರು', 'Karnataka', 13000000, '8190'),
+    ('chennai', 'Chennai', 'சென்னை', 'Tamil Nadu', 11000000, '13739'),
+    ('hyderabad', 'Hyderabad', 'హైదరాబాద్', 'Telangana', 10000000, '8677'),
+    ('ahmedabad', 'Ahmedabad', 'અમદાવાદ', 'Gujarat', 8000000, '13749'),
+    ('patna', 'Patna', 'पटना', 'Bihar', 2500000, '12742'),
+    ('lucknow', 'Lucknow', 'लखनऊ', 'Uttar Pradesh', 3500000, '8673'),
+    ('agra', 'Agra', 'आगरा', 'Uttar Pradesh', 1800000, '8186');

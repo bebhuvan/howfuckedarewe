@@ -1,0 +1,392 @@
+---
+/**
+ * Live Death Counter Component — REDESIGNED
+ *
+ * Deaths since page load. Real-time. Devastating.
+ * Now impossible to ignore.
+ */
+import { INDIA_MORTALITY } from "../../lib/constants";
+
+interface Props {
+  cityName?: string;
+  cityDeathsPerYear?: number;
+}
+
+const { cityName, cityDeathsPerYear } = Astro.props;
+
+const nationalDeathsPerSecond =
+  INDIA_MORTALITY.ANNUAL_DEATHS / (365 * 24 * 60 * 60);
+
+// Calculate when the next death will happen
+const msPerDeath = 1000 / nationalDeathsPerSecond;
+---
+
+<section class="death-counter">
+  <div class="counter-header">
+    <div class="since-label">
+      <span class="since-icon">⏱</span>
+      <span class="since-text">Since you opened this page</span>
+    </div>
+  </div>
+
+  <div class="counter-main">
+    <div
+      class="counter-number"
+      id="live-death-count"
+      data-rate={nationalDeathsPerSecond}
+    >
+      0
+    </div>
+    <div class="counter-unit">
+      <span class="unit-people">people</span>
+      <span class="unit-verb">have died</span>
+      <span class="unit-cause">from air pollution</span>
+    </div>
+  </div>
+
+  <div class="counter-context">
+    <div class="context-timer">
+      <span class="timer-label">Next death in approximately</span>
+      <span class="timer-value" id="death-countdown" data-interval={msPerDeath}
+        >...</span
+      >
+    </div>
+  </div>
+
+  <div class="counter-footer">
+    <div class="footer-stats">
+      <div class="stat-item">
+        <span class="stat-value">21 lakh</span>
+        <span class="stat-label">deaths per year</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-value">{INDIA_MORTALITY.UNDER_5_DAILY}</span>
+        <span class="stat-label">children under 5 daily</span>
+      </div>
+    </div>
+    <p class="footer-source">
+      <a href="https://www.stateofglobalair.org/" target="_blank" rel="noopener"
+        >State of Global Air 2024</a
+      >
+    </p>
+    <p class="footer-kicker">
+      The red line is what you breathed. The green dashed line is what lungs
+      prefer. They haven't met.
+    </p>
+  </div>
+</section>
+
+<script>
+  const counter = document.getElementById("live-death-count");
+  const countdown = document.getElementById("death-countdown");
+
+  if (counter) {
+    const el = counter;
+    const rate = parseFloat(counter.dataset.rate || "0");
+    const msPerDeath = 1000 / rate;
+    let startTime = Date.now();
+
+    function updateCounter() {
+      const elapsed = (Date.now() - startTime) / 1000;
+      const deaths = elapsed * rate;
+      const deathCount = Math.floor(deaths);
+      el.textContent = deathCount.toString();
+
+      // Update countdown
+      if (countdown) {
+        const timeSinceLastDeath = (deaths - deathCount) * (1000 / rate);
+        const timeToNextDeath = msPerDeath - timeSinceLastDeath;
+        const seconds = Math.max(0, timeToNextDeath / 1000).toFixed(1);
+        countdown.textContent = `${seconds}s`;
+      }
+
+      requestAnimationFrame(updateCounter);
+    }
+
+    updateCounter();
+  }
+</script>
+
+<style>
+  .death-counter {
+    background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%);
+    border-radius: 16px;
+    padding: 0;
+    margin-bottom: 2.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
+  .death-counter::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(to right, transparent, #ef4444, transparent);
+    animation: scan 3s ease-in-out infinite;
+  }
+
+  @keyframes scan {
+    0%,
+    100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  .counter-header {
+    padding: 1.5rem 2rem 0;
+  }
+
+  .since-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 100px;
+    padding: 0.75rem 1.5rem;
+  }
+
+  .since-icon {
+    font-size: 1.125rem;
+    animation: pulse 1s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .since-text {
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .counter-main {
+    padding: 2.5rem 2rem;
+  }
+
+  .counter-number {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: clamp(6rem, 20vw, 10rem);
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    color: #ef4444;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    text-shadow:
+      0 0 60px rgba(239, 68, 68, 0.4),
+      0 0 100px rgba(239, 68, 68, 0.2);
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes glow-pulse {
+    0%,
+    100% {
+      text-shadow:
+        0 0 60px rgba(239, 68, 68, 0.4),
+        0 0 100px rgba(239, 68, 68, 0.2);
+    }
+    50% {
+      text-shadow:
+        0 0 80px rgba(239, 68, 68, 0.6),
+        0 0 120px rgba(239, 68, 68, 0.3);
+    }
+  }
+
+  .counter-unit {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    margin-top: 0.75rem;
+  }
+
+  .unit-people {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .unit-verb {
+    font-size: 1.25rem;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .unit-cause {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  .counter-context {
+    padding: 1.25rem 2rem;
+    background: rgba(239, 68, 68, 0.05);
+    border-top: 1px solid rgba(239, 68, 68, 0.1);
+    border-bottom: 1px solid rgba(239, 68, 68, 0.1);
+  }
+
+  .context-timer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+
+  .timer-label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .timer-value {
+    font-family: "SF Mono", "Monaco", monospace;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #ef4444;
+    min-width: 3.5rem;
+    text-align: left;
+  }
+
+  .counter-footer {
+    padding: 1.5rem 2rem 2rem;
+  }
+
+  .footer-stats {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 1rem;
+  }
+
+  .stat-divider {
+    width: 1px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 0 2rem;
+  }
+
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .stat-value {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: white;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .footer-source {
+    font-size: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .footer-source a {
+    color: rgba(255, 255, 255, 0.4);
+    text-decoration: underline;
+    text-decoration-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .footer-source a:hover {
+    color: white;
+  }
+
+  .footer-kicker {
+    font-size: 0.9375rem;
+    color: rgba(255, 255, 255, 0.35);
+    font-style: italic;
+    margin: 0;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  @media (max-width: 600px) {
+    .counter-header {
+      padding: 1.25rem 1.5rem 0;
+    }
+
+    .since-label {
+      padding: 0.5rem 1rem;
+    }
+
+    .since-text {
+      font-size: 0.875rem;
+    }
+
+    .counter-main {
+      padding: 2rem 1.5rem;
+    }
+
+    .counter-number {
+      font-size: 5rem;
+    }
+
+    .unit-people {
+      font-size: 1.25rem;
+    }
+
+    .unit-verb {
+      font-size: 1rem;
+    }
+
+    .counter-context {
+      padding: 1rem 1.5rem;
+    }
+
+    .context-timer {
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .timer-label {
+      font-size: 0.75rem;
+    }
+
+    .timer-value {
+      font-size: 1.125rem;
+    }
+
+    .counter-footer {
+      padding: 1.25rem 1.5rem 1.5rem;
+    }
+
+    .footer-stats {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .stat-divider {
+      width: 50%;
+      height: 1px;
+      margin: 0;
+    }
+
+    .stat-value {
+      font-size: 1.25rem;
+    }
+  }
+</style>
