@@ -654,7 +654,8 @@ function getColorForPm25(pm25: number | null): string {
 		text-align: center;
 		margin-bottom: 2rem;
 		padding: 3rem 1.5rem 2.5rem;
-		background: linear-gradient(180deg, #fef2f2 0%, #fee2e2 30%, #fff 100%);
+		background: #fafafa;
+		border: 1px solid var(--border);
 		border-radius: 16px;
 		position: relative;
 	}
@@ -814,10 +815,11 @@ function getColorForPm25(pm25: number | null): string {
 		align-items: center;
 		gap: 1.5rem;
 		padding: 1rem 2rem;
-		background: #f8f7f5;
+		background: white;
 		border: 1px solid var(--border);
 		border-radius: 12px;
 		margin-bottom: 1.5rem;
+		box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 	}
 
 	.hstat {

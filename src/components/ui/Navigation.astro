@@ -1,8 +1,9 @@
 ---
 /**
- * Navigation Component
+ * Navigation Component — REFINED V2
  *
- * Mobile-first responsive navigation with hamburger menu
+ * Mobile-first responsive navigation with refined styling.
+ * Premium feel with smooth transitions.
  */
 import { ALL_CITIES } from '../../lib/cities';
 
@@ -28,15 +29,15 @@ const currentCityName = currentSlug
 ---
 
 <nav class="site-nav">
-  <div class="nav-top">
+  <div class="nav-main">
     <a href="/" class="brand">
       how <strong>fucked</strong> are we<span class="brand-q">?</span>
     </a>
 
-    <!-- Mobile: Current city indicator + hamburger -->
+    <!-- Mobile controls -->
     <div class="mobile-controls">
-      <span class="current-city-badge">{currentCityName}</span>
-      <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <span class="current-location">{currentCityName}</span>
+      <button class="menu-btn" aria-label="Toggle menu" aria-expanded="false">
         <span class="hamburger">
           <span></span>
           <span></span>
@@ -48,39 +49,43 @@ const currentCityName = currentSlug
     <!-- Desktop nav links -->
     <div class="nav-links">
       <a href="/leaderboard" class:list={[{ active: isLeaderboard }]}>Leaderboard</a>
-      <a href="/marketplace" class:list={['lungs-link', { active: isMarketplace }]}>Lung Exchange</a>
+      <a href="/marketplace" class:list={['special', { active: isMarketplace }]}>Lung Exchange</a>
       <a href="/data" class:list={[{ active: isData }]}>Data</a>
       <a href="/what-now" class:list={[{ active: isWhatNow }]}>What Now</a>
     </div>
   </div>
 
-  <!-- City pills - horizontal scroll on mobile -->
-  <div class="nav-cities">
-    <a href="/" class:list={['city', { active: isHome }]}>All India</a>
-    {ALL_CITIES.map((city) => (
-      <a href={`/${city.slug}`} class:list={['city', { active: currentSlug === city.slug }]}>
-        {city.name}
-      </a>
-    ))}
+  <!-- City pills row -->
+  <div class="cities-wrapper">
+    <div class="scroll-fade fade-left" aria-hidden="true"></div>
+    <div class="cities-scroll" id="nav-cities">
+      <a href="/" class:list={['city-pill', { active: isHome }]}>All India</a>
+      {ALL_CITIES.map((city) => (
+        <a href={`/${city.slug}`} class:list={['city-pill', { active: currentSlug === city.slug }]}>
+          {city.name}
+        </a>
+      ))}
+    </div>
+    <div class="scroll-fade fade-right" aria-hidden="true"></div>
   </div>
 
-  <!-- Mobile dropdown menu -->
+  <!-- Mobile dropdown -->
   <div class="mobile-menu" aria-hidden="true">
-    <div class="mobile-menu-section">
-      <span class="mobile-menu-label">Cities</span>
-      <div class="mobile-cities-grid">
-        <a href="/" class:list={['mobile-city', { active: isHome }]}>All India</a>
+    <div class="menu-section">
+      <span class="menu-label">Cities</span>
+      <div class="cities-grid">
+        <a href="/" class:list={['grid-city', { active: isHome }]}>All India</a>
         {ALL_CITIES.map((city) => (
-          <a href={`/${city.slug}`} class:list={['mobile-city', { active: currentSlug === city.slug }]}>
+          <a href={`/${city.slug}`} class:list={['grid-city', { active: currentSlug === city.slug }]}>
             {city.name}
           </a>
         ))}
       </div>
     </div>
-    <div class="mobile-menu-divider"></div>
-    <div class="mobile-menu-links">
+    <div class="menu-divider"></div>
+    <div class="menu-links">
       <a href="/leaderboard" class:list={[{ active: isLeaderboard }]}>Fucked Leaderboard</a>
-      <a href="/marketplace" class:list={['lungs-link', { active: isMarketplace }]}>The Lung Exchange™</a>
+      <a href="/marketplace" class:list={['special', { active: isMarketplace }]}>The Lung Exchange™</a>
       <a href="/data" class:list={[{ active: isData }]}>Data & Research</a>
       <a href="/what-now" class:list={[{ active: isWhatNow }]}>What Now?</a>
       <a href="/methodology" class:list={[{ active: isMethodology }]}>Methodology</a>
@@ -90,14 +95,14 @@ const currentCityName = currentSlug
 
 <script>
   // Mobile menu toggle
-  const menuToggle = document.querySelector('.menu-toggle');
+  const menuBtn = document.querySelector('.menu-btn');
   const mobileMenu = document.querySelector('.mobile-menu');
   const nav = document.querySelector('.site-nav');
 
-  if (menuToggle && mobileMenu) {
-    menuToggle.addEventListener('click', () => {
-      const isExpanded = menuToggle.getAttribute('aria-expanded') === 'true';
-      menuToggle.setAttribute('aria-expanded', String(!isExpanded));
+  if (menuBtn && mobileMenu) {
+    menuBtn.addEventListener('click', () => {
+      const isExpanded = menuBtn.getAttribute('aria-expanded') === 'true';
+      menuBtn.setAttribute('aria-expanded', String(!isExpanded));
       mobileMenu.setAttribute('aria-hidden', String(isExpanded));
       nav?.classList.toggle('menu-open');
     });
@@ -105,7 +110,7 @@ const currentCityName = currentSlug
     // Close menu when clicking outside
     document.addEventListener('click', (e) => {
       if (!nav?.contains(e.target as Node)) {
-        menuToggle.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-expanded', 'false');
         mobileMenu.setAttribute('aria-hidden', 'true');
         nav?.classList.remove('menu-open');
       }
@@ -114,11 +119,30 @@ const currentCityName = currentSlug
     // Close menu when clicking a link
     mobileMenu.querySelectorAll('a').forEach(link => {
       link.addEventListener('click', () => {
-        menuToggle.setAttribute('aria-expanded', 'false');
+        menuBtn.setAttribute('aria-expanded', 'false');
         mobileMenu.setAttribute('aria-hidden', 'true');
         nav?.classList.remove('menu-open');
       });
     });
+  }
+
+  // City pills scroll fade indicator
+  const citiesScroll = document.getElementById('nav-cities');
+  const wrapper = citiesScroll?.parentElement;
+
+  if (citiesScroll && wrapper) {
+    const updateScrollFades = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = citiesScroll;
+      const atStart = scrollLeft <= 10;
+      const atEnd = scrollLeft >= scrollWidth - clientWidth - 10;
+
+      wrapper.classList.toggle('at-start', atStart);
+      wrapper.classList.toggle('at-end', atEnd);
+    };
+
+    citiesScroll.addEventListener('scroll', updateScrollFades, { passive: true });
+    updateScrollFades();
+    window.addEventListener('resize', updateScrollFades, { passive: true });
   }
 </script>
 
@@ -127,15 +151,16 @@ const currentCityName = currentSlug
     position: sticky;
     top: 0;
     z-index: 100;
-    background: rgba(250, 250, 249, 0.97);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--border);
+    background: rgba(248, 247, 246, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border, #e2e0dd);
   }
 
-  .nav-top {
-    max-width: 1100px;
+  .nav-main {
+    max-width: 1080px;
     margin: 0 auto;
-    padding: 0.875rem 1.5rem;
+    padding: var(--space-4, 1rem) var(--space-5, 1.25rem);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -144,57 +169,64 @@ const currentCityName = currentSlug
   /* Brand */
   .brand {
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.25rem;
+    font-size: var(--text-h4, 1.25rem);
     font-weight: 400;
-    color: var(--text);
+    color: var(--text, #1a1a1a);
     text-decoration: none;
     letter-spacing: -0.01em;
+    transition: opacity var(--duration-fast, 150ms) ease;
+  }
+
+  .brand:hover {
+    text-decoration: none;
+    opacity: 0.8;
   }
 
   .brand strong {
     font-weight: 600;
   }
 
-  .brand:hover {
-    text-decoration: none;
-  }
-
   .brand-q {
     font-weight: 600;
-    color: var(--accent);
-    font-size: 1.3em;
-    vertical-align: baseline;
+    color: var(--accent, #b91c1c);
+    font-size: 1.15em;
   }
 
-  /* Mobile controls - hidden on desktop */
+  /* Mobile controls */
   .mobile-controls {
     display: none;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--space-3, 0.75rem);
   }
 
-  .current-city-badge {
-    font-size: 0.6875rem;
+  .current-location {
+    font-size: var(--text-caption, 0.6875rem);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: white;
-    background: var(--text);
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
+    background: var(--text, #1a1a1a);
+    padding: var(--space-1, 0.25rem) var(--space-3, 0.75rem);
+    border-radius: var(--radius-sm, 6px);
   }
 
-  .menu-toggle {
+  .menu-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     background: none;
     border: none;
     cursor: pointer;
     padding: 0;
     -webkit-tap-highlight-color: transparent;
+    border-radius: var(--radius-sm, 6px);
+    transition: background var(--duration-fast, 150ms) ease;
+  }
+
+  .menu-btn:hover {
+    background: rgba(0, 0, 0, 0.04);
   }
 
   .hamburger {
@@ -207,16 +239,16 @@ const currentCityName = currentSlug
   .hamburger span {
     display: block;
     height: 2px;
-    background: var(--text);
+    background: var(--text, #1a1a1a);
     border-radius: 1px;
-    transition: all 0.3s ease;
+    transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .hamburger span:nth-child(1) { width: 100%; }
-  .hamburger span:nth-child(2) { width: 75%; }
+  .hamburger span:nth-child(2) { width: 70%; }
   .hamburger span:nth-child(3) { width: 100%; }
 
-  /* Hamburger animation when open */
+  /* Hamburger animation */
   .menu-open .hamburger span:nth-child(1) {
     transform: rotate(45deg) translate(5px, 5px);
   }
@@ -228,93 +260,132 @@ const currentCityName = currentSlug
     transform: rotate(-45deg) translate(5px, -5px);
   }
 
-  /* Top nav links */
+  /* Desktop nav links */
   .nav-links {
     display: flex;
-    gap: 0.25rem;
+    gap: var(--space-1, 0.25rem);
   }
 
   .nav-links a {
-    padding: 0.5rem 0.875rem;
-    font-size: 0.8125rem;
+    padding: var(--space-2, 0.5rem) var(--space-4, 1rem);
+    font-size: var(--text-xs, 0.8125rem);
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-light);
+    letter-spacing: 0.04em;
+    color: var(--text-muted, #6b6b6b);
     text-decoration: none;
-    border-radius: 6px;
-    transition: color 0.15s;
+    border-radius: var(--radius-sm, 6px);
+    transition:
+      color var(--duration-fast, 150ms) ease,
+      background var(--duration-fast, 150ms) ease;
   }
 
   .nav-links a:hover {
-    color: var(--text);
+    color: var(--text, #1a1a1a);
+    background: rgba(0, 0, 0, 0.03);
   }
 
   .nav-links a.active {
-    color: var(--accent);
+    color: var(--accent, #b91c1c);
   }
 
-  /* City row */
-  .nav-cities {
-    max-width: 1100px;
+  /* Cities row */
+  .cities-wrapper {
+    position: relative;
+    max-width: 1080px;
     margin: 0 auto;
-    padding: 0 1.5rem 0.75rem;
+  }
+
+  .scroll-fade {
+    position: absolute;
+    top: 0;
+    bottom: var(--space-3, 0.75rem);
+    width: 48px;
+    pointer-events: none;
+    z-index: 2;
+    transition: opacity var(--duration-fast, 150ms) ease;
+  }
+
+  .fade-left {
+    left: 0;
+    background: linear-gradient(to right, rgba(248, 247, 246, 1) 0%, rgba(248, 247, 246, 0) 100%);
+  }
+
+  .fade-right {
+    right: 0;
+    background: linear-gradient(to left, rgba(248, 247, 246, 1) 0%, rgba(248, 247, 246, 0) 100%);
+  }
+
+  .cities-wrapper.at-start .fade-left {
+    opacity: 0;
+  }
+
+  .cities-wrapper.at-end .fade-right {
+    opacity: 0;
+  }
+
+  .cities-scroll {
+    padding: 0 var(--space-5, 1.25rem) var(--space-3, 0.75rem);
     display: flex;
-    gap: 0.25rem;
+    gap: var(--space-1, 0.25rem);
     overflow-x: auto;
     scrollbar-width: none;
+    scroll-behavior: smooth;
   }
 
-  .nav-cities::-webkit-scrollbar {
+  .cities-scroll::-webkit-scrollbar {
     display: none;
   }
 
-  .city {
-    padding: 0.5rem 0.875rem;
-    font-size: 0.875rem;
+  .city-pill {
+    padding: var(--space-2, 0.5rem) var(--space-4, 1rem);
+    font-size: var(--text-sm, 0.9375rem);
     font-weight: 500;
-    color: var(--text-secondary);
+    color: var(--text-secondary, #4a4a4a);
     text-decoration: none;
     white-space: nowrap;
-    border-radius: 6px;
-    transition: all 0.15s;
+    border-radius: var(--radius-sm, 6px);
+    transition:
+      color var(--duration-fast, 150ms) ease,
+      background var(--duration-fast, 150ms) ease;
   }
 
-  .city:hover {
+  .city-pill:hover {
     background: rgba(0, 0, 0, 0.04);
-    color: var(--text);
+    color: var(--text, #1a1a1a);
   }
 
-  .city.active {
-    background: var(--text);
+  .city-pill.active {
+    background: var(--text, #1a1a1a);
     color: white;
   }
 
-  /* Mobile menu - hidden by default */
+  /* Mobile menu */
   .mobile-menu {
     display: none;
     position: absolute;
     top: 100%;
     left: 0;
     right: 0;
-    background: rgba(250, 250, 249, 0.98);
-    backdrop-filter: blur(16px);
-    border-bottom: 1px solid var(--border);
-    padding: 1rem;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-    max-height: 70vh;
+    background: rgba(248, 247, 246, 0.98);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border, #e2e0dd);
+    padding: var(--space-5, 1.25rem);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+    max-height: 75vh;
     overflow-y: auto;
   }
 
   .mobile-menu[aria-hidden="false"] {
     display: block;
-    animation: slideDown 0.2s ease-out;
+    animation: slideIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  @keyframes slideDown {
+  @keyframes slideIn {
     from {
       opacity: 0;
-      transform: translateY(-10px);
+      transform: translateY(-8px);
     }
     to {
       opacity: 1;
@@ -322,91 +393,94 @@ const currentCityName = currentSlug
     }
   }
 
-  .mobile-menu-section {
-    margin-bottom: 1rem;
+  .menu-section {
+    margin-bottom: var(--space-4, 1rem);
   }
 
-  .mobile-menu-label {
+  .menu-label {
     display: block;
-    font-size: 0.625rem;
+    font-size: var(--text-micro, 0.625rem);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.12em;
-    color: var(--text-light);
-    margin-bottom: 0.75rem;
+    color: var(--text-subtle, #8a8a8a);
+    margin-bottom: var(--space-3, 0.75rem);
   }
 
-  .mobile-cities-grid {
+  .cities-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.5rem;
+    gap: var(--space-2, 0.5rem);
   }
 
-  .mobile-city {
+  .grid-city {
     display: block;
-    padding: 0.625rem 0.5rem;
-    font-size: 0.8125rem;
+    padding: var(--space-3, 0.75rem) var(--space-2, 0.5rem);
+    font-size: var(--text-xs, 0.8125rem);
     font-weight: 500;
-    color: var(--text-secondary);
+    color: var(--text-secondary, #4a4a4a);
     text-decoration: none;
     text-align: center;
-    border-radius: 6px;
-    background: rgba(0, 0, 0, 0.03);
-    transition: all 0.15s ease;
+    border-radius: var(--radius-sm, 6px);
+    background: rgba(0, 0, 0, 0.02);
+    transition: all var(--duration-fast, 150ms) ease;
   }
 
-  .mobile-city:hover,
-  .mobile-city:active {
-    background: rgba(0, 0, 0, 0.06);
-    color: var(--text);
+  .grid-city:hover,
+  .grid-city:active {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text, #1a1a1a);
   }
 
-  .mobile-city.active {
-    background: var(--text);
+  .grid-city.active {
+    background: var(--text, #1a1a1a);
     color: white;
   }
 
-  .mobile-menu-divider {
+  .menu-divider {
     height: 1px;
-    background: var(--border);
-    margin: 1rem 0;
+    background: var(--border, #e2e0dd);
+    margin: var(--space-4, 1rem) 0;
   }
 
-  .mobile-menu-links {
+  .menu-links {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: var(--space-1, 0.25rem);
   }
 
-  .mobile-menu-links a {
+  .menu-links a {
     display: block;
-    padding: 0.75rem 0.5rem;
-    font-size: 0.9375rem;
+    padding: var(--space-3, 0.75rem) var(--space-2, 0.5rem);
+    font-size: var(--text-base, 1rem);
     font-weight: 500;
-    color: var(--text-secondary);
+    color: var(--text-secondary, #4a4a4a);
     text-decoration: none;
-    border-radius: 6px;
-    transition: all 0.15s ease;
+    border-radius: var(--radius-sm, 6px);
+    transition: all var(--duration-fast, 150ms) ease;
   }
 
-  .mobile-menu-links a:hover,
-  .mobile-menu-links a:active {
+  .menu-links a:hover,
+  .menu-links a:active {
     background: rgba(0, 0, 0, 0.03);
-    color: var(--text);
+    color: var(--text, #1a1a1a);
   }
 
-  .mobile-menu-links a.active {
-    color: var(--accent);
+  .menu-links a.active {
+    color: var(--accent, #b91c1c);
   }
 
-  /* Mobile breakpoint */
-  @media (max-width: 700px) {
-    .nav-top {
-      padding: 0.75rem 1rem;
+  /* ═══════════════════════════════════════════════════════════════
+     RESPONSIVE
+     ═══════════════════════════════════════════════════════════════ */
+
+  @media (max-width: 720px) {
+    .nav-main {
+      padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
     }
 
     .brand {
-      font-size: 1rem;
+      font-size: var(--text-base, 1rem);
     }
 
     /* Show mobile controls, hide desktop nav */
@@ -418,21 +492,25 @@ const currentCityName = currentSlug
       display: none;
     }
 
-    /* Hide city row on mobile - use dropdown instead */
-    .nav-cities {
+    /* Hide city row on mobile */
+    .cities-scroll {
+      display: none;
+    }
+
+    .scroll-fade {
       display: none;
     }
   }
 
-  /* Tablet - show scrollable cities */
-  @media (min-width: 701px) and (max-width: 900px) {
-    .nav-cities {
-      padding: 0 1rem 0.75rem;
+  /* Tablet */
+  @media (min-width: 721px) and (max-width: 920px) {
+    .cities-scroll {
+      padding: 0 var(--space-4, 1rem) var(--space-3, 0.75rem);
     }
 
-    .city {
-      padding: 0.4rem 0.625rem;
-      font-size: 0.8125rem;
+    .city-pill {
+      padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
+      font-size: var(--text-xs, 0.8125rem);
     }
   }
 </style>

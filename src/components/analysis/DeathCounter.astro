@@ -52,9 +52,15 @@ const timePerDeath =
       id="death-counter"
       data-rate={nationalDeathsPerSecond}
       data-start={deathsToday}
+      role="timer"
+      aria-live="polite"
+      aria-atomic="true"
+      aria-label={`${deathsToday.toLocaleString("en-IN")} Indians dead from air pollution today`}
     >
       {deathsToday.toLocaleString("en-IN")}
     </div>
+    <!-- Screen reader announcement (hidden visually) -->
+    <div id="death-counter-sr" class="visually-hidden" aria-live="assertive" aria-atomic="true"></div>
 
     <div class="counter-label">Indians</div>
 
@@ -123,17 +129,28 @@ const timePerDeath =
 </section>
 
 <script>
-  // Real-time counter animation
+  // Real-time counter animation with accessibility announcements
   const counter = document.getElementById("death-counter");
   const cityCounter = document.getElementById("city-death-counter");
+  const srAnnounce = document.getElementById("death-counter-sr");
 
   if (counter) {
     const rate = parseFloat(counter.dataset.rate || "0");
     let count = parseInt(counter.dataset.start || "0", 10);
+    let lastAnnouncedMilestone = Math.floor(count / 100) * 100;
 
     setInterval(() => {
       count += rate;
-      counter.textContent = Math.floor(count).toLocaleString("en-IN");
+      const displayCount = Math.floor(count);
+      counter.textContent = displayCount.toLocaleString("en-IN");
+      counter.setAttribute("aria-label", `${displayCount.toLocaleString("en-IN")} Indians dead from air pollution today`);
+
+      // Announce milestones (every 100 deaths) for screen readers
+      const currentMilestone = Math.floor(displayCount / 100) * 100;
+      if (srAnnounce && currentMilestone > lastAnnouncedMilestone) {
+        lastAnnouncedMilestone = currentMilestone;
+        srAnnounce.textContent = `${currentMilestone.toLocaleString("en-IN")} deaths reached`;
+      }
     }, 1000);
   }
 
@@ -410,5 +427,18 @@ const timePerDeath =
     .city-value {
       font-size: 2rem;
     }
+  }
+
+  /* Visually hidden for screen readers */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 </style>

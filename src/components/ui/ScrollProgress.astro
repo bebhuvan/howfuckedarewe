@@ -1,0 +1,50 @@
+---
+/**
+ * Scroll Progress Indicator
+ *
+ * Fixed 3px red bar at top showing scroll depth.
+ * A grim reminder of how much doom you've consumed.
+ */
+---
+
+<div class="scroll-progress" id="scroll-progress" aria-hidden="true">
+  <div class="scroll-progress-bar" id="scroll-progress-bar"></div>
+</div>
+
+<script>
+  const progressBar = document.getElementById("scroll-progress-bar");
+
+  if (progressBar) {
+    const updateProgress = () => {
+      const scrollTop = window.scrollY;
+      const docHeight =
+        document.documentElement.scrollHeight - window.innerHeight;
+      const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+      progressBar.style.width = `${progress}%`;
+    };
+
+    window.addEventListener("scroll", updateProgress, { passive: true });
+    updateProgress();
+  }
+</script>
+
+<style>
+  .scroll-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: transparent;
+    z-index: 9999;
+    pointer-events: none;
+  }
+
+  .scroll-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #991b1b 0%, #dc2626 50%, #ef4444 100%);
+    transition: width 0.1s ease-out;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+  }
+</style>

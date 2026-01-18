@@ -1,17 +1,12 @@
 ---
 /**
- * HardStats Component — REDESIGNED
+ * HardStats Component — REDESIGNED V2
  *
- * The raw numbers. Comparison against limits.
- * Now with visible headers and methodology links.
+ * Three violation cards that hit hard.
+ * Clean, dramatic, impossible to ignore.
  */
-import {
-  formatPopulation,
-  formatDeaths,
-  calculateYearsLost,
-} from "../../lib/calculations";
+import { calculateYearsLost } from "../../lib/calculations";
 import { WHO, US_EPA, INDIA_NAAQS } from "../../lib/constants";
-
 import type { AirQualityMetrics } from "../../lib/types";
 
 interface Props {
@@ -25,84 +20,113 @@ const { metrics, cityName, population, annualDeaths } = Astro.props;
 const pm25 = metrics.pm25;
 
 // Calculate violation factors
-const whoViolation = (pm25 / WHO.PM25_ANNUAL).toFixed(1);
-const epaViolation = (pm25 / US_EPA.PM25_ANNUAL).toFixed(1);
-const indiaViolation = (pm25 / INDIA_NAAQS.PM25_ANNUAL).toFixed(1);
+const whoViolation = pm25 / WHO.PM25_ANNUAL;
+const epaViolation = pm25 / US_EPA.PM25_ANNUAL;
+const indiaViolation = pm25 / INDIA_NAAQS.PM25_ANNUAL;
 
-// Calculate days lost
+// Calculate collective damage
 const yearsLost = calculateYearsLost(pm25);
-const daysLost = yearsLost * 365;
+const totalDaysLost = yearsLost * 365 * population;
+const totalYearsLost = totalDaysLost / 365;
+
+// Format large numbers
+function formatNumber(num: number): string {
+  if (num >= 1_000_000_000) return (num / 1_000_000_000).toFixed(1) + 'B';
+  if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
+  if (num >= 1_000) return (num / 1_000).toFixed(0) + 'K';
+  return num.toFixed(0);
+}
 ---
 
 <section class="hard-stats">
-  <div class="stats-header">
-    <h3 class="stats-title">How far over the limit?</h3>
-    <p class="stats-subtitle">
-      Comparing {cityName}'s air against safety standards
-    </p>
-  </div>
+  <header class="section-header">
+    <span class="header-eyebrow">Standards Violations</span>
+    <h3 class="header-title">How Far Over the Line</h3>
+  </header>
 
-  <div class="violation-grid">
-    <!-- WHO Limit -->
+  <div class="violations-grid">
+    <!-- WHO Card -->
     <div class="violation-card who">
-      <div class="card-top">
-        <span class="limit-label">WHO Limit</span>
-        <span class="limit-value">{WHO.PM25_ANNUAL} µg/m³</span>
+      <div class="card-badge">Strictest</div>
+      <div class="card-content">
+        <span class="standard-name">WHO</span>
+        <span class="standard-limit">{WHO.PM25_ANNUAL} µg/m³</span>
+        <div class="violation-display">
+          <span class="violation-number">{whoViolation.toFixed(1)}</span>
+          <span class="violation-suffix">×</span>
+        </div>
+        <span class="violation-label">over safe limit</span>
       </div>
-      <div class="violation-value">
-        {whoViolation}×
+      <div class="card-bar">
+        <div class="bar-fill" style={`width: ${Math.min(whoViolation * 5, 100)}%`}></div>
       </div>
-      <div class="violation-context">over the safe limit</div>
     </div>
 
-    <!-- US EPA Limit -->
-    <div class="violation-card us">
-      <div class="card-top">
-        <span class="limit-label">US EPA Limit</span>
-        <span class="limit-value">{US_EPA.PM25_ANNUAL} µg/m³</span>
+    <!-- US EPA Card -->
+    <div class="violation-card epa">
+      <div class="card-badge">Lenient</div>
+      <div class="card-content">
+        <span class="standard-name">US EPA</span>
+        <span class="standard-limit">{US_EPA.PM25_ANNUAL} µg/m³</span>
+        <div class="violation-display">
+          <span class="violation-number">{epaViolation.toFixed(1)}</span>
+          <span class="violation-suffix">×</span>
+        </div>
+        <span class="violation-label">over US limit</span>
       </div>
-      <div class="violation-value">
-        {epaViolation}×
+      <div class="card-bar">
+        <div class="bar-fill" style={`width: ${Math.min(epaViolation * 10, 100)}%`}></div>
       </div>
-      <div class="violation-context">over the US limit</div>
     </div>
 
-    <!-- India Limit -->
+    <!-- India Card -->
     <div class="violation-card india">
-      <div class="card-top">
-        <span class="limit-label">India Limit</span>
-        <span class="limit-value">{INDIA_NAAQS.PM25_ANNUAL} µg/m³</span>
+      <div class="card-badge">Most Lenient</div>
+      <div class="card-content">
+        <span class="standard-name">India</span>
+        <span class="standard-limit">{INDIA_NAAQS.PM25_ANNUAL} µg/m³</span>
+        <div class="violation-display">
+          <span class="violation-number">{indiaViolation.toFixed(1)}</span>
+          <span class="violation-suffix">×</span>
+        </div>
+        <span class="violation-label">{indiaViolation > 1 ? 'still failing' : 'barely passing'}</span>
       </div>
-      <div class="violation-value">
-        {indiaViolation}×
+      <div class="card-bar">
+        <div class="bar-fill" style={`width: ${Math.min(indiaViolation * 25, 100)}%`}></div>
       </div>
-      <div class="violation-context">over our own limit</div>
     </div>
   </div>
 
-  <div class="population-context">
-    <div class="pop-stat">
-      <span class="pop-value">{population.toLocaleString("en-IN")}</span>
-      <span class="pop-label">people in {cityName}</span>
+  <!-- Collective Damage -->
+  <div class="collective-damage">
+    <div class="damage-row">
+      <div class="damage-stat">
+        <span class="damage-value">{population.toLocaleString("en-IN")}</span>
+        <span class="damage-label">people in {cityName}</span>
+      </div>
+      <div class="damage-connector">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </div>
+      <div class="damage-stat highlight">
+        <span class="damage-value">{formatNumber(totalYearsLost)}</span>
+        <span class="damage-label">years of life lost annually</span>
+      </div>
     </div>
-    <div class="pop-divider"></div>
-    <div class="pop-stat">
-      <span class="pop-value"
-        >{
-          (daysLost * population).toLocaleString("en-IN", {
-            maximumFractionDigits: 0,
-          })
-        }</span
-      >
-      <span class="pop-label">total days of life lost annually</span>
-    </div>
-  </div>
-
-  <footer class="stats-footer">
-    <p class="methodology-note">
-      Calculated using annual average PM2.5 limits.
-      <a href="/methodology" class="methodology-link">Read our methodology →</a>
+    <p class="damage-kicker">
+      That's {(totalYearsLost / population * 365).toFixed(1)} days per person. Every year. Just by existing here.
     </p>
+  </div>
+
+  <footer class="section-footer">
+    <p class="note">
+      India's limit is 8× weaker than WHO's.
+      {indiaViolation > 1
+        ? "We're failing even that."
+        : "The only test we can pass is the one we wrote ourselves."}
+    </p>
+    <a href="/methodology" class="methodology-link">Read methodology →</a>
   </footer>
 </section>
 
@@ -111,213 +135,323 @@ const daysLost = yearsLost * 365;
     background: white;
     border: 1px solid var(--border);
     border-radius: 16px;
-    padding: 2rem;
+    padding: 2.5rem 2rem;
     margin-bottom: 2rem;
   }
 
-  .stats-header {
+  .section-header {
     text-align: center;
     margin-bottom: 2rem;
   }
 
-  .stats-title {
-    font-family: "Playfair Display", Georgia, serif;
-    font-size: 1.75rem;
-    font-weight: 500;
-    color: var(--text);
-    margin: 0 0 0.5rem 0;
+  .header-eyebrow {
+    display: block;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
   }
 
-  .stats-subtitle {
-    font-size: 1rem;
-    color: var(--text-muted);
+  .header-title {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 400;
+    color: var(--text);
     margin: 0;
   }
 
-  .violation-grid {
+  /* Violations Grid */
+  .violations-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
+    gap: 1rem;
     margin-bottom: 2rem;
   }
 
   .violation-card {
-    background: rgba(0, 0, 0, 0.02);
+    position: relative;
+    background: #fafafa;
     border-radius: 12px;
     padding: 1.5rem;
     text-align: center;
-    border: 1px solid transparent;
-    transition: all 0.2s ease;
+    border: 1px solid var(--border);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
 
   .violation-card:hover {
-    transform: translateY(-2px);
-    background: rgba(0, 0, 0, 0.04);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   }
 
   .violation-card.who {
-    border-color: rgba(239, 68, 68, 0.2);
-    background: rgba(239, 68, 68, 0.05);
+    border-top: 3px solid #ef4444;
   }
 
-  .violation-card.us {
-    border-color: rgba(249, 115, 22, 0.2);
-    background: rgba(249, 115, 22, 0.05);
+  .violation-card.epa {
+    border-top: 3px solid #f97316;
   }
 
   .violation-card.india {
-    border-color: rgba(234, 179, 8, 0.2);
-    background: rgba(234, 179, 8, 0.05);
+    border-top: 3px solid #eab308;
   }
 
-  .card-top {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    margin-bottom: 1rem;
-  }
-
-  .limit-label {
-    font-size: 0.75rem;
+  .card-badge {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.5625rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--text-secondary);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    white-space: nowrap;
   }
 
-  .limit-value {
+  .who .card-badge {
+    background: #fef2f2;
+    color: #dc2626;
+  }
+
+  .epa .card-badge {
+    background: #fff7ed;
+    color: #ea580c;
+  }
+
+  .india .card-badge {
+    background: #fefce8;
+    color: #ca8a04;
+  }
+
+  .card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .standard-name {
+    font-weight: 700;
     font-size: 0.875rem;
-    color: var(--text-muted);
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
-  .violation-value {
-    font-family: "Playfair Display", Georgia, serif;
-    font-size: 2.5rem;
-    font-weight: 500;
-    line-height: 1;
+  .standard-limit {
+    font-size: 0.75rem;
+    color: var(--text-muted);
     margin-bottom: 0.5rem;
+  }
+
+  .violation-display {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+  }
+
+  .violation-number {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 3rem;
+    font-weight: 400;
+    line-height: 1;
     color: var(--text);
   }
 
-  .who .violation-value {
-    color: #ef4444;
-  }
-  .us .violation-value {
-    color: #f97316;
-  }
-  .india .violation-value {
-    color: #eab308;
-  }
+  .who .violation-number { color: #dc2626; }
+  .epa .violation-number { color: #ea580c; }
+  .india .violation-number { color: #ca8a04; }
 
-  .violation-context {
-    font-size: 0.8125rem;
+  .violation-suffix {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 1.5rem;
     color: var(--text-muted);
-    font-weight: 500;
+    margin-left: 0.125rem;
   }
 
-  .population-context {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  .violation-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-top: 0.25rem;
+  }
+
+  .card-bar {
+    margin-top: 1rem;
+    height: 4px;
+    background: #e5e5e5;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .who .card-bar .bar-fill {
+    background: linear-gradient(90deg, #ef4444, #b91c1c);
+  }
+
+  .epa .card-bar .bar-fill {
+    background: linear-gradient(90deg, #f97316, #ea580c);
+  }
+
+  .india .card-bar .bar-fill {
+    background: linear-gradient(90deg, #eab308, #ca8a04);
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Collective Damage */
+  .collective-damage {
     padding: 1.5rem;
-    background: rgba(0, 0, 0, 0.02);
+    background: linear-gradient(135deg, #fef2f2 0%, #fff7ed 100%);
     border-radius: 12px;
     margin-bottom: 1.5rem;
   }
 
-  .pop-stat {
+  .damage-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+  }
+
+  .damage-stat {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    flex: 1;
   }
 
-  .pop-value {
+  .damage-value {
     font-family: "Playfair Display", Georgia, serif;
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     font-weight: 500;
     color: var(--text);
-    margin-bottom: 0.25rem;
+    line-height: 1.1;
   }
 
-  .pop-label {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
+  .damage-stat.highlight .damage-value {
+    color: #dc2626;
+    font-size: 2rem;
+  }
+
+  .damage-label {
+    font-size: 0.6875rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
   }
 
-  .pop-divider {
-    width: 1px;
-    height: 40px;
-    background: var(--border);
-    margin: 0 1.5rem;
+  .damage-connector {
+    color: var(--text-light);
+    flex-shrink: 0;
   }
 
-  .stats-footer {
+  .damage-kicker {
+    text-align: center;
+    font-size: 0.9375rem;
+    font-style: italic;
+    color: var(--text-muted);
+    margin: 1rem 0 0 0;
+    padding-top: 1rem;
+    border-top: 1px dashed rgba(0, 0, 0, 0.1);
+  }
+
+  /* Footer */
+  .section-footer {
     text-align: center;
   }
 
-  .methodology-note {
+  .note {
     font-size: 0.875rem;
     color: var(--text-muted);
-    margin: 0;
+    margin: 0 0 0.5rem 0;
   }
 
   .methodology-link {
+    font-size: 0.8125rem;
     color: var(--accent);
     text-decoration: none;
     font-weight: 500;
-    margin-left: 0.25rem;
   }
 
   .methodology-link:hover {
     text-decoration: underline;
   }
 
-  @media (max-width: 600px) {
-    .hard-stats {
-      padding: 1.5rem;
-    }
-
-    .violation-grid {
+  /* Mobile */
+  @media (max-width: 768px) {
+    .violations-grid {
       grid-template-columns: 1fr;
-      gap: 1rem;
+      gap: 1.25rem;
     }
 
     .violation-card {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+      gap: 0.5rem 1rem;
       padding: 1.25rem;
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
       text-align: left;
     }
 
-    .card-top {
-      margin-bottom: 0;
+    .card-badge {
+      position: static;
+      transform: none;
+      width: fit-content;
+      grid-column: 1 / -1;
+      margin-bottom: 0.25rem;
+    }
+
+    .card-content {
       align-items: flex-start;
     }
 
-    .violation-value {
-      font-size: 2rem;
-      margin-bottom: 0;
+    .violation-display {
+      justify-content: flex-start;
     }
 
-    .violation-context {
-      display: none;
+    .violation-number {
+      font-size: 2.5rem;
     }
 
-    .population-context {
+    .card-bar {
+      grid-column: 1 / -1;
+      margin-top: 0.5rem;
+    }
+
+    .damage-row {
       flex-direction: column;
-      gap: 1.5rem;
+      gap: 1rem;
     }
 
-    .pop-divider {
-      width: 50%;
-      height: 1px;
-      margin: 0;
+    .damage-connector {
+      transform: rotate(90deg);
+    }
+
+    .damage-value {
+      font-size: 1.5rem;
+    }
+
+    .damage-stat.highlight .damage-value {
+      font-size: 1.75rem;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .hard-stats {
+      padding: 1.5rem 1.25rem;
+    }
+
+    .header-title {
+      font-size: 1.5rem;
     }
   }
 </style>

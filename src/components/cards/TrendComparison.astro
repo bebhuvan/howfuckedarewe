@@ -1,0 +1,291 @@
+---
+/**
+ * Trend Comparison Card
+ *
+ * Today vs Yesterday — are we getting worse or pretending things are better?
+ *
+ * Uses existing daily aggregates from D1 to show if pollution is
+ * trending better or worse with sardonic commentary.
+ */
+
+interface Props {
+  todayPm25: number;
+  yesterdayPm25: number | null;
+  cityName: string;
+}
+
+const { todayPm25, yesterdayPm25, cityName } = Astro.props;
+
+// Calculate change
+const hasYesterday = yesterdayPm25 !== null;
+const change = hasYesterday ? todayPm25 - yesterdayPm25 : 0;
+const percentChange = hasYesterday && yesterdayPm25 > 0
+  ? ((change / yesterdayPm25) * 100)
+  : 0;
+
+const isBetter = change < -3; // At least 3 µg/m³ improvement
+const isWorse = change > 3; // At least 3 µg/m³ worse
+const isSame = !isBetter && !isWorse;
+
+// Sardonic commentary based on trend
+function getCommentary(): string {
+  if (!hasYesterday) {
+    return "No data from yesterday. Maybe we didn't want to know.";
+  }
+
+  if (isBetter) {
+    if (percentChange < -20) {
+      return "Suspiciously better. Check if the sensors are working.";
+    }
+    return "Marginally less terrible. Don't get used to it.";
+  }
+
+  if (isWorse) {
+    if (percentChange > 50) {
+      return "Dramatically worse. Consider calling in sick to life.";
+    }
+    if (percentChange > 20) {
+      return "Noticeably worse. Your lungs noticed too.";
+    }
+    return "Getting worse. As is tradition.";
+  }
+
+  return "About the same. Consistently poisonous.";
+}
+
+const commentary = getCommentary();
+---
+
+<div class="trend-card">
+  <div class="trend-header">
+    <h4 class="trend-title">Today vs Yesterday</h4>
+    <p class="trend-subtitle">The daily damage report</p>
+  </div>
+
+  <div class="trend-content">
+    <div class="trend-values">
+      <div class="value-block today">
+        <span class="value-label">Today</span>
+        <span class="value-number">{todayPm25.toFixed(0)}</span>
+        <span class="value-unit">µg/m³</span>
+      </div>
+
+      <div class="trend-arrow" class:list={[{ better: isBetter, worse: isWorse, same: isSame }]}>
+        {isBetter && (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M7 17L17 7M17 7H7M17 7V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        )}
+        {isWorse && (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M7 7L17 17M17 17V7M17 17H7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        )}
+        {isSame && (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M5 12H19M19 12L14 7M19 12L14 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        )}
+        {!hasYesterday && (
+          <span class="no-data">?</span>
+        )}
+      </div>
+
+      <div class="value-block yesterday">
+        <span class="value-label">Yesterday</span>
+        <span class="value-number">{hasYesterday ? yesterdayPm25.toFixed(0) : '—'}</span>
+        <span class="value-unit">µg/m³</span>
+      </div>
+    </div>
+
+    {hasYesterday && (
+      <div class="trend-delta" class:list={[{ better: isBetter, worse: isWorse, same: isSame }]}>
+        <span class="delta-icon">
+          {isBetter ? '↓' : isWorse ? '↑' : '→'}
+        </span>
+        <span class="delta-value">
+          {isBetter ? '' : isWorse ? '+' : ''}{change.toFixed(0)} µg/m³
+        </span>
+        <span class="delta-percent">
+          ({isBetter ? '' : isWorse ? '+' : ''}{percentChange.toFixed(0)}%)
+        </span>
+      </div>
+    )}
+
+    <p class="trend-commentary">{commentary}</p>
+  </div>
+</div>
+
+<style>
+  .trend-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .trend-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .trend-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin: 0 0 0.25rem 0;
+    color: var(--text);
+  }
+
+  .trend-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-light);
+    margin: 0;
+    font-style: italic;
+  }
+
+  .trend-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .trend-values {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .value-block {
+    text-align: center;
+  }
+
+  .value-label {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-light);
+    margin-bottom: 0.25rem;
+  }
+
+  .value-number {
+    display: block;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 2.5rem;
+    font-weight: 400;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  .value-block.today .value-number {
+    color: var(--accent);
+  }
+
+  .value-unit {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-top: 0.25rem;
+  }
+
+  .trend-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #f5f5f5;
+    color: var(--text-muted);
+  }
+
+  .trend-arrow.better {
+    background: #dcfce7;
+    color: #16a34a;
+  }
+
+  .trend-arrow.worse {
+    background: #fef2f2;
+    color: #dc2626;
+  }
+
+  .trend-arrow.same {
+    background: #fefce8;
+    color: #a16207;
+  }
+
+  .no-data {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-light);
+  }
+
+  .trend-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    border-radius: 100px;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+  }
+
+  .trend-delta.better {
+    background: #dcfce7;
+    color: #16a34a;
+  }
+
+  .trend-delta.worse {
+    background: #fef2f2;
+    color: #dc2626;
+  }
+
+  .trend-delta.same {
+    background: #fefce8;
+    color: #a16207;
+  }
+
+  .delta-icon {
+    font-size: 1.125rem;
+  }
+
+  .delta-percent {
+    font-size: 0.8125rem;
+    opacity: 0.8;
+  }
+
+  .trend-commentary {
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
+    margin: 0;
+    max-width: 300px;
+  }
+
+  @media (max-width: 500px) {
+    .trend-values {
+      gap: 1.25rem;
+    }
+
+    .value-number {
+      font-size: 2rem;
+    }
+
+    .trend-arrow {
+      width: 40px;
+      height: 40px;
+    }
+
+    .trend-arrow svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+</style>

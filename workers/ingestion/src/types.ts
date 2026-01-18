@@ -32,10 +32,13 @@ export interface WaqiResponse {
       no2?: { v: number };
       so2?: { v: number };
       co?: { v: number };
-      t?: { v: number };
-      h?: { v: number };
-      w?: { v: number };
-      p?: { v: number };
+      t?: { v: number };      // Temperature (°C)
+      h?: { v: number };      // Humidity (%)
+      w?: { v: number };      // Wind speed (m/s)
+      wg?: { v: number };     // Wind gust (m/s)
+      wd?: { v: number };     // Wind direction (degrees)
+      p?: { v: number };      // Pressure (hPa)
+      dew?: { v: number };    // Dew point (°C)
     };
     forecast?: {
       daily?: {
@@ -60,6 +63,11 @@ export interface StationReading {
   aqi: number | null;
   dominantPollutant: string | null;
   recordedAt: string;
+  // Weather data
+  temperature: number | null;
+  humidity: number | null;
+  windSpeed: number | null;
+  pressure: number | null;
 }
 
 // City-level aggregated snapshot
@@ -79,6 +87,11 @@ export interface CitySnapshot {
   validStations: number;
   dominantPollutant: string | null;
   qualityStatus: 'healthy' | 'degraded' | 'critical';
+  // Weather (averaged from stations)
+  temperature: number | null;
+  humidity: number | null;
+  windSpeed: number | null;
+  pressure: number | null;
 }
 
 // Daily aggregate for a city

@@ -1,10 +1,11 @@
 ---
 /**
- * Damage Card Component — REDESIGNED
+ * Damage Card Component — REFINED V3
  *
  * The arithmetic of breathing. Three time horizons.
  * TODAY. THIS YEAR. LIFETIME.
- * Clear, relatable, devastating.
+ *
+ * Premium dark card with refined grid and impactful numbers.
  */
 import type { AirQualityMetrics } from "../../lib/types";
 
@@ -17,9 +18,9 @@ const { metrics } = Astro.props;
 // Calculate damage at different time scales
 const yearsLost = metrics.yearsLost;
 const monthsLost = yearsLost * 12;
-const daysLostPerYear = yearsLost * 365;
 const hoursLostToday =
   metrics.hoursLostEquivalentPerDay || (yearsLost * 365 * 24) / 365;
+const daysLostPerYear = (hoursLostToday * 365) / 24;
 
 // Cigarettes are visceral
 const cigsPerDay = metrics.cigarettesPerDay;
@@ -28,284 +29,340 @@ const packsPerYear = cigsPerYear / 20;
 ---
 
 <section class="damage-card">
+  <!-- Accent line -->
+  <div class="accent-line" aria-hidden="true"></div>
+
   <header class="card-header">
-    <h3 class="card-title">The Arithmetic of Breathing</h3>
-    <p class="card-subtitle">
-      What today's air costs you, whether you like it or not
-    </p>
+    <span class="header-label">The Arithmetic</span>
+    <h3 class="header-title">What You're Losing</h3>
   </header>
 
   <div class="damage-grid">
     <!-- TODAY -->
-    <div class="damage-column today">
-      <div class="column-label">Today</div>
-      <div class="damage-stat primary">
-        <span class="stat-number">{cigsPerDay.toFixed(1)}</span>
-        <span class="stat-unit">cigarettes</span>
+    <article class="damage-cell">
+      <div class="cell-badge today">Today</div>
+      <div class="cell-primary">
+        <span class="primary-number">{cigsPerDay.toFixed(1)}</span>
+        <span class="primary-unit">cigarettes</span>
       </div>
-      <div class="damage-stat secondary">
-        <span class="stat-number">{hoursLostToday.toFixed(1)}</span>
-        <span class="stat-unit">hours of life</span>
+      <div class="cell-secondary">
+        <svg class="secondary-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12,6 12,12 16,14"/>
+        </svg>
+        <span class="secondary-text">{hoursLostToday.toFixed(1)} hours of life</span>
       </div>
-      <p class="damage-kicker">Just by existing. You're welcome.</p>
-    </div>
+      <p class="cell-kicker">Just by existing.</p>
+    </article>
 
     <!-- THIS YEAR -->
-    <div class="damage-column year">
-      <div class="column-label">This Year</div>
-      <div class="damage-stat primary">
-        <span class="stat-number">{packsPerYear.toFixed(0)}</span>
-        <span class="stat-unit">packs of cigarettes</span>
+    <article class="damage-cell">
+      <div class="cell-badge year">This Year</div>
+      <div class="cell-primary">
+        <span class="primary-number">{packsPerYear.toFixed(0)}</span>
+        <span class="primary-unit">packs</span>
       </div>
-      <div class="damage-stat secondary">
-        <span class="stat-number">{daysLostPerYear.toFixed(1)}</span>
-        <span class="stat-unit">days of life</span>
+      <div class="cell-secondary">
+        <svg class="secondary-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <span class="secondary-text">{daysLostPerYear.toFixed(1)} days gone</span>
       </div>
-      <p class="damage-kicker">That's a holiday you'll never take.</p>
-    </div>
+      <p class="cell-kicker">A vacation you'll never take.</p>
+    </article>
 
     <!-- LIFETIME -->
-    <div class="damage-column lifetime">
-      <div class="column-label">Lifetime</div>
-      <div class="damage-stat primary">
-        <span class="stat-number"
-          >{
-            monthsLost >= 12 ? yearsLost.toFixed(1) : monthsLost.toFixed(0)
-          }</span
-        >
-        <span class="stat-unit"
-          >{monthsLost >= 12 ? "years" : "months"} gone</span
-        >
+    <article class="damage-cell lifetime">
+      <div class="cell-badge lifetime-badge">Lifetime</div>
+      <div class="cell-primary">
+        <span class="primary-number">
+          {monthsLost >= 12 ? yearsLost.toFixed(1) : monthsLost.toFixed(0)}
+        </span>
+        <span class="primary-unit">{monthsLost >= 12 ? "years" : "months"}</span>
       </div>
-      <div class="damage-explainer">
+      <div class="lifetime-statement">
         {
           yearsLost >= 2
-            ? `That's ${yearsLost.toFixed(0)} birthdays you won't see.`
+            ? `${yearsLost.toFixed(0)} birthdays you won't see.`
             : monthsLost >= 6
-              ? `Half a year. Poof.`
-              : `A few months. Still adds up.`
+              ? `Half a year. Gone.`
+              : `It adds up.`
         }
       </div>
-      <p class="damage-kicker">
-        If you breathe this air your whole life. Which, ironically, will be
-        shorter.
-      </p>
-    </div>
+      <p class="cell-kicker">If you breathe this your whole life. Which will be shorter.</p>
+    </article>
   </div>
 
   <footer class="card-footer">
-    <div class="methodology">
-      <p class="methodology-text">
-        These aren't scare tactics. They're calculations based on peer-reviewed
-        research from Berkeley Earth and the AQLI.
-      </p>
-      <a href="/methodology" class="methodology-link">
-        How we calculated this →
-      </a>
-    </div>
+    <p class="footer-text">
+      Peer-reviewed calculations from Berkeley Earth and AQLI.
+      <a href="/methodology">See methodology →</a>
+    </p>
   </footer>
 </section>
 
 <style>
   .damage-card {
-    background: linear-gradient(180deg, #0d0d0d 0%, #1a1a1a 100%);
-    border-radius: 16px;
-    padding: 2.5rem 2rem;
-    margin-bottom: 2.5rem;
-    color: white;
     position: relative;
+    background: linear-gradient(180deg, #0f0f0f 0%, #0a0a0a 100%);
+    border-radius: var(--radius-2xl, 28px);
+    padding: var(--space-10, 2.5rem) var(--space-8, 2rem);
+    margin-bottom: var(--space-8, 2rem);
     overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.05),
+      0 16px 32px -8px rgba(0, 0, 0, 0.4);
   }
 
-  .damage-card::before {
-    content: "";
+  /* Accent line */
+  .accent-line {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: 2px;
-    background: linear-gradient(to right, transparent, #f97316, transparent);
+    height: 3px;
+    background: linear-gradient(90deg, #eab308 0%, #f97316 50%, #ef4444 100%);
   }
 
+  /* Header */
   .card-header {
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: var(--space-10, 2.5rem);
   }
 
-  .card-title {
-    font-family: "Playfair Display", Georgia, serif;
-    font-size: 1.75rem;
-    font-weight: 500;
-    color: white;
-    margin: 0 0 0.5rem 0;
+  .header-label {
+    display: block;
+    font-size: var(--text-caption, 0.6875rem);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: rgba(255, 255, 255, 0.35);
+    margin-bottom: var(--space-2, 0.5rem);
   }
 
-  .card-subtitle {
-    font-size: 1rem;
-    color: rgba(255, 255, 255, 0.5);
+  .header-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: var(--text-h1, clamp(1.75rem, 4vw, 2.25rem));
+    font-weight: 400;
+    color: #ffffff;
     margin: 0;
+    letter-spacing: -0.02em;
   }
 
+  /* Grid */
   .damage-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+    gap: 1px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-lg, 14px);
+    overflow: hidden;
+    margin-bottom: var(--space-8, 2rem);
   }
 
-  .damage-column {
-    padding: 1.5rem;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 12px;
+  /* Cell */
+  .damage-cell {
+    background: #0a0a0a;
+    padding: var(--space-8, 2rem) var(--space-6, 1.5rem);
     text-align: center;
     display: flex;
     flex-direction: column;
-    border: 1px solid rgba(255, 255, 255, 0.05);
   }
 
-  .damage-column.today {
-    border-top: 3px solid #eab308;
+  .damage-cell.lifetime {
+    background: linear-gradient(180deg, rgba(239, 68, 68, 0.06) 0%, rgba(239, 68, 68, 0.02) 100%);
   }
 
-  .damage-column.year {
-    border-top: 3px solid #f97316;
-  }
-
-  .damage-column.lifetime {
-    border-top: 3px solid #ef4444;
-  }
-
-  .column-label {
-    font-size: 0.6875rem;
+  /* Badge */
+  .cell-badge {
+    display: inline-block;
+    font-size: var(--text-micro, 0.625rem);
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.15em;
-    color: rgba(255, 255, 255, 0.4);
-    margin-bottom: 1rem;
+    letter-spacing: 0.14em;
+    padding: var(--space-1, 0.25rem) var(--space-3, 0.75rem);
+    border-radius: var(--radius-full, 9999px);
+    margin: 0 auto var(--space-5, 1.25rem);
+    width: fit-content;
   }
 
-  .damage-stat {
-    margin-bottom: 0.75rem;
+  .cell-badge.today {
+    background: rgba(234, 179, 8, 0.12);
+    color: #fbbf24;
   }
 
-  .damage-stat.primary .stat-number {
-    font-family: "Playfair Display", Georgia, serif;
-    font-size: 3rem;
+  .cell-badge.year {
+    background: rgba(249, 115, 22, 0.12);
+    color: #fb923c;
+  }
+
+  .cell-badge.lifetime-badge {
+    background: rgba(239, 68, 68, 0.12);
+    color: #f87171;
+  }
+
+  /* Primary stat */
+  .cell-primary {
+    margin-bottom: var(--space-5, 1.25rem);
+  }
+
+  .primary-number {
+    display: block;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: var(--text-display-md, clamp(2.5rem, 7vw, 3.5rem));
     font-weight: 400;
     line-height: 1;
+    letter-spacing: -0.03em;
+    color: #ffffff;
+  }
+
+  .damage-cell:first-child .primary-number {
+    color: #fbbf24;
+  }
+
+  .damage-cell:nth-child(2) .primary-number {
+    color: #fb923c;
+  }
+
+  .damage-cell.lifetime .primary-number {
+    color: #f87171;
+  }
+
+  .primary-unit {
     display: block;
-  }
-
-  .today .damage-stat.primary .stat-number {
-    color: #eab308;
-  }
-
-  .year .damage-stat.primary .stat-number {
-    color: #f97316;
-  }
-
-  .lifetime .damage-stat.primary .stat-number {
-    color: #ef4444;
-  }
-
-  .damage-stat.primary .stat-unit {
-    font-size: 0.9375rem;
-    color: rgba(255, 255, 255, 0.7);
-    display: block;
-    margin-top: 0.25rem;
-  }
-
-  .damage-stat.secondary {
-    padding: 0.75rem;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 6px;
-    margin-bottom: 1rem;
-  }
-
-  .damage-stat.secondary .stat-number {
-    font-family: "Playfair Display", Georgia, serif;
-    font-size: 1.5rem;
-    color: white;
-    display: block;
-  }
-
-  .damage-stat.secondary .stat-unit {
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.5);
-    display: block;
-  }
-
-  .damage-explainer {
-    font-size: 1rem;
-    color: rgba(255, 255, 255, 0.7);
-    padding: 0.75rem;
-    background: rgba(239, 68, 68, 0.1);
-    border-radius: 6px;
-    margin-bottom: 1rem;
-  }
-
-  .damage-kicker {
-    font-size: 0.8125rem;
-    color: rgba(255, 255, 255, 0.35);
-    font-style: italic;
-    margin: auto 0 0 0;
-    line-height: 1.4;
-  }
-
-  .card-footer {
-    padding-top: 1.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .methodology {
-    text-align: center;
-  }
-
-  .methodology-text {
-    font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.4);
-    margin: 0 0 0.75rem 0;
-    max-width: 500px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .methodology-link {
-    font-size: 0.875rem;
+    font-size: var(--text-base, 1rem);
     color: rgba(255, 255, 255, 0.6);
+    margin-top: var(--space-1, 0.25rem);
+  }
+
+  /* Secondary stat */
+  .cell-secondary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2, 0.5rem);
+    padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-md, 10px);
+    margin-bottom: var(--space-4, 1rem);
+  }
+
+  .secondary-icon {
+    color: rgba(255, 255, 255, 0.4);
+    flex-shrink: 0;
+  }
+
+  .secondary-text {
+    font-size: var(--text-sm, 0.9375rem);
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  /* Lifetime statement */
+  .lifetime-statement {
+    font-size: var(--text-lg, 1.125rem);
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+    padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+    background: rgba(239, 68, 68, 0.08);
+    border-radius: var(--radius-md, 10px);
+    margin-bottom: var(--space-4, 1rem);
+  }
+
+  /* Kicker */
+  .cell-kicker {
+    font-size: var(--text-xs, 0.8125rem);
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.35);
+    margin: auto 0 0 0;
+    line-height: 1.45;
+  }
+
+  /* Footer */
+  .card-footer {
+    text-align: center;
+    padding-top: var(--space-6, 1.5rem);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .footer-text {
+    font-size: var(--text-sm, 0.9375rem);
+    color: rgba(255, 255, 255, 0.45);
+    margin: 0;
+  }
+
+  .footer-text a {
+    color: rgba(255, 255, 255, 0.65);
     text-decoration: none;
-    padding: 0.5rem 1rem;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 6px;
-    display: inline-block;
-    transition: all 0.2s ease;
+    margin-left: var(--space-1, 0.25rem);
+    transition: color 0.2s ease;
   }
 
-  .methodology-link:hover {
-    color: white;
-    background: rgba(255, 255, 255, 0.1);
+  .footer-text a:hover {
+    color: #ffffff;
+    text-decoration: underline;
   }
 
-  @media (max-width: 768px) {
+  /* ═══════════════════════════════════════════════════════════════
+     TABLET
+     ═══════════════════════════════════════════════════════════════ */
+
+  @media (min-width: 600px) and (max-width: 899px) {
+    .damage-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .damage-cell.lifetime {
+      grid-column: 1 / -1;
+    }
+
+    .primary-number {
+      font-size: clamp(2.25rem, 6vw, 3rem);
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     MOBILE
+     ═══════════════════════════════════════════════════════════════ */
+
+  @media (max-width: 599px) {
     .damage-card {
-      padding: 2rem 1.5rem;
+      padding: var(--space-8, 2rem) var(--space-5, 1.25rem);
+      margin-left: calc(-1 * var(--space-5, 1.25rem));
+      margin-right: calc(-1 * var(--space-5, 1.25rem));
+      border-radius: 0;
+    }
+
+    .card-header {
+      margin-bottom: var(--space-8, 2rem);
+    }
+
+    .header-title {
+      font-size: var(--text-h2, 1.5rem);
     }
 
     .damage-grid {
       grid-template-columns: 1fr;
-      gap: 1rem;
+      border-radius: var(--radius-md, 10px);
     }
 
-    .damage-column {
-      padding: 1.25rem;
+    .damage-cell {
+      padding: var(--space-6, 1.5rem) var(--space-5, 1.25rem);
     }
 
-    .damage-stat.primary .stat-number {
-      font-size: 2.5rem;
+    .cell-badge {
+      margin-bottom: var(--space-4, 1rem);
     }
 
-    .card-title {
-      font-size: 1.5rem;
+    .cell-primary {
+      margin-bottom: var(--space-4, 1rem);
+    }
+
+    .primary-number {
+      font-size: clamp(2.5rem, 12vw, 3rem);
     }
   }
 </style>

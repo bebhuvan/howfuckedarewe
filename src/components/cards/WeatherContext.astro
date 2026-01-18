@@ -1,0 +1,295 @@
+---
+/**
+ * Weather Context Card — REDESIGNED
+ *
+ * Clean, elegant weather conditions that affect air quality.
+ * No emojis. Pure data visualization.
+ */
+
+import type { WeatherData } from "../../lib/types";
+
+interface Props {
+    weather: WeatherData | null;
+    avgPm25: number | null;
+}
+
+const { weather, avgPm25 } = Astro.props;
+
+if (!weather || weather.temperature === null) {
+    return null;
+}
+
+function getTemperatureContext(temp: number): { label: string; warning: string | null } {
+    if (temp < 10) return { label: "Cold", warning: "Cold air + pollution = respiratory stress" };
+    if (temp < 20) return { label: "Cool", warning: null };
+    if (temp < 30) return { label: "Warm", warning: null };
+    if (temp < 35) return { label: "Hot", warning: "Heat amplifies PM2.5 health effects" };
+    return { label: "Very Hot", warning: "Extreme heat + pollution = dangerous" };
+}
+
+function getHumidityContext(humidity: number): { label: string } {
+    if (humidity < 30) return { label: "Dry" };
+    if (humidity < 60) return { label: "Moderate" };
+    if (humidity < 80) return { label: "Humid" };
+    return { label: "Very Humid" };
+}
+
+function getWindContext(speed: number): { label: string; outlook: string; willClear: boolean } {
+    if (speed < 0.5) return { label: "Calm", outlook: "Pollution will stagnate", willClear: false };
+    if (speed < 2) return { label: "Light", outlook: "Slow dispersal", willClear: false };
+    if (speed < 5) return { label: "Moderate", outlook: "Gradual clearing expected", willClear: true };
+    return { label: "Windy", outlook: "Good dispersal conditions", willClear: true };
+}
+
+function getWindDirectionLabel(degrees: number): string {
+    const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+    const index = Math.round(degrees / 45) % 8;
+    return directions[index];
+}
+
+const temp = weather.temperature!;
+const humidity = weather.humidity ?? 50;
+const windSpeed = weather.windSpeed ?? 0;
+
+const tempContext = getTemperatureContext(temp);
+const humidityContext = getHumidityContext(humidity);
+const windContext = getWindContext(windSpeed);
+
+const hasHighPM = avgPm25 !== null && avgPm25 > 50;
+const isHot = temp > 30;
+const isStagnant = windSpeed < 1;
+
+let warningMessage: string | null = null;
+if (hasHighPM && isHot && isStagnant) {
+    warningMessage = "Hot, stagnant air traps pollution. Avoid outdoor exposure.";
+} else if (hasHighPM && isHot) {
+    warningMessage = "Heat intensifies pollution effects. Limit exertion.";
+} else if (hasHighPM && isStagnant) {
+    warningMessage = "No wind — pollution building up. Stay indoors.";
+}
+---
+
+<section class="weather-card">
+  <div class="weather-header">
+    <h4 class="weather-title">Current Conditions</h4>
+    <div class="outlook-badge" class:list={[{ positive: windContext.willClear, negative: !windContext.willClear }]}>
+      {windContext.willClear ? 'Clearing' : 'Stagnant'}
+    </div>
+  </div>
+
+  <div class="weather-metrics">
+    <!-- Temperature -->
+    <div class="metric">
+      <div class="metric-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
+        </svg>
+      </div>
+      <div class="metric-data">
+        <span class="metric-value">{temp.toFixed(0)}°</span>
+        <span class="metric-label">{tempContext.label}</span>
+      </div>
+    </div>
+
+    <!-- Humidity -->
+    <div class="metric">
+      <div class="metric-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+        </svg>
+      </div>
+      <div class="metric-data">
+        <span class="metric-value">{humidity.toFixed(0)}%</span>
+        <span class="metric-label">{humidityContext.label}</span>
+      </div>
+    </div>
+
+    <!-- Wind -->
+    <div class="metric">
+      <div class="metric-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/>
+        </svg>
+      </div>
+      <div class="metric-data">
+        <span class="metric-value">{windSpeed.toFixed(1)}<span class="metric-unit">m/s</span></span>
+        <span class="metric-label">
+          {windContext.label}
+          {weather.windDirection !== null && ` from ${getWindDirectionLabel(weather.windDirection)}`}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  {warningMessage && (
+    <div class="warning-strip">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <span>{warningMessage}</span>
+    </div>
+  )}
+
+  <div class="outlook-footer">
+    <span class="outlook-label">Air quality outlook:</span>
+    <span class="outlook-text" class:list={[{ positive: windContext.willClear, negative: !windContext.willClear }]}>
+      {windContext.outlook}
+    </span>
+  </div>
+</section>
+
+<style>
+  .weather-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .weather-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+
+  .weather-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text);
+    margin: 0;
+  }
+
+  .outlook-badge {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.25rem 0.625rem;
+    border-radius: 100px;
+  }
+
+  .outlook-badge.positive {
+    background: rgba(22, 163, 74, 0.1);
+    color: #16a34a;
+  }
+
+  .outlook-badge.negative {
+    background: rgba(220, 38, 38, 0.1);
+    color: #dc2626;
+  }
+
+  .weather-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .metric {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .metric-icon {
+    color: var(--text-light);
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+  }
+
+  .metric-data {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .metric-value {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.1;
+  }
+
+  .metric-unit {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-left: 0.125rem;
+  }
+
+  .metric-label {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-top: 0.125rem;
+  }
+
+  .warning-strip {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem 1rem;
+    background: rgba(234, 179, 8, 0.1);
+    border: 1px solid rgba(234, 179, 8, 0.3);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    color: #92400e;
+    font-size: 0.875rem;
+  }
+
+  .warning-strip svg {
+    flex-shrink: 0;
+    color: #ca8a04;
+  }
+
+  .outlook-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .outlook-label {
+    font-size: 0.8125rem;
+    color: var(--text-light);
+  }
+
+  .outlook-text {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .outlook-text.positive {
+    color: #16a34a;
+  }
+
+  .outlook-text.negative {
+    color: #dc2626;
+  }
+
+  @media (max-width: 600px) {
+    .weather-card {
+      padding: 1.25rem;
+    }
+
+    .weather-metrics {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .metric {
+      padding: 0.75rem;
+      background: rgba(0, 0, 0, 0.02);
+      border-radius: 8px;
+    }
+
+    .metric-value {
+      font-size: 1.25rem;
+    }
+  }
+</style>

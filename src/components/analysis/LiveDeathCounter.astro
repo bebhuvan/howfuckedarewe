@@ -34,9 +34,14 @@ const msPerDeath = 1000 / nationalDeathsPerSecond;
       class="counter-number"
       id="live-death-count"
       data-rate={nationalDeathsPerSecond}
+      role="timer"
+      aria-live="polite"
+      aria-atomic="true"
+      aria-label="0 people have died from air pollution since you opened this page"
     >
       0
     </div>
+    <div id="live-death-sr" class="visually-hidden" aria-live="assertive" aria-atomic="true"></div>
     <div class="counter-unit">
       <span class="unit-people">people</span>
       <span class="unit-verb">have died</span>
@@ -80,18 +85,30 @@ const msPerDeath = 1000 / nationalDeathsPerSecond;
 <script>
   const counter = document.getElementById("live-death-count");
   const countdown = document.getElementById("death-countdown");
+  const srAnnounce = document.getElementById("live-death-sr");
 
   if (counter) {
     const el = counter;
     const rate = parseFloat(counter.dataset.rate || "0");
     const msPerDeath = 1000 / rate;
     let startTime = Date.now();
+    let lastAnnouncedCount = 0;
 
     function updateCounter() {
       const elapsed = (Date.now() - startTime) / 1000;
       const deaths = elapsed * rate;
       const deathCount = Math.floor(deaths);
       el.textContent = deathCount.toString();
+      el.setAttribute("aria-label", `${deathCount} people have died from air pollution since you opened this page`);
+
+      // Announce every death for screen readers (but not too frequently)
+      if (srAnnounce && deathCount > lastAnnouncedCount) {
+        lastAnnouncedCount = deathCount;
+        // Only announce every 5th death to avoid overwhelming
+        if (deathCount % 5 === 0 || deathCount <= 3) {
+          srAnnounce.textContent = `${deathCount} deaths`;
+        }
+      }
 
       // Update countdown
       if (countdown) {
@@ -388,5 +405,17 @@ const msPerDeath = 1000 / nationalDeathsPerSecond;
     .stat-value {
       font-size: 1.25rem;
     }
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 </style>

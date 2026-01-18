@@ -1,9 +1,9 @@
 ---
 /**
- * Risk Context Component
+ * Risk Context Component — REFINED V3
  *
  * Who's at risk and what activities are dangerous.
- * Makes the abstract personal.
+ * Clean, refined cards with consistent spacing.
  */
 
 interface Props {
@@ -13,15 +13,7 @@ interface Props {
 
 const { pm25, cityName } = Astro.props;
 
-// Risk groups and their vulnerability thresholds
-interface RiskGroup {
-  group: string;
-  icon: string;
-  threshold: number;  // PM2.5 level where risk begins
-  status: 'safe' | 'caution' | 'avoid' | 'danger';
-  action: string;
-}
-
+// Risk status function
 function getRiskStatus(pm25: number, threshold: number): 'safe' | 'caution' | 'avoid' | 'danger' {
   if (pm25 < threshold) return 'safe';
   if (pm25 < threshold * 1.5) return 'caution';
@@ -29,45 +21,40 @@ function getRiskStatus(pm25: number, threshold: number): 'safe' | 'caution' | 'a
   return 'danger';
 }
 
-const riskGroups: RiskGroup[] = [
+// Risk groups
+const riskGroups = [
   {
     group: 'Children',
-    icon: '👶',
     threshold: 12,
     status: getRiskStatus(pm25, 12),
     action: pm25 < 12 ? 'Outdoor play OK' : pm25 < 35 ? 'Limit outdoor time' : 'Keep indoors',
   },
   {
     group: 'Elderly',
-    icon: '👴',
     threshold: 15,
     status: getRiskStatus(pm25, 15),
     action: pm25 < 15 ? 'Normal activity' : pm25 < 35 ? 'Reduce exertion' : 'Stay inside',
   },
   {
     group: 'Pregnant',
-    icon: '🤰',
     threshold: 12,
     status: getRiskStatus(pm25, 12),
     action: pm25 < 12 ? 'Normal activity' : pm25 < 25 ? 'Limit exposure' : 'Avoid outdoors',
   },
   {
     group: 'Asthmatics',
-    icon: '🫁',
     threshold: 25,
     status: getRiskStatus(pm25, 25),
     action: pm25 < 25 ? 'Monitor symptoms' : pm25 < 50 ? 'Carry inhaler' : 'Emergency risk',
   },
   {
     group: 'Athletes',
-    icon: '🏃',
     threshold: 35,
     status: getRiskStatus(pm25, 35),
     action: pm25 < 35 ? 'Outdoor sports OK' : pm25 < 55 ? 'Indoor gym only' : 'Skip workout',
   },
   {
-    group: 'Workers',
-    icon: '👷',
+    group: 'Outdoor Workers',
     threshold: 55,
     status: getRiskStatus(pm25, 55),
     action: pm25 < 55 ? 'Normal work' : pm25 < 150 ? 'Mask required' : 'Hazard pay?',
@@ -76,29 +63,24 @@ const riskGroups: RiskGroup[] = [
 
 // Count at-risk groups
 const atRiskCount = riskGroups.filter(g => g.status !== 'safe').length;
+const dangerCount = riskGroups.filter(g => g.status === 'danger').length;
 
-// Activities and their safety
-interface Activity {
-  activity: string;
-  safe: boolean;
-  note: string;
-}
-
-const activities: Activity[] = [
+// Activities
+const activities = [
   {
     activity: 'Morning jog',
     safe: pm25 < 35,
     note: pm25 < 35 ? 'Acceptable' : pm25 < 55 ? 'Not recommended' : 'Lung damage',
   },
   {
-    activity: 'Window open',
+    activity: 'Open windows',
     safe: pm25 < 25,
-    note: pm25 < 25 ? 'OK for ventilation' : 'Keep sealed',
+    note: pm25 < 25 ? 'Fresh air OK' : 'Keep sealed',
   },
   {
     activity: 'Outdoor dining',
     safe: pm25 < 50,
-    note: pm25 < 50 ? 'Enjoy the smog' : 'Eat inside',
+    note: pm25 < 50 ? 'Bon appétit' : 'Eat inside',
   },
   {
     activity: 'Kids playing',
@@ -106,42 +88,61 @@ const activities: Activity[] = [
     note: pm25 < 35 ? 'Supervised OK' : 'Indoor play only',
   },
 ];
+
+const statusColors = {
+  safe: '#059669',
+  caution: '#d97706',
+  avoid: '#ea580c',
+  danger: '#dc2626',
+};
 ---
 
 <section class="risk-context">
-  <div class="risk-header">
-    <h3>Who's At Risk Right Now</h3>
-    <div class="risk-summary">
-      <span class="risk-count">{atRiskCount}</span>
-      <span class="risk-label">of {riskGroups.length} groups should take precautions</span>
+  <header class="section-header">
+    <span class="header-label">Vulnerability Assessment</span>
+    <h3 class="header-title">Who Should Stay Indoors</h3>
+    <p class="header-kicker">Spoiler: probably you.</p>
+  </header>
+
+  <div class="risk-summary">
+    <div class="summary-main">
+      <span class="summary-number" style={`color: ${atRiskCount > 3 ? '#dc2626' : '#f97316'}`}>
+        {atRiskCount}
+      </span>
+      <span class="summary-context">of {riskGroups.length} groups at risk</span>
     </div>
+    {dangerCount > 0 && (
+      <div class="danger-badge">
+        {dangerCount} group{dangerCount > 1 ? 's' : ''} in danger zone
+      </div>
+    )}
   </div>
 
   <div class="risk-grid">
     {riskGroups.map((group) => (
-      <div class:list={['risk-card', group.status]}>
-        <div class="risk-icon">{group.icon}</div>
-        <div class="risk-info">
-          <span class="risk-group">{group.group}</span>
-          <span class="risk-action">{group.action}</span>
+      <article
+        class:list={['risk-card', group.status]}
+        style={`--status-color: ${statusColors[group.status]}`}
+      >
+        <div class="card-accent"></div>
+        <div class="card-body">
+          <div class="card-top">
+            <span class="group-name">{group.group}</span>
+            <span class="status-pill">{group.status}</span>
+          </div>
+          <p class="group-action">{group.action}</p>
         </div>
-        <div class:list={['risk-indicator', group.status]}>
-          {group.status === 'safe' && '✓'}
-          {group.status === 'caution' && '!'}
-          {group.status === 'avoid' && '!!'}
-          {group.status === 'danger' && '⚠'}
-        </div>
-      </div>
+      </article>
     ))}
   </div>
 
   <div class="activities-section">
-    <h4>Activity Check</h4>
+    <h4 class="activities-label">Activity Check</h4>
     <div class="activities-grid">
       {activities.map((act) => (
         <div class:list={['activity-item', { safe: act.safe, unsafe: !act.safe }]}>
           <span class="activity-name">{act.activity}</span>
-          <span class="activity-note">{act.note}</span>
+          <span class="activity-status">{act.note}</span>
         </div>
       ))}
     </div>
@@ -150,180 +151,231 @@ const activities: Activity[] = [
 
 <style>
   .risk-context {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 2rem;
-    margin-bottom: 2rem;
+    background: var(--bg-elevated, #ffffff);
+    border: 1px solid var(--border, #e2e0dd);
+    border-radius: var(--radius-xl, 20px);
+    padding: var(--space-8, 2rem);
+    box-shadow: var(--shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.04));
   }
 
-  .risk-header {
+  /* Header */
+  .section-header {
     text-align: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--space-6, 1.5rem);
   }
 
-  .risk-header h3 {
-    font-size: 1.25rem;
-    margin-bottom: 0.5rem;
+  .header-label {
+    display: block;
+    font-size: var(--text-micro, 0.625rem);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-subtle, #8a8a8a);
+    margin-bottom: var(--space-2, 0.5rem);
   }
 
+  .header-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: var(--text-h2, clamp(1.375rem, 3vw, 1.75rem));
+    font-weight: 400;
+    color: var(--text, #1a1a1a);
+    margin: 0 0 var(--space-2, 0.5rem) 0;
+    letter-spacing: -0.02em;
+  }
+
+  .header-kicker {
+    font-size: var(--text-sm, 0.9375rem);
+    font-style: italic;
+    color: var(--text-muted, #6b6b6b);
+    margin: 0;
+  }
+
+  /* Summary */
   .risk-summary {
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3, 0.75rem);
+    margin-bottom: var(--space-6, 1.5rem);
+    padding: var(--space-5, 1.25rem);
+    background: var(--bg-sunken, #f0efed);
+    border-radius: var(--radius-lg, 14px);
+  }
+
+  .summary-main {
+    display: flex;
     align-items: baseline;
-    justify-content: center;
-    gap: 0.375rem;
+    gap: var(--space-2, 0.5rem);
   }
 
-  .risk-count {
+  .summary-number {
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: 2rem;
+    font-size: var(--text-display-md, 2.5rem);
     font-weight: 400;
-    color: #c41e1e;
+    line-height: 1;
   }
 
-  .risk-label {
-    font-size: 0.875rem;
-    color: var(--text-muted);
+  .summary-context {
+    font-size: var(--text-base, 1rem);
+    color: var(--text-muted, #6b6b6b);
   }
 
+  .danger-badge {
+    font-size: var(--text-caption, 0.6875rem);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #dc2626;
+    background: rgba(220, 38, 38, 0.08);
+    padding: var(--space-1, 0.25rem) var(--space-3, 0.75rem);
+    border-radius: var(--radius-sm, 6px);
+  }
+
+  /* Risk Grid */
   .risk-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.75rem;
-    margin-bottom: 2rem;
+    gap: var(--space-3, 0.75rem);
+    margin-bottom: var(--space-8, 2rem);
   }
 
   .risk-card {
     display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    border-radius: 8px;
-    background: #f8f8f8;
-    border: 1px solid var(--border);
+    background: var(--bg-sunken, #f0efed);
+    border: 1px solid var(--border-subtle, #ebe9e6);
+    border-radius: var(--radius-md, 10px);
+    overflow: hidden;
+    transition:
+      transform var(--duration-fast, 150ms) var(--ease-out, ease),
+      box-shadow var(--duration-fast, 150ms) var(--ease-out, ease);
+  }
+
+  .risk-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.06));
   }
 
   .risk-card.caution {
-    background: #fefce8;
-    border-color: #fde047;
+    background: rgba(217, 119, 6, 0.04);
+    border-color: rgba(217, 119, 6, 0.15);
   }
 
   .risk-card.avoid {
-    background: #fff7ed;
-    border-color: #fed7aa;
+    background: rgba(234, 88, 12, 0.04);
+    border-color: rgba(234, 88, 12, 0.15);
   }
 
   .risk-card.danger {
-    background: #fef2f2;
-    border-color: #fecaca;
+    background: rgba(220, 38, 38, 0.04);
+    border-color: rgba(220, 38, 38, 0.18);
   }
 
-  .risk-icon {
-    font-size: 1.5rem;
-    line-height: 1;
+  .card-accent {
+    width: 4px;
+    background: var(--status-color);
+    flex-shrink: 0;
   }
 
-  .risk-info {
+  .card-body {
+    padding: var(--space-4, 1rem);
     flex: 1;
-    min-width: 0;
   }
 
-  .risk-group {
-    display: block;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--text);
-  }
-
-  .risk-action {
-    display: block;
-    font-size: 0.6875rem;
-    color: var(--text-muted);
-  }
-
-  .risk-indicator {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
+  .card-top {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    justify-content: center;
-    font-size: 0.75rem;
-    font-weight: 700;
+    margin-bottom: var(--space-2, 0.5rem);
   }
 
-  .risk-indicator.safe {
-    background: #dcfce7;
-    color: #16a34a;
-  }
-
-  .risk-indicator.caution {
-    background: #fef08a;
-    color: #a16207;
-  }
-
-  .risk-indicator.avoid {
-    background: #fed7aa;
-    color: #c2410c;
-  }
-
-  .risk-indicator.danger {
-    background: #fecaca;
-    color: #dc2626;
-  }
-
-  .activities-section {
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--border);
-  }
-
-  .activities-section h4 {
-    font-size: 0.75rem;
+  .group-name {
+    font-size: var(--text-sm, 0.9375rem);
     font-weight: 600;
+    color: var(--text, #1a1a1a);
+  }
+
+  .status-pill {
+    font-size: var(--text-micro, 0.625rem);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--status-color);
+    background: color-mix(in srgb, var(--status-color) 10%, transparent);
+    padding: 2px var(--space-2, 0.5rem);
+    border-radius: var(--radius-sm, 6px);
+  }
+
+  .group-action {
+    font-size: var(--text-xs, 0.8125rem);
+    color: var(--text-secondary, #4a4a4a);
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  /* Activities */
+  .activities-section {
+    padding-top: var(--space-6, 1.5rem);
+    border-top: 1px solid var(--border, #e2e0dd);
+  }
+
+  .activities-label {
+    font-size: var(--text-caption, 0.6875rem);
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: var(--text-light);
-    margin-bottom: 0.75rem;
+    color: var(--text-subtle, #8a8a8a);
+    margin: 0 0 var(--space-4, 1rem) 0;
     text-align: center;
   }
 
   .activities-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
+    gap: var(--space-2, 0.5rem);
   }
 
   .activity-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.625rem 0.875rem;
-    border-radius: 6px;
-    font-size: 0.8125rem;
+    padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+    border-radius: var(--radius-md, 10px);
+    border: 1px solid;
   }
 
   .activity-item.safe {
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
+    background: rgba(5, 150, 105, 0.04);
+    border-color: rgba(5, 150, 105, 0.15);
   }
 
   .activity-item.unsafe {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
+    background: rgba(220, 38, 38, 0.04);
+    border-color: rgba(220, 38, 38, 0.15);
   }
 
   .activity-name {
+    font-size: var(--text-sm, 0.9375rem);
+    font-weight: 500;
+    color: var(--text, #1a1a1a);
+  }
+
+  .activity-status {
+    font-size: var(--text-xs, 0.8125rem);
+    color: var(--text-muted, #6b6b6b);
+  }
+
+  .activity-item.unsafe .activity-status {
+    color: #dc2626;
     font-weight: 500;
   }
 
-  .activity-note {
-    font-size: 0.75rem;
-    color: var(--text-muted);
+  .activity-item.safe .activity-status {
+    color: #059669;
   }
 
-  .activity-item.unsafe .activity-note {
-    color: #dc2626;
-  }
+  /* ═══════════════════════════════════════════════════════════════
+     RESPONSIVE
+     ═══════════════════════════════════════════════════════════════ */
 
   @media (max-width: 768px) {
     .risk-grid {
@@ -333,57 +385,28 @@ const activities: Activity[] = [
 
   @media (max-width: 500px) {
     .risk-context {
-      padding: 1.5rem 1rem;
+      padding: var(--space-6, 1.5rem) var(--space-5, 1.25rem);
+    }
+
+    .header-title {
+      font-size: var(--text-h3, 1.25rem);
     }
 
     .risk-grid {
       grid-template-columns: 1fr;
+      gap: var(--space-2, 0.5rem);
+    }
+
+    .card-body {
+      padding: var(--space-3, 0.75rem);
     }
 
     .activities-grid {
       grid-template-columns: 1fr;
     }
 
-    .risk-count {
-      font-size: 1.5rem;
-    }
-
-    .risk-label {
-      font-size: 0.8125rem;
-    }
-  }
-
-  @media (max-width: 400px) {
-    .risk-card {
-      padding: 0.625rem;
-      gap: 0.5rem;
-    }
-
-    .risk-icon {
-      font-size: 1.25rem;
-    }
-
-    .risk-group {
-      font-size: 0.75rem;
-    }
-
-    .risk-action {
-      font-size: 0.625rem;
-    }
-
-    .risk-indicator {
-      width: 20px;
-      height: 20px;
-      font-size: 0.625rem;
-    }
-
-    .activity-item {
-      padding: 0.5rem 0.75rem;
-      font-size: 0.75rem;
-    }
-
-    .activity-note {
-      font-size: 0.6875rem;
+    .summary-number {
+      font-size: var(--text-h1, 2rem);
     }
   }
 </style>

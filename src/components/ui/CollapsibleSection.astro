@@ -1,0 +1,159 @@
+---
+/**
+ * Collapsible Section Component
+ *
+ * On mobile: collapsible with toggle.
+ * On desktop: always expanded.
+ *
+ * For when there's too much doom to display at once.
+ */
+
+interface Props {
+  title: string;
+  defaultOpen?: boolean;
+  id?: string;
+}
+
+const { title, defaultOpen = false, id } = Astro.props;
+---
+
+<details class="collapsible-section" open={defaultOpen} id={id}>
+  <summary class="collapsible-header">
+    <h3 class="collapsible-title">{title}</h3>
+    <span class="collapsible-icon" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path
+          d="M4 6l4 4 4-4"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </span>
+  </summary>
+  <div class="collapsible-content">
+    <slot />
+  </div>
+</details>
+
+<style>
+  .collapsible-section {
+    margin-bottom: 2rem;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .collapsible-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    transition: background 0.15s ease;
+  }
+
+  .collapsible-header::-webkit-details-marker {
+    display: none;
+  }
+
+  .collapsible-header:hover {
+    background: rgba(0, 0, 0, 0.02);
+  }
+
+  .collapsible-title {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin: 0;
+    color: var(--text);
+  }
+
+  .collapsible-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+  }
+
+  .collapsible-section[open] .collapsible-icon {
+    transform: rotate(180deg);
+  }
+
+  .collapsible-content {
+    padding: 0 1.5rem 1.5rem;
+  }
+
+  /* Desktop: Always expanded, no toggle visible */
+  @media (min-width: 768px) {
+    .collapsible-section {
+      background: transparent;
+      border: none;
+      border-radius: 0;
+    }
+
+    .collapsible-header {
+      padding: 0 0 1rem;
+      cursor: default;
+    }
+
+    .collapsible-header:hover {
+      background: transparent;
+    }
+
+    .collapsible-icon {
+      display: none;
+    }
+
+    .collapsible-content {
+      padding: 0;
+    }
+
+    /* Force open on desktop */
+    .collapsible-section:not([open]) .collapsible-content {
+      display: block;
+    }
+  }
+
+  /* Mobile: Collapsible with animation */
+  @media (max-width: 767px) {
+    .collapsible-content {
+      animation: slideDown 0.2s ease-out;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  }
+</style>
+
+<script>
+  // Force open on desktop
+  if (typeof window !== "undefined") {
+    const checkBreakpoint = () => {
+      const isDesktop = window.matchMedia("(min-width: 768px)").matches;
+      document.querySelectorAll(".collapsible-section").forEach((section) => {
+        if (isDesktop) {
+          section.setAttribute("open", "");
+        }
+      });
+    };
+
+    checkBreakpoint();
+    window.addEventListener("resize", checkBreakpoint);
+  }
+</script>

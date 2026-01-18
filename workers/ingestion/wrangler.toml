@@ -5,9 +5,13 @@ name = "aqi-ingestion"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
-# Scheduled triggers - run every hour at minute 0
+# Scheduled triggers (max 5 allowed on free plan)
+# Ingestion: 3x per hour at :00, :20, :40
+# Maintenance: Runs during the :00 trigger at 19:00 UTC (00:30 IST)
+#   Daily: Cleanup old snapshots (keep 7 days)  
+#   2nd of month: Monthly aggregation
 [triggers]
-crons = ["0 * * * *"]
+crons = ["0 * * * *", "20 * * * *", "40 * * * *"]
 
 # D1 Database binding
 [[d1_databases]]
