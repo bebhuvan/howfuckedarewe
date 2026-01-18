@@ -1,9 +1,8 @@
 ---
 /**
- * The Fucked Index™ — REFINED V3
+ * The Fucked Index™ — READABLE V4
  *
- * Dramatic, visceral, undeniable. Premium dark card with refined typography.
- * The verdict card that demands attention.
+ * Clear, readable, no BS. Data you can actually understand.
  */
 import type { AirQualityMetrics } from "../../lib/types";
 import { WHO, US_EPA, INDIA_NAAQS } from "../../lib/constants";
@@ -17,604 +16,342 @@ interface Props {
 const { metrics, cityName, pm25 } = Astro.props;
 const actualPm25 = pm25 ?? metrics.whoViolation * WHO.PM25_ANNUAL;
 
-// Calculate ratios
 const whoFucked = actualPm25 / WHO.PM25_ANNUAL;
 const epaFucked = actualPm25 / US_EPA.PM25_ANNUAL;
 const indiaFucked = actualPm25 / INDIA_NAAQS.PM25_ANNUAL;
 
-// Determine verdict with color
-function getVerdict(whoRatio: number): { label: string; subtext: string; color: string; glow: string } {
+function getVerdict(whoRatio: number): { label: string; subtext: string; color: string } {
   if (whoRatio <= 1)
     return {
-      label: "Suspiciously Okay",
-      subtext: "Either the sensors are broken or you should buy a lottery ticket.",
+      label: "Within Safe Limits",
+      subtext: "Rare for Indian cities. Enjoy it.",
       color: "#22c55e",
-      glow: "rgba(34, 197, 94, 0.4)",
     };
   if (whoRatio <= 2)
     return {
-      label: "Technically Survivable",
-      subtext: "Your lungs are only mildly disappointed.",
+      label: "Mildly Polluted",
+      subtext: "Sensitive groups should limit outdoor time.",
       color: "#84cc16",
-      glow: "rgba(132, 204, 22, 0.35)",
     };
   if (whoRatio <= 4)
     return {
-      label: "Cope Zone",
-      subtext: "You've normalized this. That's the problem.",
+      label: "Unhealthy",
+      subtext: "Everyone should reduce prolonged outdoor exertion.",
       color: "#eab308",
-      glow: "rgba(234, 179, 8, 0.35)",
     };
   if (whoRatio <= 8)
     return {
-      label: "Very Fucked",
-      subtext: "Other countries would issue health warnings. We issue press releases.",
+      label: "Very Unhealthy",
+      subtext: "Avoid outdoor activities. Use air purifiers indoors.",
       color: "#f97316",
-      glow: "rgba(249, 115, 22, 0.4)",
     };
   if (whoRatio <= 15)
     return {
-      label: "Extremely Fucked",
-      subtext: '"Stay indoors" assumes your indoors isn\'t also fucked.',
+      label: "Hazardous",
+      subtext: "Health emergency. Stay indoors with windows closed.",
       color: "#ef4444",
-      glow: "rgba(239, 68, 68, 0.4)",
-    };
-  if (whoRatio <= 20)
-    return {
-      label: "Apocalyptic",
-      subtext: "If this was a movie, the credits would be rolling.",
-      color: "#dc2626",
-      glow: "rgba(220, 38, 38, 0.45)",
     };
   return {
-    label: "Off The Charts",
-    subtext: "Congratulations, you're breathing solid matter.",
-    color: "#991b1b",
-    glow: "rgba(153, 27, 27, 0.5)",
+    label: "Severe",
+    subtext: "Extremely dangerous. Avoid all outdoor exposure.",
+    color: "#dc2626",
   };
 }
 
 const verdict = getVerdict(whoFucked);
-
-// Scale context message
-const scaleContext =
-  whoFucked <= 2
-    ? "Enjoy it while it lasts. It won't."
-    : whoFucked <= 4
-      ? "You've probably stopped noticing. That's the trap."
-      : whoFucked <= 8
-        ? "In any other country, this would be a scandal."
-        : whoFucked <= 15
-          ? "Your lungs would like a word. If they could talk."
-          : "Beyond satire. Welcome to the future.";
 ---
 
 <section class="fucked-index">
-  <!-- Ambient glow effect -->
-  <div class="ambient-glow" style={`--glow-color: ${verdict.glow}`} aria-hidden="true"></div>
+  <header class="header">
+    <span class="label">Air Quality Index</span>
+    <h2 class="title">The Fucked Index™</h2>
+  </header>
 
-  <!-- Hero Display -->
-  <div class="index-hero">
-    <span class="hero-label">The Fucked Index</span>
-
-    <div class="hero-number-container">
-      <span class="hero-number" style={`--number-color: ${verdict.color}`}>
-        {whoFucked.toFixed(1)}
-      </span>
-      <span class="hero-suffix" style={`color: ${verdict.color}`}>×</span>
+  <div class="main-stat">
+    <div class="number" style={`color: ${verdict.color}`}>
+      {whoFucked.toFixed(1)}<span class="suffix">×</span>
     </div>
-
-    <p class="hero-context">over WHO safe limit</p>
-
-    <div class="verdict-pill" style={`--pill-color: ${verdict.color}; --pill-glow: ${verdict.glow}`}>
-      {verdict.label}
-    </div>
-
-    <p class="verdict-subtext">{verdict.subtext}</p>
+    <p class="context">above WHO safe limit</p>
   </div>
 
-  <!-- Visual Scale -->
-  <div class="scale-section">
-    <h4 class="scale-title">Where {cityName} Falls</h4>
-
-    <div class="scale-container">
-      <!-- Position marker -->
-      <div
-        class="position-marker"
-        style={`left: ${Math.min(Math.max((whoFucked / 25) * 100, 2), 98)}%`}
-      >
-        <div class="marker-pip"></div>
-        <div class="marker-line"></div>
-        <div class="marker-badge">
-          <span class="marker-you">YOU</span>
-          <span class="marker-value">{whoFucked.toFixed(1)}×</span>
-        </div>
-      </div>
-
-      <!-- Scale track -->
-      <div class="scale-track">
-        <div class="zone zone-safe"></div>
-        <div class="zone zone-moderate"></div>
-        <div class="zone zone-bad"></div>
-        <div class="zone zone-danger"></div>
-        <div class="zone zone-extreme"></div>
-      </div>
-
-      <!-- Scale labels -->
-      <div class="scale-labels">
-        <span class="scale-label">1× Safe</span>
-        <span class="scale-label">5×</span>
-        <span class="scale-label">10×</span>
-        <span class="scale-label">15×</span>
-        <span class="scale-label">20×+</span>
-      </div>
-    </div>
-
-    <p class="scale-kicker">{scaleContext}</p>
+  <div class="verdict" style={`border-color: ${verdict.color}`}>
+    <span class="verdict-label" style={`color: ${verdict.color}`}>{verdict.label}</span>
+    <p class="verdict-text">{verdict.subtext}</p>
   </div>
 
-  <!-- Comparison Bars -->
+  <div class="scale">
+    <div class="scale-header">
+      <span>Safe</span>
+      <span>Hazardous</span>
+    </div>
+    <div class="scale-bar">
+      <div class="scale-fill" style={`width: ${Math.min((whoFucked / 20) * 100, 100)}%`}></div>
+      <div class="scale-marker" style={`left: ${Math.min((whoFucked / 20) * 100, 98)}%`}>
+        <span class="marker-dot"></span>
+      </div>
+    </div>
+    <div class="scale-labels">
+      <span>1×</span>
+      <span>5×</span>
+      <span>10×</span>
+      <span>15×</span>
+      <span>20×</span>
+    </div>
+  </div>
+
   <div class="comparisons">
-    <h4 class="comparisons-label">Against the Standards</h4>
+    <h3 class="comparisons-title">How {cityName} compares to safety standards</h3>
 
-    <div class="comparison-list">
-      <div class="comparison-item">
-        <div class="comp-header">
-          <span class="comp-org">WHO</span>
-          <span class="comp-limit">{WHO.PM25_ANNUAL} µg/m³</span>
-        </div>
-        <div class="comp-bar-track">
-          <div
-            class="comp-bar-fill"
-            style={`width: ${Math.min(whoFucked * 5, 100)}%; --bar-color: ${verdict.color}`}
-          ></div>
-        </div>
-        <span class="comp-ratio" style={`color: ${verdict.color}`}>{whoFucked.toFixed(1)}×</span>
+    <div class="comparison">
+      <div class="comp-label">
+        <strong>WHO</strong>
+        <span class="comp-limit">5 µg/m³ annual limit</span>
       </div>
-
-      <div class="comparison-item">
-        <div class="comp-header">
-          <span class="comp-org">US EPA</span>
-          <span class="comp-limit">{US_EPA.PM25_ANNUAL} µg/m³</span>
-        </div>
-        <div class="comp-bar-track">
-          <div
-            class="comp-bar-fill"
-            style={`width: ${Math.min(epaFucked * 10, 100)}%; --bar-color: #f97316`}
-          ></div>
-        </div>
-        <span class="comp-ratio">{epaFucked.toFixed(1)}×</span>
+      <div class="comp-bar-wrap">
+        <div class="comp-bar" style={`width: ${Math.min(whoFucked * 5, 100)}%; background: ${verdict.color}`}></div>
       </div>
-
-      <div class="comparison-item">
-        <div class="comp-header">
-          <span class="comp-org">India NAAQS</span>
-          <span class="comp-limit">{INDIA_NAAQS.PM25_ANNUAL} µg/m³</span>
-        </div>
-        <div class="comp-bar-track">
-          <div
-            class="comp-bar-fill"
-            style={`width: ${Math.min(indiaFucked * 25, 100)}%; --bar-color: #eab308`}
-          ></div>
-        </div>
-        <span class="comp-ratio">{indiaFucked.toFixed(1)}×</span>
-      </div>
+      <span class="comp-value" style={`color: ${verdict.color}`}>{whoFucked.toFixed(1)}×</span>
     </div>
 
-    <p class="india-note">
-      {indiaFucked > 1
-        ? `Failing even India's 8× looser standard.`
-        : `Meeting India's standard. Which is 8× weaker than WHO's.`}
+    <div class="comparison">
+      <div class="comp-label">
+        <strong>US EPA</strong>
+        <span class="comp-limit">9 µg/m³ annual limit</span>
+      </div>
+      <div class="comp-bar-wrap">
+        <div class="comp-bar" style={`width: ${Math.min(epaFucked * 10, 100)}%; background: #f97316`}></div>
+      </div>
+      <span class="comp-value">{epaFucked.toFixed(1)}×</span>
+    </div>
+
+    <div class="comparison">
+      <div class="comp-label">
+        <strong>India</strong>
+        <span class="comp-limit">40 µg/m³ annual limit</span>
+      </div>
+      <div class="comp-bar-wrap">
+        <div class="comp-bar" style={`width: ${Math.min(indiaFucked * 25, 100)}%; background: #eab308`}></div>
+      </div>
+      <span class="comp-value">{indiaFucked.toFixed(1)}×</span>
+    </div>
+
+    <p class="note">
+      India's limit is 8× higher than WHO's recommendation.
+      {indiaFucked > 1 ? ` ${cityName} fails even this lenient standard.` : ''}
     </p>
   </div>
-
-  <footer class="index-footer">
-    <p class="footnote">
-      *The Fucked Index: Not a scientific term. But neither is "moderate" at {whoFucked.toFixed(0)}× WHO limits.
-    </p>
-  </footer>
 </section>
 
 <style>
   .fucked-index {
-    position: relative;
-    background: linear-gradient(180deg, #111111 0%, #0a0a0a 100%);
-    border-radius: var(--radius-2xl, 28px);
-    padding: var(--space-12, 3rem) var(--space-8, 2rem);
-    margin-bottom: var(--space-8, 2rem);
-    overflow: hidden;
-    box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.06),
-      0 24px 48px -12px rgba(0, 0, 0, 0.5);
+    background: #111;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    color: #e5e5e5;
   }
 
-  /* Top accent gradient */
-  .fucked-index::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(
-      90deg,
-      #22c55e 0%,
-      #84cc16 15%,
-      #eab308 35%,
-      #f97316 55%,
-      #ef4444 75%,
-      #991b1b 100%
-    );
-  }
-
-  /* Ambient glow */
-  .ambient-glow {
-    position: absolute;
-    top: -100px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 500px;
-    height: 400px;
-    background: radial-gradient(ellipse at center, var(--glow-color) 0%, transparent 70%);
-    opacity: 0.3;
-    pointer-events: none;
-  }
-
-  /* Hero Section */
-  .index-hero {
-    position: relative;
+  .header {
     text-align: center;
-    margin-bottom: var(--space-12, 3rem);
+    margin-bottom: 2rem;
   }
 
-  .hero-label {
-    display: inline-block;
-    font-size: var(--text-caption, 0.6875rem);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
-    color: rgba(255, 255, 255, 0.45);
-    margin-bottom: var(--space-4, 1rem);
-  }
-
-  .hero-number-container {
-    display: flex;
-    align-items: baseline;
-    justify-content: center;
-    gap: 0.1em;
-    margin-bottom: var(--space-2, 0.5rem);
-  }
-
-  .hero-number {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: var(--text-display-xl, clamp(5rem, 18vw, 9rem));
-    font-weight: 400;
-    line-height: 0.85;
-    letter-spacing: -0.04em;
-    color: var(--number-color);
-    text-shadow: 0 0 80px var(--number-color);
-  }
-
-  .hero-suffix {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 0.35em;
-    font-weight: 400;
-    opacity: 0.7;
-    margin-left: -0.05em;
-  }
-
-  .hero-context {
-    font-size: var(--text-lg, 1.125rem);
-    color: rgba(255, 255, 255, 0.5);
-    margin: 0 0 var(--space-6, 1.5rem) 0;
-    letter-spacing: 0.02em;
-  }
-
-  .verdict-pill {
-    display: inline-block;
-    padding: var(--space-3, 0.75rem) var(--space-6, 1.5rem);
-    background: var(--pill-color);
-    border-radius: var(--radius-full, 9999px);
-    font-size: var(--text-sm, 0.9375rem);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: white;
-    box-shadow:
-      0 0 24px var(--pill-glow),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    margin-bottom: var(--space-4, 1rem);
-  }
-
-  .verdict-subtext {
-    font-size: var(--text-base, 1rem);
-    font-style: italic;
-    color: rgba(255, 255, 255, 0.6);
-    max-width: 400px;
-    margin: 0 auto;
-    line-height: 1.55;
-  }
-
-  /* Scale Section */
-  .scale-section {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: var(--radius-lg, 14px);
-    padding: var(--space-6, 1.5rem);
-    margin-bottom: var(--space-8, 2rem);
-  }
-
-  .scale-title {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: var(--text-h4, 1.125rem);
-    font-weight: 400;
-    color: rgba(255, 255, 255, 0.9);
-    text-align: center;
-    margin: 0 0 var(--space-6, 1.5rem) 0;
-  }
-
-  .scale-container {
-    position: relative;
-    padding-top: 56px;
-  }
-
-  /* Position Marker */
-  .position-marker {
-    position: absolute;
-    top: 0;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    z-index: 2;
-  }
-
-  .marker-badge {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: #fbbf24;
-    padding: 4px 10px 6px;
-    border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
-  }
-
-  .marker-you {
-    font-size: 9px;
-    font-weight: 800;
+  .label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: #0a0a0a;
-    line-height: 1;
+    color: #888;
+    margin-bottom: 0.5rem;
   }
 
-  .marker-value {
+  .title {
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: 14px;
-    font-weight: 600;
-    color: #0a0a0a;
-    line-height: 1.2;
-  }
-
-  .marker-line {
-    width: 2px;
-    height: 12px;
-    background: #fbbf24;
-  }
-
-  .marker-pip {
-    width: 8px;
-    height: 8px;
-    background: #fbbf24;
-    border-radius: 50%;
-    box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
-  }
-
-  /* Scale Track */
-  .scale-track {
-    display: flex;
-    height: 10px;
-    border-radius: 5px;
-    overflow: hidden;
-    margin-bottom: var(--space-3, 0.75rem);
-  }
-
-  .zone {
-    height: 100%;
-  }
-
-  .zone-safe { width: 4%; background: #22c55e; }
-  .zone-moderate { width: 16%; background: linear-gradient(90deg, #84cc16, #eab308); }
-  .zone-bad { width: 20%; background: linear-gradient(90deg, #eab308, #f97316); }
-  .zone-danger { width: 30%; background: linear-gradient(90deg, #f97316, #ef4444); }
-  .zone-extreme { width: 30%; background: linear-gradient(90deg, #ef4444, #7f1d1d); }
-
-  /* Scale Labels */
-  .scale-labels {
-    display: flex;
-    justify-content: space-between;
-  }
-
-  .scale-label {
-    font-size: var(--text-caption, 0.6875rem);
-    color: rgba(255, 255, 255, 0.4);
+    font-size: 1.75rem;
     font-weight: 500;
-  }
-
-  .scale-label:first-child {
-    color: rgba(255, 255, 255, 0.6);
-  }
-
-  .scale-kicker {
-    text-align: center;
-    font-size: var(--text-sm, 0.9375rem);
-    font-style: italic;
-    color: rgba(255, 255, 255, 0.45);
-    margin: var(--space-5, 1.25rem) 0 0 0;
-  }
-
-  /* Comparisons */
-  .comparisons {
-    padding-top: var(--space-8, 2rem);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .comparisons-label {
-    font-size: var(--text-caption, 0.6875rem);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: rgba(255, 255, 255, 0.4);
-    text-align: center;
-    margin: 0 0 var(--space-6, 1.5rem) 0;
-  }
-
-  .comparison-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4, 1rem);
-  }
-
-  .comparison-item {
-    display: grid;
-    grid-template-columns: 90px 1fr 56px;
-    align-items: center;
-    gap: var(--space-4, 1rem);
-  }
-
-  .comp-header {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .comp-org {
-    font-size: var(--text-sm, 0.9375rem);
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.9);
-  }
-
-  .comp-limit {
-    font-size: var(--text-caption, 0.6875rem);
-    color: rgba(255, 255, 255, 0.35);
-  }
-
-  .comp-bar-track {
-    height: 6px;
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 3px;
-    overflow: hidden;
-  }
-
-  .comp-bar-fill {
-    height: 100%;
-    background: var(--bar-color);
-    border-radius: 3px;
-    transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  .comp-ratio {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: var(--text-h4, 1.25rem);
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.85);
-    text-align: right;
-  }
-
-  .india-note {
-    font-size: var(--text-xs, 0.8125rem);
-    font-style: italic;
-    color: rgba(255, 255, 255, 0.35);
-    text-align: center;
-    margin: var(--space-6, 1.5rem) 0 0 0;
-    padding-top: var(--space-4, 1rem);
-    border-top: 1px solid rgba(255, 255, 255, 0.04);
-  }
-
-  /* Footer */
-  .index-footer {
-    margin-top: var(--space-8, 2rem);
-    text-align: center;
-  }
-
-  .footnote {
-    font-size: var(--text-caption, 0.6875rem);
-    color: rgba(255, 255, 255, 0.3);
-    font-style: italic;
+    color: #fff;
     margin: 0;
   }
 
-  /* ═══════════════════════════════════════════════════════════════
-     MOBILE RESPONSIVE
-     ═══════════════════════════════════════════════════════════════ */
+  .main-stat {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
 
-  @media (max-width: 640px) {
+  .number {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(4rem, 15vw, 6rem);
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .suffix {
+    font-size: 0.4em;
+    opacity: 0.8;
+  }
+
+  .context {
+    font-size: 1.125rem;
+    color: #aaa;
+    margin: 0.5rem 0 0 0;
+  }
+
+  .verdict {
+    text-align: center;
+    padding: 1.25rem;
+    border: 2px solid;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .verdict-label {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .verdict-text {
+    font-size: 1rem;
+    color: #ccc;
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .scale {
+    margin-bottom: 2rem;
+  }
+
+  .scale-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8125rem;
+    color: #888;
+    margin-bottom: 0.5rem;
+  }
+
+  .scale-bar {
+    position: relative;
+    height: 8px;
+    background: linear-gradient(90deg, #22c55e 0%, #eab308 30%, #f97316 60%, #ef4444 80%, #7f1d1d 100%);
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+  }
+
+  .scale-fill {
+    display: none;
+  }
+
+  .scale-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .marker-dot {
+    display: block;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border: 3px solid #111;
+    border-radius: 50%;
+  }
+
+  .scale-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: #666;
+  }
+
+  .comparisons {
+    border-top: 1px solid #333;
+    padding-top: 1.5rem;
+  }
+
+  .comparisons-title {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #ccc;
+    margin: 0 0 1.25rem 0;
+    font-family: inherit;
+  }
+
+  .comparison {
+    display: grid;
+    grid-template-columns: 100px 1fr 50px;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .comp-label {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .comp-label strong {
+    font-size: 0.9375rem;
+    color: #e5e5e5;
+  }
+
+  .comp-limit {
+    font-size: 0.75rem;
+    color: #777;
+  }
+
+  .comp-bar-wrap {
+    height: 8px;
+    background: #333;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .comp-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+
+  .comp-value {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: #e5e5e5;
+    text-align: right;
+  }
+
+  .note {
+    font-size: 0.875rem;
+    color: #888;
+    margin: 1.5rem 0 0 0;
+    padding-top: 1rem;
+    border-top: 1px solid #222;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 600px) {
     .fucked-index {
-      padding: var(--space-8, 2rem) var(--space-5, 1.25rem);
-      border-radius: var(--radius-xl, 20px);
-      margin-left: calc(-1 * var(--space-5, 1.25rem));
-      margin-right: calc(-1 * var(--space-5, 1.25rem));
+      padding: 1.5rem 1.25rem;
+      margin-left: -1.25rem;
+      margin-right: -1.25rem;
       border-radius: 0;
     }
 
-    .index-hero {
-      margin-bottom: var(--space-8, 2rem);
+    .number {
+      font-size: clamp(3.5rem, 18vw, 5rem);
     }
 
-    .hero-number {
-      font-size: clamp(4rem, 22vw, 6rem);
+    .comparison {
+      grid-template-columns: 80px 1fr 45px;
+      gap: 0.75rem;
     }
 
-    .hero-context {
-      font-size: var(--text-base, 1rem);
-    }
-
-    .verdict-pill {
-      font-size: var(--text-xs, 0.8125rem);
-      padding: var(--space-2, 0.5rem) var(--space-5, 1.25rem);
-    }
-
-    .verdict-subtext {
-      font-size: var(--text-sm, 0.9375rem);
-    }
-
-    .scale-section {
-      padding: var(--space-5, 1.25rem);
-    }
-
-    .scale-container {
-      padding-top: 48px;
-    }
-
-    .comparison-item {
-      grid-template-columns: 72px 1fr 48px;
-      gap: var(--space-3, 0.75rem);
-    }
-
-    .comp-org {
-      font-size: var(--text-xs, 0.8125rem);
-    }
-
-    .comp-ratio {
-      font-size: var(--text-base, 1rem);
-    }
-  }
-
-  /* ═══════════════════════════════════════════════════════════════
-     REDUCED MOTION
-     ═══════════════════════════════════════════════════════════════ */
-
-  @media (prefers-reduced-motion: reduce) {
-    .hero-number {
-      text-shadow: none;
-    }
-
-    .verdict-pill {
-      box-shadow: none;
-    }
-
-    .marker-badge {
-      box-shadow: none;
+    .comp-value {
+      font-size: 1rem;
     }
   }
 </style>

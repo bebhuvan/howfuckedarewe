@@ -140,14 +140,14 @@
 }
 
 html {
-  font-size: 15px;
+  font-size: 16px;
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
 }
 
 @media (min-width: 768px) {
   html {
-    font-size: 16px;
+    font-size: 17px;
   }
 }
 
@@ -156,8 +156,8 @@ body {
   color: var(--text);
   font-family: 'Inter', 'Inter Fallback', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-weight: 400;
-  line-height: 1.6;
-  letter-spacing: -0.01em;
+  line-height: 1.7;
+  letter-spacing: -0.008em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
@@ -187,8 +187,8 @@ main {
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Playfair Display', 'Playfair Display Fallback', Georgia, 'Times New Roman', serif;
   font-weight: 500;
-  line-height: 1.15;
-  letter-spacing: -0.025em;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
   color: var(--text);
 }
 
@@ -198,7 +198,12 @@ h3 { font-size: var(--text-h3); }
 h4 { font-size: var(--text-h4); }
 
 p {
-  line-height: 1.65;
+  line-height: 1.75;
+  color: var(--text-secondary);
+}
+
+p strong {
+  color: var(--text);
 }
 
 a {
