@@ -81,7 +81,7 @@ wrangler d1 execute aqi-bangalore --file=./schema.sql
 ```bash
 cd collector
 wrangler secret put OPENAQ_API_KEY
-# Paste: fd1f448933e016f1681815e31b60a150ca7d92925baed9716f7bc2c785ce3bf0
+# Paste: your_key_here
 ```
 
 ### Step 5: Deploy workers

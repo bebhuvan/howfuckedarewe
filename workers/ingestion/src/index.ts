@@ -6,8 +6,13 @@
  * 2. Stores raw readings in D1
  * 3. Computes and stores city-level aggregates
  * 4. Updates daily aggregates
+ * 5. Runs monthly aggregation (on 2nd of each month)
+ * 6. Cleans up old hourly snapshots (keeps 7 days)
  *
- * Runs on cron: 0 * * * * (every hour at minute 0)
+ * Cron schedule:
+ * - 0,20,40 * * * * (ingestion: 3x per hour)
+ * - 30 19 * * *     (daily cleanup: 00:30 IST = 19:00 UTC prev day)
+ * - 30 19 2 * *     (monthly aggregation: 2nd of month at 00:30 IST)
  */
 
 import { CITIES, WAQI_CONFIG, METRICS, type CityConfig, type StationConfig } from './config';
@@ -22,14 +27,49 @@ export default {
     env: Env,
     ctx: ExecutionContext
   ): Promise<void> {
-    console.log(`[${new Date().toISOString()}] Starting scheduled ingestion...`);
+    const now = new Date();
+    const hour = now.getUTCHours();
+    const minute = now.getUTCMinutes();
+    const dayOfMonth = now.getUTCDate();
 
+    console.log(`[${now.toISOString()}] Scheduled trigger - hour:${hour}, minute:${minute}, day:${dayOfMonth}`);
+
+    // Check if this is the maintenance window (19:00 UTC = 00:30 IST)
+    // Runs during the normal :00 ingestion trigger at hour 19
+    const isMaintenanceWindow = hour === 19 && minute === 0;
+
+    // Always run ingestion first
     try {
       const results = await ingestAllCities(env, 'scheduled');
       console.log(`[${new Date().toISOString()}] Ingestion complete:`, results);
     } catch (error) {
       console.error(`[${new Date().toISOString()}] Ingestion failed:`, error);
-      throw error;
+      // Don't throw - continue to maintenance if applicable
+    }
+
+    // Run maintenance tasks during maintenance window
+    if (isMaintenanceWindow) {
+      console.log('Running maintenance jobs...');
+
+      // Monthly aggregation: Run on 2nd of each month
+      if (dayOfMonth === 2) {
+        console.log('Running monthly aggregation...');
+        try {
+          const monthlyResult = await runMonthlyAggregation(env.DB);
+          console.log('Monthly aggregation result:', monthlyResult);
+        } catch (e) {
+          console.error('Monthly aggregation failed:', e);
+        }
+      }
+
+      // Daily cleanup: Run every day
+      console.log('Running snapshot cleanup...');
+      try {
+        const cleanupResult = await cleanupOldSnapshots(env.DB);
+        console.log('Cleanup result:', cleanupResult);
+      } catch (e) {
+        console.error('Cleanup failed:', e);
+      }
     }
   },
 
@@ -97,32 +137,45 @@ async function ingestAllCities(env: Env, source: string = 'scheduled'): Promise<
   let totalRecords = 0;
   let citiesProcessed = 0;
 
-  // SHARDING LOGIC
-  // Cloudflare Workers has a CPU limit, so we split the work.
-  // Even Hours: First 50% of cities
-  // Odd Hours: Last 50% of cities
-  // Manual trigger: All cities (source === 'manual')
+  // SHARDING LOGIC (v3 - Subrequest Limit Aware)
+  // Cloudflare Workers FREE tier has a 50 subrequests limit per invocation.
+  // We must keep each shard under ~45 requests to allow for retries.
+  // 
+  // Station counts: Delhi=17, Mumbai=20, Kolkata=10, Bangalore=10,
+  //                 Chennai=6, Hyderabad=9, Ahmedabad=7, Patna=6, Lucknow=6, Agra=5
+  // 
+  // Strategy: 3-way sharding by minute within the hour
+  // - Minute 0:  Delhi(17) + Kolkata(10) = 27 stations
+  // - Minute 20: Mumbai(20) + Bangalore(10) = 30 stations  
+  // - Minute 40: Chennai + Hyderabad + Ahmedabad + Patna + Lucknow + Agra = 39 stations
+  //
+  // Each city gets updated every hour. Cron runs 3x per hour.
+  // Manual trigger processes ALL cities (WARNING: may hit subrequest limit!).
 
-  const currentHour = new Date().getHours();
-  console.log(`Current hour: ${currentHour}, Source: ${source}`);
+  const currentMinute = new Date().getMinutes();
+  console.log(`Current minute: ${currentMinute}, Source: ${source}`);
 
   let citiesToProcess: typeof CITIES;
 
   if (source === 'manual') {
-    // Manual trigger always runs everything
-    citiesToProcess = CITIES;
-    console.log(`Manual trigger: Processing ALL ${CITIES.length} cities.`);
+    // Manual trigger - WARNING: may exceed subrequest limit on free tier
+    // For manual triggers, only process one shard worth at a time
+    console.log(`Manual trigger: Processing first shard only (use scheduled for full coverage).`);
+    citiesToProcess = [CITIES[0], CITIES[2]]; // Delhi + Kolkata
   } else {
-    // Scheduled trigger uses sharding
-    const half = Math.ceil(CITIES.length / 2);
-    if (currentHour % 2 === 0) {
-      // Even hours: First half
-      citiesToProcess = CITIES.slice(0, half);
-      console.log(`Even hour (${currentHour}): Processing first ${half} cities.`);
+    // Scheduled trigger uses 3-way sharding by minute
+    if (currentMinute < 15) {
+      // First shard: Delhi + Kolkata (27 stations)
+      citiesToProcess = [CITIES[0], CITIES[2]]; // indices: delhi=0, kolkata=2
+      console.log(`Shard 1 (minute ${currentMinute}): Processing Delhi + Kolkata (27 stations).`);
+    } else if (currentMinute < 35) {
+      // Second shard: Mumbai + Bangalore (30 stations)
+      citiesToProcess = [CITIES[1], CITIES[3]]; // indices: mumbai=1, bangalore=3
+      console.log(`Shard 2 (minute ${currentMinute}): Processing Mumbai + Bangalore (30 stations).`);
     } else {
-      // Odd hours: Second half
-      citiesToProcess = CITIES.slice(half);
-      console.log(`Odd hour (${currentHour}): Processing last ${CITIES.length - half} cities.`);
+      // Third shard: Remaining cities (39 stations)
+      citiesToProcess = CITIES.slice(4); // Chennai, Hyderabad, Ahmedabad, Patna, Lucknow, Agra
+      console.log(`Shard 3 (minute ${currentMinute}): Processing remaining 6 cities (39 stations).`);
     }
   }
 
@@ -135,13 +188,26 @@ async function ingestAllCities(env: Env, source: string = 'scheduled'): Promise<
 
       // Fetch ALL stations for this city with batching
       const stationDataMap = await fetchStationsBatched(city.stations, env.WAQI_API_TOKEN);
+      console.log(`[DEBUG] ${city.name}: Fetched ${stationDataMap.size}/${city.stations.length} stations from API`);
 
       const readings: StationReading[] = [];
       let latestStationTime = timestamp;
 
       for (const stationConfig of city.stations) {
         const rawData = stationDataMap.get(stationConfig.id);
-        if (!rawData || rawData.status !== 'ok' || !rawData.data) continue;
+        if (!rawData) {
+          console.log(`[DEBUG] Station ${stationConfig.id} (${stationConfig.name}): No data in map`);
+          continue;
+        }
+        if (rawData.status !== 'ok') {
+          console.log(`[DEBUG] Station ${stationConfig.id} (${stationConfig.name}): Status ${rawData.status}`);
+          continue;
+        }
+        if (!rawData.data) {
+          console.log(`[DEBUG] Station ${stationConfig.id} (${stationConfig.name}): No data field`);
+          continue;
+        }
+        console.log(`[DEBUG] Station ${stationConfig.id} (${stationConfig.name}): OK, AQI=${rawData.data.aqi}`);
 
         const stationId = await ensureStation(env.DB, cityId, {
           waqiId: String(stationConfig.id),
@@ -151,6 +217,8 @@ async function ingestAllCities(env: Env, source: string = 'scheduled'): Promise<
           longitude: rawData.data.city?.geo?.[1],
         });
 
+        // Insert reading for ALL stations (even those without PM2.5)
+        // This ensures PM10-only stations like Bangalore's City Railway Station are tracked
         const reading = await insertReading(env.DB, stationId, stationConfig.area, rawData.data, timestamp);
         if (reading) {
           readings.push(reading);
@@ -201,6 +269,16 @@ const RETRY_CONFIG = {
   backoffMultiplier: 2,
 };
 
+// US EPA AQI breakpoints for PM2.5 (AQI -> µg/m³)
+const PM25_BREAKPOINTS = [
+  { aqiLow: 0, aqiHigh: 50, concLow: 0, concHigh: 12.0 },
+  { aqiLow: 51, aqiHigh: 100, concLow: 12.1, concHigh: 35.4 },
+  { aqiLow: 101, aqiHigh: 150, concLow: 35.5, concHigh: 55.4 },
+  { aqiLow: 151, aqiHigh: 200, concLow: 55.5, concHigh: 150.4 },
+  { aqiLow: 201, aqiHigh: 300, concLow: 150.5, concHigh: 250.4 },
+  { aqiLow: 301, aqiHigh: 500, concLow: 250.5, concHigh: 500.4 },
+] as const;
+
 /**
  * Sleep for specified milliseconds
  */
@@ -215,6 +293,31 @@ function getBackoffDelay(attempt: number): number {
   const exponentialDelay = RETRY_CONFIG.baseDelayMs * Math.pow(RETRY_CONFIG.backoffMultiplier, attempt);
   const jitter = Math.random() * 0.3 * exponentialDelay; // 0-30% jitter
   return Math.min(exponentialDelay + jitter, RETRY_CONFIG.maxDelayMs);
+}
+
+function isNumber(value: number | null | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function filterNumbers(values: Array<number | null | undefined>): number[] {
+  return values.filter(isNumber);
+}
+
+function aqiToPm25(aqi: number | null | undefined): number | null {
+  if (!isNumber(aqi)) return null;
+  if (aqi < 0) return null;
+  if (aqi > 500) return 500.4;
+
+  for (const bp of PM25_BREAKPOINTS) {
+    if (aqi <= bp.aqiHigh) {
+      const aqiRange = bp.aqiHigh - bp.aqiLow;
+      const concRange = bp.concHigh - bp.concLow;
+      const aqiDelta = aqi - bp.aqiLow;
+      return bp.concLow + (aqiDelta / aqiRange) * concRange;
+    }
+  }
+
+  return 500.4;
 }
 
 /**
@@ -292,10 +395,11 @@ async function fetchWaqiData(stationId: number, token: string): Promise<WaqiResp
       // Validate response structure
       if (!data || typeof data !== 'object') {
         lastError = new Error('Invalid WAQI response structure');
-        console.error('Invalid WAQI response structure');
+        console.error(`[DEBUG] Station ${stationId}: Invalid response structure`);
         continue;
       }
 
+      console.log(`[DEBUG] Fetch station ${stationId}: Success, status=${(data as any).status}`);
       return data as WaqiResponse;
     } catch (error) {
       lastError = error as Error;
@@ -375,7 +479,8 @@ async function insertReading(
   if (!data) return null;
 
   const recordedAt = data.time?.iso || timestamp;
-  const pm25 = data.iaqi?.pm25?.v ?? null;
+  const pm25Aqi = data.iaqi?.pm25?.v ?? null;
+  const pm25 = aqiToPm25(pm25Aqi);
   const pm10 = data.iaqi?.pm10?.v ?? null;
   const o3 = data.iaqi?.o3?.v ?? null;
   const no2 = data.iaqi?.no2?.v ?? null;
@@ -383,6 +488,12 @@ async function insertReading(
   const co = data.iaqi?.co?.v ?? null;
   const aqi = typeof data.aqi === 'number' ? data.aqi : null;
   const dominantPollutant = data.dominentpol || null;
+
+  // Weather data
+  const temperature = data.iaqi?.t?.v ?? null;
+  const humidity = data.iaqi?.h?.v ?? null;
+  const windSpeed = data.iaqi?.w?.v ?? null;
+  const pressure = data.iaqi?.p?.v ?? null;
 
   try {
     await db
@@ -417,6 +528,10 @@ async function insertReading(
       aqi,
       dominantPollutant,
       recordedAt,
+      temperature,
+      humidity,
+      windSpeed,
+      pressure,
     };
   } catch (error) {
     console.error('Insert reading error:', error);
@@ -434,7 +549,7 @@ async function computeCitySnapshot(
   hourTimestamp: string,
   totalStationCount: number
 ): Promise<CitySnapshot | null> {
-  const validReadings = readings.filter((r) => r.pm25 !== null && r.pm25 !== undefined);
+  const validReadings = readings.filter((r) => isNumber(r.pm25));
 
   if (validReadings.length === 0) return null;
 
@@ -448,11 +563,11 @@ async function computeCitySnapshot(
       : pm25Values[Math.floor(pm25Values.length / 2)];
 
   // Other pollutants (averages)
-  const avgPm10 = average(validReadings.map((r) => r.pm10).filter(Boolean) as number[]);
-  const avgO3 = average(validReadings.map((r) => r.o3).filter(Boolean) as number[]);
-  const avgNo2 = average(validReadings.map((r) => r.no2).filter(Boolean) as number[]);
-  const avgSo2 = average(validReadings.map((r) => r.so2).filter(Boolean) as number[]);
-  const avgCo = average(validReadings.map((r) => r.co).filter(Boolean) as number[]);
+  const avgPm10 = average(filterNumbers(validReadings.map((r) => r.pm10)));
+  const avgO3 = average(filterNumbers(validReadings.map((r) => r.o3)));
+  const avgNo2 = average(filterNumbers(validReadings.map((r) => r.no2)));
+  const avgSo2 = average(filterNumbers(validReadings.map((r) => r.so2)));
+  const avgCo = average(filterNumbers(validReadings.map((r) => r.co)));
 
   // Dominant pollutant (most common)
   const pollutantCounts: Record<string, number> = {};
@@ -462,6 +577,12 @@ async function computeCitySnapshot(
     }
   });
   const dominantPollutant = Object.entries(pollutantCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+  // Weather (average from all readings that have weather data)
+  const avgTemperature = average(filterNumbers(readings.map((r) => r.temperature)));
+  const avgHumidity = average(filterNumbers(readings.map((r) => r.humidity)));
+  const avgWindSpeed = average(filterNumbers(readings.map((r) => r.windSpeed)));
+  const avgPressure = average(filterNumbers(readings.map((r) => r.pressure)));
 
   const snapshot: CitySnapshot = {
     cityId,
@@ -478,7 +599,11 @@ async function computeCitySnapshot(
     totalStations: totalStationCount,
     validStations: validReadings.length,
     dominantPollutant,
-    qualityStatus: validReadings.length >= totalStationCount * 0.5 ? 'healthy' : 'degraded',
+    qualityStatus: validReadings.length >= totalStationCount * 0.8 ? 'healthy' : 'degraded',
+    temperature: avgTemperature,
+    humidity: avgHumidity,
+    windSpeed: avgWindSpeed,
+    pressure: avgPressure,
   };
 
   try {
@@ -487,8 +612,9 @@ async function computeCitySnapshot(
         INSERT OR REPLACE INTO city_snapshots
         (city_id, recorded_at, avg_pm25, min_pm25, max_pm25, median_pm25,
          avg_pm10, avg_o3, avg_no2, avg_so2, avg_co,
-         total_stations, valid_stations, dominant_pollutant, quality_status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         total_stations, valid_stations, dominant_pollutant, quality_status,
+         temperature, humidity, wind_speed, pressure)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
       .bind(
         cityId,
@@ -505,7 +631,11 @@ async function computeCitySnapshot(
         totalStationCount,
         validReadings.length,
         dominantPollutant,
-        snapshot.qualityStatus
+        snapshot.qualityStatus,
+        avgTemperature,
+        avgHumidity,
+        avgWindSpeed,
+        avgPressure
       )
       .run();
 
@@ -526,23 +656,32 @@ async function updateDailyAggregate(
 ): Promise<void> {
   const date = hourTimestamp.split('T')[0]; // YYYY-MM-DD
 
-  // Get all snapshots for this day
+  // Get all snapshots for this day (including weather)
   const snapshots = await db
     .prepare(`
-      SELECT avg_pm25, min_pm25, max_pm25, recorded_at
+      SELECT avg_pm25, min_pm25, max_pm25, avg_pm10, avg_o3, avg_no2, recorded_at,
+             temperature, humidity, wind_speed
       FROM city_snapshots
       WHERE city_id = ? AND date(recorded_at) = ?
       ORDER BY recorded_at
     `)
     .bind(cityId, date)
-    .all<{ avg_pm25: number; min_pm25: number; max_pm25: number; recorded_at: string }>();
+    .all<{
+      avg_pm25: number; min_pm25: number; max_pm25: number;
+      avg_pm10: number | null; avg_o3: number | null; avg_no2: number | null;
+      recorded_at: string;
+      temperature: number | null; humidity: number | null; wind_speed: number | null;
+    }>();
 
   if (!snapshots.results || snapshots.results.length === 0) return;
 
-  const pm25Values = snapshots.results.map((s) => s.avg_pm25).filter(Boolean);
+  const pm25Values = filterNumbers(snapshots.results.map((s) => s.avg_pm25));
+  if (pm25Values.length === 0) return;
   const avgPm25 = average(pm25Values);
-  const minPm25 = Math.min(...snapshots.results.map((s) => s.min_pm25).filter(Boolean));
-  const maxPm25 = Math.max(...snapshots.results.map((s) => s.max_pm25).filter(Boolean));
+  const minPm25Values = filterNumbers(snapshots.results.map((s) => s.min_pm25));
+  const maxPm25Values = filterNumbers(snapshots.results.map((s) => s.max_pm25));
+  const minPm25 = minPm25Values.length > 0 ? Math.min(...minPm25Values) : null;
+  const maxPm25 = maxPm25Values.length > 0 ? Math.max(...maxPm25Values) : null;
 
   // Find peak hour
   let peakHour = 0;
@@ -554,6 +693,14 @@ async function updateDailyAggregate(
     }
   });
 
+  // Weather averages for the day
+  const avgPm10 = average(filterNumbers(snapshots.results.map((s) => s.avg_pm10)));
+  const avgO3 = average(filterNumbers(snapshots.results.map((s) => s.avg_o3)));
+  const avgNo2 = average(filterNumbers(snapshots.results.map((s) => s.avg_no2)));
+  const avgTemperature = average(filterNumbers(snapshots.results.map((s) => s.temperature)));
+  const avgHumidity = average(filterNumbers(snapshots.results.map((s) => s.humidity)));
+  const avgWindSpeed = average(filterNumbers(snapshots.results.map((s) => s.wind_speed)));
+
   // Compute health metrics
   const cigarettesEquivalent = avgPm25 !== null ? avgPm25 / METRICS.CIGARETTE_PM25_EQUIVALENT : 0;
   const yearsLostPerYear = avgPm25 !== null ? Math.max(0, (avgPm25 - METRICS.WHO_GUIDELINE) / 10) * METRICS.AQLI_YEARS_PER_10UG : 0;
@@ -564,8 +711,10 @@ async function updateDailyAggregate(
       .prepare(`
         INSERT OR REPLACE INTO daily_aggregates
         (city_id, date, avg_pm25, min_pm25, max_pm25, peak_hour, peak_pm25,
-         cigarettes_equivalent, years_lost_per_year, who_violation_factor, hours_with_data)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         avg_pm10, avg_o3, avg_no2,
+         cigarettes_equivalent, years_lost_per_year, who_violation_factor, hours_with_data,
+         avg_temperature, avg_humidity, avg_wind_speed)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
       .bind(
         cityId,
@@ -575,10 +724,16 @@ async function updateDailyAggregate(
         maxPm25,
         peakHour,
         peakPm25,
+        avgPm10,
+        avgO3,
+        avgNo2,
         cigarettesEquivalent,
         yearsLostPerYear,
         whoViolation,
-        snapshots.results.length
+        snapshots.results.length,
+        avgTemperature,
+        avgHumidity,
+        avgWindSpeed
       )
       .run();
   } catch (error) {
@@ -678,4 +833,163 @@ async function updateIngestionLog(
   } else {
     await db.prepare(query).bind(completedAt, status, cities, records, id).run();
   }
+}
+
+/**
+ * Aggregate daily data into monthly aggregates
+ * Should run on the 2nd of each month at ~00:30 IST
+ */
+async function runMonthlyAggregation(db: D1Database): Promise<{ processed: number; errors: string[] }> {
+  const errors: string[] = [];
+  let processed = 0;
+
+  // Get last month (year, month)
+  const now = new Date();
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const year = lastMonth.getFullYear();
+  const month = lastMonth.getMonth() + 1; // 1-indexed
+
+  console.log(`Running monthly aggregation for ${year}-${String(month).padStart(2, '0')}`);
+
+  // Get all cities
+  const cities = await db.prepare('SELECT id, name FROM cities').all<{ id: number; name: string }>();
+
+  for (const city of cities.results || []) {
+    try {
+      // Get all daily aggregates for last month
+      const dailies = await db.prepare(`
+        SELECT * FROM daily_aggregates 
+        WHERE city_id = ? 
+          AND strftime('%Y', date) = ? 
+          AND strftime('%m', date) = ?
+        ORDER BY date
+      `).bind(city.id, String(year), String(month).padStart(2, '0')).all<{
+        date: string;
+        avg_pm25: number | null;
+        min_pm25: number | null;
+        max_pm25: number | null;
+        avg_pm10: number | null;
+        avg_o3: number | null;
+        avg_no2: number | null;
+        avg_temperature: number | null;
+        avg_humidity: number | null;
+        avg_wind_speed: number | null;
+        cigarettes_equivalent: number | null;
+        years_lost_per_year: number | null;
+        who_violation_factor: number | null;
+      }>();
+
+      if (!dailies.results || dailies.results.length === 0) {
+        console.log(`No daily data for ${city.name} in ${year}-${month}`);
+        continue;
+      }
+
+      const pm25Values = filterNumbers(dailies.results.map(d => d.avg_pm25));
+
+      if (pm25Values.length === 0) continue;
+
+      // Calculate aggregates
+      const avgPm25 = average(pm25Values);
+      const minPm25Values = filterNumbers(dailies.results.map(d => d.min_pm25));
+      const maxPm25Values = filterNumbers(dailies.results.map(d => d.max_pm25));
+      const minPm25 = minPm25Values.length > 0 ? Math.min(...minPm25Values) : null;
+      const maxPm25 = maxPm25Values.length > 0 ? Math.max(...maxPm25Values) : null;
+      const medianPm25 = median(pm25Values);
+
+      // Other pollutants
+      const avgPm10 = average(filterNumbers(dailies.results.map(d => d.avg_pm10)));
+      const avgO3 = average(filterNumbers(dailies.results.map(d => d.avg_o3)));
+      const avgNo2 = average(filterNumbers(dailies.results.map(d => d.avg_no2)));
+
+      // Weather
+      const avgTemperature = average(filterNumbers(dailies.results.map(d => d.avg_temperature)));
+      const avgHumidity = average(filterNumbers(dailies.results.map(d => d.avg_humidity)));
+      const avgWindSpeed = average(filterNumbers(dailies.results.map(d => d.avg_wind_speed)));
+
+      // Health metrics
+      const cigarettesPerDay = avgPm25 !== null ? avgPm25 / METRICS.CIGARETTE_PM25_EQUIVALENT : null;
+      const cigarettesPerMonth = cigarettesPerDay !== null ? cigarettesPerDay * pm25Values.length : null;
+      const whoViolationDays = pm25Values.filter(v => v > METRICS.WHO_GUIDELINE).length;
+      const yearsLostPerYear = avgPm25 !== null
+        ? Math.max(0, (avgPm25 - METRICS.WHO_GUIDELINE) / 10) * METRICS.AQLI_YEARS_PER_10UG
+        : null;
+
+      // Find worst and best days
+      let worstDay = dailies.results[0];
+      let bestDay = dailies.results[0];
+      for (const day of dailies.results) {
+        if ((day.avg_pm25 || 0) > (worstDay.avg_pm25 || 0)) worstDay = day;
+        if ((day.avg_pm25 || Infinity) < (bestDay.avg_pm25 || Infinity)) bestDay = day;
+      }
+
+      // Insert monthly aggregate
+      await db.prepare(`
+        INSERT OR REPLACE INTO monthly_aggregates
+        (city_id, year, month, avg_pm25, min_pm25, max_pm25, median_pm25,
+         avg_pm10, avg_o3, avg_no2, avg_temperature, avg_humidity, avg_wind_speed,
+         cigarettes_per_day, cigarettes_per_month, who_violation_days, years_lost_per_year,
+         worst_day, worst_day_pm25, best_day, best_day_pm25, days_with_data)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        city.id, year, month,
+        avgPm25, minPm25, maxPm25, medianPm25,
+        avgPm10, avgO3, avgNo2,
+        avgTemperature, avgHumidity, avgWindSpeed,
+        cigarettesPerDay, cigarettesPerMonth, whoViolationDays, yearsLostPerYear,
+        worstDay.date, worstDay.avg_pm25,
+        bestDay.date, bestDay.avg_pm25,
+        pm25Values.length
+      ).run();
+
+      processed++;
+      console.log(`Aggregated ${city.name}: ${pm25Values.length} days → monthly record`);
+
+    } catch (e) {
+      const errorMsg = `Failed to aggregate ${city.name}: ${e}`;
+      console.error(errorMsg);
+      errors.push(errorMsg);
+    }
+  }
+
+  return { processed, errors };
+}
+
+/**
+ * Clean up old hourly snapshots (keep only last 7 days)
+ * Run after daily aggregation to preserve data
+ */
+async function cleanupOldSnapshots(db: D1Database): Promise<{ deleted: number }> {
+  // Calculate cutoff date (7 days ago)
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+  const cutoffStr = cutoff.toISOString();
+
+  console.log(`Cleaning up snapshots older than ${cutoffStr}`);
+
+  // Count before deletion
+  const countBefore = await db.prepare(
+    'SELECT COUNT(*) as count FROM city_snapshots WHERE recorded_at < ?'
+  ).bind(cutoffStr).first<{ count: number }>();
+
+  // Delete old snapshots
+  await db.prepare(
+    'DELETE FROM city_snapshots WHERE recorded_at < ?'
+  ).bind(cutoffStr).run();
+
+  const deleted = countBefore?.count || 0;
+  console.log(`Deleted ${deleted} old snapshots`);
+
+  return { deleted };
+}
+
+/**
+ * Calculate median of an array
+ */
+function median(arr: number[]): number | null {
+  if (arr.length === 0) return null;
+  const sorted = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[mid - 1] + sorted[mid]) / 2
+    : sorted[mid];
 }

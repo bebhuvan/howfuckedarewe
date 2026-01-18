@@ -17,7 +17,8 @@ const { stations, showPm25Warning = true } = Astro.props;
 const stationsWithPm25 = stations.filter(s => s.pm25Concentration !== null);
 const coverage = `${stationsWithPm25.length}/${stations.length}`;
 
-function getAqiColor(aqi: number): string {
+function getAqiColor(aqi: number | null): string {
+  if (aqi === null) return '#999';
   if (aqi <= 50) return '#6b8e6b';
   if (aqi <= 100) return '#a3a322';
   if (aqi <= 150) return '#c45a20';
@@ -45,7 +46,7 @@ function getAqiColor(aqi: number): string {
         </div>
 
         <div class="station-aqi" style={`color: ${getAqiColor(station.aqi)}`}>
-          {station.aqi}
+          {station.aqi ?? '—'}
           <span class="aqi-label">AQI</span>
         </div>
 

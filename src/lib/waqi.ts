@@ -16,6 +16,7 @@
  */
 
 import { calculateAllMetrics, aqiToPm25 } from './calculations';
+import { DATA_QUALITY } from './constants';
 import type {
     CityConfig,
     CitySnapshot,
@@ -251,15 +252,21 @@ function extractPollutants(data: WAQIStationData): PollutantReadings {
 export function extractWeather(data: WAQIStationData): {
     temperature: number | null;
     humidity: number | null;
-    wind: number | null;
+    windSpeed: number | null;
+    windGust: number | null;
+    windDirection: number | null;
     pressure: number | null;
+    dewPoint: number | null;
 } {
     const iaqi = data.iaqi || {};
     return {
         temperature: iaqi.t?.v ?? null,
         humidity: iaqi.h?.v ?? null,
-        wind: iaqi.w?.v ?? null,
+        windSpeed: iaqi.w?.v ?? null,
+        windGust: (iaqi as any).wg?.v ?? null,
+        windDirection: (iaqi as any).wd?.v ?? null,
         pressure: iaqi.p?.v ?? null,
+        dewPoint: (iaqi as any).dew?.v ?? null,
     };
 }
 
@@ -295,9 +302,9 @@ function processStationData(
     const now = new Date();
     const stationTime = data.time?.iso ? new Date(data.time.iso) : now;
     const hoursOld = (now.getTime() - stationTime.getTime()) / (1000 * 60 * 60);
-    const isStale = hoursOld > 2;
+    const isStale = hoursOld > DATA_QUALITY.STALE_THRESHOLD_HOURS;
 
-    const aqi = typeof data.aqi === 'number' && data.aqi >= 0 && data.aqi <= 500 ? data.aqi : 0;
+    const aqi = typeof data.aqi === 'number' && data.aqi >= 0 && data.aqi <= 500 ? data.aqi : null;
 
     // Get PM2.5 concentration from AQI sub-index
     let pm25Concentration: number | null = null;
@@ -341,7 +348,15 @@ export async function fetchCityData(
     const stations: StationReading[] = [];
     const allPollutants: PollutantReadings[] = [];
     let forecast: ForecastDay[] = [];
-    let weather = { temperature: null as number | null, humidity: null as number | null, wind: null as number | null, pressure: null as number | null };
+    let weather: {
+        temperature: number | null;
+        humidity: number | null;
+        windSpeed: number | null;
+        windGust: number | null;
+        windDirection: number | null;
+        pressure: number | null;
+        dewPoint: number | null;
+    } | null = null;
 
     for (const stationConfig of city.stations) {
         const rawData = stationDataMap.get(stationConfig.id);
@@ -354,7 +369,7 @@ export async function fetchCityData(
         if (forecast.length === 0) {
             forecast = processForecast(rawData);
         }
-        if (weather.temperature === null) {
+        if (weather === null) {
             weather = extractWeather(rawData);
         }
     }
@@ -394,8 +409,8 @@ export async function fetchCityData(
     const stationRatio = validStationCount / totalStationCount;
     const dataQuality: CitySnapshot['dataQuality'] =
         validStationCount === 0 ? 'unavailable' :
-            stationRatio >= 0.8 ? 'good' :
-                stationRatio >= 0.5 ? 'partial' : 'poor';
+            stationRatio >= DATA_QUALITY.MIN_STATIONS_GOOD ? 'good' :
+                stationRatio >= DATA_QUALITY.MIN_STATIONS_PARTIAL ? 'partial' : 'poor';
 
     const metrics = avgPm25 !== null ? calculateAllMetrics(avgPm25) : null;
 
@@ -409,7 +424,7 @@ export async function fetchCityData(
     return {
         city,
         timestamp: latestStationTimestamp,
-        stations: stations.sort((a, b) => (b.aqi || 0) - (a.aqi || 0)),
+        stations: stations.sort((a, b) => (b.aqi ?? -1) - (a.aqi ?? -1)),
         validStationCount,
         totalStationCount,
         avgPm25: avgPm25 !== null ? Math.round(avgPm25 * 10) / 10 : null,
@@ -419,6 +434,7 @@ export async function fetchCityData(
         pollutants,
         dominantPollutant: topPollutant,
         forecast,
+        weather,
         dataQuality,
     };
 }
@@ -435,7 +451,7 @@ function aggregatePollutants(stationPollutants: PollutantReadings[]): PollutantR
     for (const key of keys) {
         const values = stationPollutants
             .map(p => p[key])
-            .filter((v): v is number => v !== null && v > 0);
+            .filter((v): v is number => v !== null && Number.isFinite(v) && v >= 0);
 
         if (values.length > 0) {
             result[key] = Math.round(values.reduce((a, b) => a + b, 0) / values.length);

@@ -446,7 +446,7 @@
               <li><code>daily_aggregates</code> — Daily min/max/avg per city</li>
               <li><code>national_daily_aggregates</code> — Pre-computed national averages</li>
               <li><code>openaq_stations</code> — Mapping of OpenAQ stations to our cities</li>
-              <li><code>ingestion_log</code> — Audit trail of data collection runs</li>
+              <li><code>ingestion_logs</code> — Audit trail of data collection runs</li>
             </ul>
             <p><strong>Why pre-compute?</strong> Calculating population-weighted averages across millions of readings on every page load would be slow. We pre-compute daily aggregates via background workers.</p>
           </div>

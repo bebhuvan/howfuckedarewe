@@ -296,7 +296,7 @@ export async function getLastIngestionTime(db: D1Database): Promise<string | nul
     .prepare(
       `
       SELECT completed_at
-      FROM ingestion_log
+      FROM ingestion_logs
       WHERE status = 'completed'
       ORDER BY completed_at DESC
       LIMIT 1

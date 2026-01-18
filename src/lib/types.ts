@@ -30,10 +30,13 @@ export interface WAQIStation {
     no2?: { v: number };
     so2?: { v: number };
     co?: { v: number };
-    t?: { v: number };     // Temperature
-    h?: { v: number };     // Humidity
-    w?: { v: number };     // Wind
-    p?: { v: number };     // Pressure
+    t?: { v: number };     // Temperature (°C)
+    h?: { v: number };     // Humidity (%)
+    w?: { v: number };     // Wind speed (m/s)
+    wg?: { v: number };    // Wind gust (m/s)
+    wd?: { v: number };    // Wind direction (degrees)
+    p?: { v: number };     // Pressure (hPa)
+    dew?: { v: number };   // Dew point (°C)
   };
   forecast?: {
     daily?: {
@@ -81,7 +84,7 @@ export interface StationReading {
   coordinates: { lat: number; lng: number };
 
   // Raw values
-  aqi: number;                    // Overall AQI (may be driven by any pollutant)
+  aqi: number | null;             // Overall AQI (may be driven by any pollutant)
   pm25Concentration: number | null;  // ACTUAL PM2.5 in µg/m³ (null if not available)
   dominantPollutant: string | null;
 
@@ -125,6 +128,19 @@ export interface SeverityLevel {
   label: string;
   description: string;
   color: string;
+}
+
+/**
+ * Weather data from WAQI iaqi
+ */
+export interface WeatherData {
+  temperature: number | null;   // °C
+  humidity: number | null;      // %
+  windSpeed: number | null;     // m/s
+  windGust: number | null;      // m/s
+  windDirection: number | null; // degrees (0-360)
+  pressure: number | null;      // hPa
+  dewPoint: number | null;      // °C
 }
 
 /**
@@ -178,6 +194,9 @@ export interface CitySnapshot {
 
   // Forecast (if available)
   forecast: ForecastDay[];
+
+  // Weather data (if available)
+  weather: WeatherData | null;
 
   // Data quality indicator
   dataQuality: 'good' | 'partial' | 'poor' | 'unavailable';

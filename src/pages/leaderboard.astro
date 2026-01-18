@@ -8,15 +8,30 @@
 import CityLayout from "../layouts/CityLayout.astro";
 import { ALL_CITIES } from "../lib/cities";
 import { fetchAllCitiesData } from "../lib/waqi";
+import { getLatestCitySnapshots, hasRecentData } from "../lib/db";
 import { WHO } from "../lib/constants";
 import type { CitySnapshot } from "../lib/types";
 
 // Fetch all cities
-const WAQI_TOKEN = import.meta.env.WAQI_API_TOKEN;
-const citiesData: CitySnapshot[] = await fetchAllCitiesData(
-  ALL_CITIES,
-  WAQI_TOKEN,
-);
+const WAQI_TOKEN =
+  import.meta.env.WAQI_API_TOKEN || Astro.locals.runtime?.env?.WAQI_API_TOKEN;
+const db = Astro.locals.runtime?.env?.DB;
+let citiesData: CitySnapshot[] = [];
+
+if (db && !import.meta.env.DEV) {
+  try {
+    if (await hasRecentData(db, 2)) {
+      citiesData = await getLatestCitySnapshots(db);
+      console.log(`[leaderboard] Got ${citiesData.length} cities from D1`);
+    }
+  } catch (e) {
+    console.warn("[leaderboard] D1 read failed:", e);
+  }
+}
+
+if (citiesData.length === 0 && WAQI_TOKEN) {
+  citiesData = await fetchAllCitiesData(ALL_CITIES, WAQI_TOKEN);
+}
 
 // Sort by PM2.5 (most fucked first)
 const rankedCities = citiesData
@@ -74,10 +89,11 @@ const description =
   "A real-time ranking of India's most polluted cities. Spoiler: everyone loses.";
 
 // Calculate some stats
-const avgWhoViolation =
-  rankedCities.reduce((sum, c) => sum + (c.avgPm25 || 0), 0) /
-  rankedCities.length /
-  WHO.PM25_ANNUAL;
+const avgWhoViolation = rankedCities.length > 0
+  ? rankedCities.reduce((sum, c) => sum + (c.avgPm25 || 0), 0) /
+      rankedCities.length /
+      WHO.PM25_ANNUAL
+  : 0;
 const totalCigsPerDay = rankedCities.reduce(
   (sum, c) => sum + (c.metrics?.cigarettesPerDay || 0),
   0,

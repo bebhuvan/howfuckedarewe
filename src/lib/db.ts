@@ -6,7 +6,8 @@
  */
 
 import { getCityBySlug, ALL_CITIES } from './cities';
-import { calculateAllMetrics, aqiToPm25 } from './calculations';
+import { calculateAllMetrics, pm25ToAqi } from './calculations';
+import { DATA_QUALITY } from './constants';
 import type { CitySnapshot, CityConfig, PollutantReadings, StationReading } from './types';
 
 // ============================================================================
@@ -342,7 +343,7 @@ export async function storeCitySnapshot(
             snapshot.totalStations,
             snapshot.validStations,
             snapshot.dominantPollutant,
-            snapshot.validStations >= snapshot.totalStations * 0.8 ? 'healthy' : 'degraded'
+            snapshot.validStations >= snapshot.totalStations * DATA_QUALITY.MIN_STATIONS_GOOD ? 'healthy' : 'degraded'
         ).run();
     } catch (error) {
         console.error('[db] storeCitySnapshot error:', error);
@@ -390,7 +391,7 @@ function transformRowToSnapshot(
     };
 
     const pollutants: PollutantReadings = {
-        pm25: row.avg_pm25 !== null ? Math.round(row.avg_pm25) : null,
+        pm25: row.avg_pm25 !== null ? pm25ToAqi(row.avg_pm25) : null,
         pm10: row.avg_pm10 !== null ? Math.round(row.avg_pm10) : null,
         o3: row.avg_o3 !== null ? Math.round(row.avg_o3) : null,
         no2: row.avg_no2 !== null ? Math.round(row.avg_no2) : null,
@@ -404,10 +405,10 @@ function transformRowToSnapshot(
     const stations: StationReading[] = stationRows
         .filter(sr => sr.pm25 !== null || sr.aqi !== null)
         .map(sr => {
-            // Get PM2.5 concentration - either direct from reading or convert from AQI
+            // Get PM2.5 concentration from reading (already stored as µg/m³)
             let pm25Concentration: number | null = null;
             if (sr.pm25 !== null) {
-                pm25Concentration = aqiToPm25(sr.pm25);
+                pm25Concentration = sr.pm25;
             }
 
             // Find area name from city config if available
@@ -432,21 +433,21 @@ function transformRowToSnapshot(
                     lat: sr.latitude || 0,
                     lng: sr.longitude || 0,
                 },
-                aqi: sr.aqi || 0,
+                aqi: sr.aqi,
                 pm25Concentration,
                 dominantPollutant: sr.dominant_pollutant,
                 metrics: stationMetrics,
                 timestamp: sr.recorded_at || row.recorded_at,
-                isStale: hoursOld > 2,
+                isStale: hoursOld > DATA_QUALITY.STALE_THRESHOLD_HOURS,
             };
         })
-        .sort((a, b) => (b.aqi || 0) - (a.aqi || 0));
+        .sort((a, b) => (b.aqi ?? -1) - (a.aqi ?? -1));
 
     const stationRatio = row.total_stations > 0 ? row.valid_stations / row.total_stations : 0;
     const dataQuality: CitySnapshot['dataQuality'] =
         row.valid_stations === 0 ? 'unavailable' :
-            stationRatio >= 0.8 ? 'good' :
-                stationRatio >= 0.5 ? 'partial' : 'poor';
+            stationRatio >= DATA_QUALITY.MIN_STATIONS_GOOD ? 'good' :
+                stationRatio >= DATA_QUALITY.MIN_STATIONS_PARTIAL ? 'partial' : 'poor';
 
     return {
         city,
@@ -461,6 +462,7 @@ function transformRowToSnapshot(
         pollutants,
         dominantPollutant: row.dominant_pollutant,
         forecast: [],
+        weather: null, // Weather not stored in D1, only available via live API
         dataQuality,
     };
 }

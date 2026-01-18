@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS readings (
     recorded_at TEXT NOT NULL,  -- ISO timestamp from WAQI
     ingested_at TEXT DEFAULT (datetime('now')),
 
-    -- Pollutant values (µg/m³ or ppb as reported)
+    -- Pollutant values (PM2.5 stored as µg/m³; others are WAQI AQI sub-indices)
     pm25 REAL,
     pm10 REAL,
     o3 REAL,
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS city_snapshots (
     max_pm25 REAL,
     median_pm25 REAL,
 
-    -- Other pollutants (averages)
+    -- Other pollutants (averages, WAQI AQI sub-indices)
     avg_pm10 REAL,
     avg_o3 REAL,
     avg_no2 REAL,
@@ -88,6 +88,13 @@ CREATE TABLE IF NOT EXISTS city_snapshots (
 
     -- Quality
     quality_status TEXT,  -- 'healthy', 'degraded', 'critical'
+
+    -- Weather (averages)
+    temperature REAL,
+    humidity REAL,
+    wind_speed REAL,
+    wind_direction REAL,
+    pressure REAL,
 
     FOREIGN KEY (city_id) REFERENCES cities(id),
     UNIQUE(city_id, recorded_at)
@@ -117,6 +124,11 @@ CREATE TABLE IF NOT EXISTS daily_aggregates (
     cigarettes_equivalent REAL,
     years_lost_per_year REAL,
     who_violation_factor REAL,
+
+    -- Weather averages
+    avg_temperature REAL,
+    avg_humidity REAL,
+    avg_wind_speed REAL,
 
     -- Data completeness
     hours_with_data INTEGER,  -- out of 24

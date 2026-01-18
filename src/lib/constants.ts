@@ -139,8 +139,8 @@ export const FUCKED_INDEX_THRESHOLDS = {
 
 export const DATA_QUALITY = {
   STALE_THRESHOLD_HOURS: 2,     // Data older than this is considered stale
-  MIN_STATIONS_GOOD: 0.7,       // 70% of stations needed for "good" quality
-  MIN_STATIONS_PARTIAL: 0.3,   // 30% for "partial" quality
+  MIN_STATIONS_GOOD: 0.8,       // 80% of stations needed for "good" quality
+  MIN_STATIONS_PARTIAL: 0.5,   // 50% for "partial" quality
   INVALID_AQI_VALUES: [999, -1], // WAQI error codes
   MAX_VALID_AQI: 500,           // AQI above this is invalid/error
 } as const;

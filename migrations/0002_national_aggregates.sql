@@ -68,25 +68,12 @@ CREATE TABLE IF NOT EXISTS backfill_progress (
     updated_at TEXT DEFAULT (datetime('now'))
 );
 
--- Data ingestion log - track when data was last fetched
-CREATE TABLE IF NOT EXISTS ingestion_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    source TEXT NOT NULL,               -- 'waqi', 'openaq'
-    ingestion_type TEXT NOT NULL,       -- 'hourly', 'daily', 'backfill'
-    started_at TEXT NOT NULL,
-    completed_at TEXT,
-    records_processed INTEGER DEFAULT 0,
-    cities_processed INTEGER DEFAULT 0,
-    status TEXT DEFAULT 'running',      -- running, completed, failed
-    error_message TEXT
-);
 
 -- Indexes for efficient queries
 CREATE INDEX IF NOT EXISTS idx_national_daily_date ON national_daily_aggregates(date DESC);
 CREATE INDEX IF NOT EXISTS idx_openaq_stations_city ON openaq_stations(city_id);
 CREATE INDEX IF NOT EXISTS idx_openaq_stations_location ON openaq_stations(openaq_location_id);
 CREATE INDEX IF NOT EXISTS idx_backfill_progress_source ON backfill_progress(source, city_slug);
-CREATE INDEX IF NOT EXISTS idx_ingestion_log_source ON ingestion_log(source, started_at DESC);
 
 -- Add new cities from the recent expansion
 INSERT OR IGNORE INTO cities (slug, name, local_name, state, population, latitude, longitude) VALUES

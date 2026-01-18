@@ -26,6 +26,7 @@ const bestStation = sortedStations[sortedStations.length - 1];
 <section class="area-breakdown">
   <div class="section-header">
     <h2>Area by area</h2>
+    <p class="section-kicker">Your lungs play a lottery every time you choose where to live</p>
     <p class="section-intro">
       Not all of {cityName} is equally fucked.
       {worstStation && bestStation && worstStation !== bestStation && (
@@ -49,7 +50,7 @@ const bestStation = sortedStations[sortedStations.length - 1];
 
           <div class="station-info">
             <h3 class="station-name">{station.area}</h3>
-            <span class="station-aqi">AQI {station.aqi}</span>
+            <span class="station-aqi">AQI {station.aqi ?? '—'}</span>
           </div>
 
           <div class="station-cigarettes">
@@ -57,7 +58,7 @@ const bestStation = sortedStations[sortedStations.length - 1];
             <span class="cig-label">cigarettes/day</span>
           </div>
 
-          {station.pm25Concentration && (
+          {station.pm25Concentration !== null && (
             <div class="station-pm25">
               {station.pm25Concentration.toFixed(0)} µg/m³
             </div>
@@ -85,6 +86,13 @@ const bestStation = sortedStations[sortedStations.length - 1];
 
   .section-header h2 {
     font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .section-kicker {
+    font-size: 0.875rem;
+    color: var(--text-light);
+    font-style: italic;
     margin-bottom: 0.5rem;
   }
 

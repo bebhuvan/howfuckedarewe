@@ -9,8 +9,8 @@
     "preview": "wrangler pages dev ./dist",
     "deploy": "astro build && wrangler pages deploy ./dist",
     "astro": "astro",
-    "db:migrate": "wrangler d1 execute aqi-historical --file=./migrations/0001_initial_schema.sql",
-    "db:migrate:local": "wrangler d1 execute aqi-historical --file=./migrations/0001_initial_schema.sql --local"
+    "db:migrate": "wrangler d1 execute aqi-historical --file=./migrations/0001_initial_schema.sql && wrangler d1 execute aqi-historical --file=./migrations/0002_add_ingestion_logs.sql && wrangler d1 execute aqi-historical --file=./migrations/0002_national_aggregates.sql && wrangler d1 execute aqi-historical --file=./migrations/003_add_weather_and_monthly.sql",
+    "db:migrate:local": "wrangler d1 execute aqi-historical --file=./migrations/0001_initial_schema.sql --local && wrangler d1 execute aqi-historical --file=./migrations/0002_add_ingestion_logs.sql --local && wrangler d1 execute aqi-historical --file=./migrations/0002_national_aggregates.sql --local && wrangler d1 execute aqi-historical --file=./migrations/003_add_weather_and_monthly.sql --local"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.0.1",

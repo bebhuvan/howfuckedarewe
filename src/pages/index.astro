@@ -14,6 +14,7 @@ import DeathCounter from "../components/analysis/DeathCounter.astro";
 import CityRankingChart from "../components/charts/CityRankingChart.astro";
 import PopulationExposure from "../components/analysis/PopulationExposure.astro";
 import NationalHistoricalTrends from "../components/charts/NationalHistoricalTrends.astro";
+import IndiaMap from "../components/charts/IndiaMap.astro";
 
 import { ALL_CITIES, ALL_INDIA, CITIES_BY_POLLUTION } from "../lib/cities";
 import { fetchAllCitiesData } from "../lib/waqi";
@@ -34,11 +35,10 @@ import type {
 	YearOverYearData,
 } from "../lib/db-national";
 
-// WAQI API token - hardcoded fallback for dev mode (safe, no secrets)
+// WAQI API token from environment/secret (no hardcoded fallback)
 const WAQI_TOKEN =
 	import.meta.env.WAQI_API_TOKEN ||
-	Astro.locals.runtime?.env?.WAQI_API_TOKEN ||
-	"f9c3a63cafeffbe1bae0286e46e8df56c80f87a6";
+	Astro.locals.runtime?.env?.WAQI_API_TOKEN;
 
 // Try D1 first in production for fast, reliable data
 const db = Astro.locals.runtime?.env?.DB;
@@ -228,73 +228,76 @@ function getColorForPm25(pm25: number | null): string {
 ---
 
 <CityLayout title={title} description={description}>
-	<!-- Hero Section -->
+	<!-- Hero Section — Minimal, Devastating -->
 	<header class="india-hero">
-		<div class="hero-hook">
-			<span class="hook-number"
-				>{
-					nationalMetrics
-						? nationalMetrics.whoViolation.toFixed(0)
-						: "—"
-				}×</span
-			>
-			<span class="hook-text"
-				>above what the WHO says is safe to breathe</span
-			>
+		<!-- Eyebrow -->
+		<div class="hero-eyebrow">
+			<span class="eyebrow-dot"></span>
+			<span class="eyebrow-text">Live across India</span>
 		</div>
 
-		<h1 class="hero-title">Right now, in India</h1>
+		<!-- The Statement -->
+		<p class="hero-statement">Breathing here equals smoking</p>
 
-		<div class="hero-stat-main">
-			<span
-				class="main-number"
-				style={`color: ${nationalMetrics.severity.color}`}
-			>
-				{nationalAvgPm25.toFixed(0)}
+		<!-- The Number -->
+		<div class="hero-number-block">
+			<span class="hero-number" style={`color: ${nationalMetrics?.severity.color || "#b91c1c"}`}>
+				{nationalMetrics ? nationalMetrics.cigarettesPerDay.toFixed(1) : "—"}
 			</span>
-			<span class="main-unit">µg/m³ PM2.5</span>
-			<span class="main-context">
-				Every breath. Every person. {
-					(ALL_INDIA.population / 1000000000).toFixed(1)
-				} billion lungs.
-			</span>
+			<div class="hero-number-context">
+				<span class="context-word">cigarettes</span>
+				<span class="context-period">every single day</span>
+			</div>
 		</div>
 
-		<p class="tagline">
-			1.4 billion people. One shared atmosphere. Zero accountability.
-		</p>
-
-		{
-			nationalMetrics && (
-				<div class="hero-stats-row">
-					<div class="stat-pill">
-						<span class="pill-value">
-							{nationalMetrics.cigarettesPerDay.toFixed(1)}
-						</span>
-						<span class="pill-label">
-							cigarettes/day equivalent
-						</span>
-					</div>
-					<div class="stat-pill">
-						<span class="pill-value">
-							{nationalMetrics.hoursLostEquivalentPerDay.toFixed(
-								1,
-							)}
-							h
-						</span>
-						<span class="pill-label">
-							life lost per person today
-						</span>
-					</div>
-					<div class="stat-pill">
-						<span class="pill-value">
-							{citiesWithData.length}/{ALL_CITIES.length}
-						</span>
-						<span class="pill-label">cities reporting</span>
-					</div>
+		<!-- Visual Cigarette Row -->
+		<div class="hero-cig-row" aria-hidden="true">
+			{nationalMetrics && Array.from({ length: Math.min(Math.floor(nationalMetrics.cigarettesPerDay), 12) }).map((_, i) => (
+				<div class="hero-cig" style={`animation-delay: ${i * 0.06}s`}>
+					<div class="hcig-filter"></div>
+					<div class="hcig-paper"></div>
+					<div class="hcig-ember"></div>
 				</div>
-			)
-		}
+			))}
+			{nationalMetrics && Math.floor(nationalMetrics.cigarettesPerDay) > 12 && (
+				<span class="hero-cig-more">+{Math.floor(nationalMetrics.cigarettesPerDay) - 12}</span>
+			)}
+		</div>
+
+		<!-- Punchline -->
+		<p class="hero-punchline">You never asked for any of them.</p>
+
+		<!-- Stats Strip -->
+		<div class="hero-stats-strip">
+			<div class="hstat">
+				<span class="hstat-value" style={`color: ${nationalMetrics?.severity.color || "#b91c1c"}`}>
+					{nationalAvgPm25?.toFixed(0) || "—"}
+				</span>
+				<span class="hstat-unit">µg/m³</span>
+				<span class="hstat-label">PM2.5</span>
+			</div>
+			<div class="hstat-divider"></div>
+			<div class="hstat">
+				<span class="hstat-value">{nationalMetrics ? nationalMetrics.whoViolation.toFixed(0) : "—"}×</span>
+				<span class="hstat-label">WHO limit</span>
+			</div>
+			<div class="hstat-divider"></div>
+			<div class="hstat">
+				<span class="hstat-value">{(ALL_INDIA.population / 1000000000).toFixed(1)}B</span>
+				<span class="hstat-label">exposed</span>
+			</div>
+			<div class="hstat-divider"></div>
+			<div class="hstat">
+				<span class="hstat-value danger">{nationalMetrics ? nationalMetrics.hoursLostEquivalentPerDay.toFixed(1) : "—"}</span>
+				<span class="hstat-unit">hrs</span>
+				<span class="hstat-label">life lost today</span>
+			</div>
+		</div>
+
+		<!-- Bottom line -->
+		<p class="hero-bottom-line">
+			{citiesWithData.length} cities reporting. {consecutiveDaysAboveWHO > 0 ? consecutiveDaysAboveWHO : "365+"} consecutive days above WHO limit.
+		</p>
 	</header>
 
 	<!-- Data Source Disclosure -->
@@ -316,123 +319,159 @@ function getColorForPm25(pm25: number | null): string {
 	</div>
 
 	<!-- Death Counter (National) -->
-	<DeathCounter showNational={true} />
+	<div data-animate>
+		<DeathCounter showNational={true} />
+	</div>
 
 	<!-- Population at Risk -->
-	<PopulationExposure cities={citiesData} />
+	<div data-animate>
+		<PopulationExposure cities={citiesData} />
+	</div>
 
 	<!-- Historical Trends (only shows if we have enough D1 data) -->
 	{
 		hasHistoricalData && nationalStats && (
-			<NationalHistoricalTrends
-				dailyData={nationalDailyData}
-				stats={nationalStats}
-				consecutiveDaysAboveWHO={consecutiveDaysAboveWHO}
-				yearOverYear={yearOverYear}
-				lastIngestionTime={lastIngestionTime}
-			/>
+			<div data-animate>
+				<NationalHistoricalTrends
+					dailyData={nationalDailyData}
+					stats={nationalStats}
+					consecutiveDaysAboveWHO={consecutiveDaysAboveWHO}
+					yearOverYear={yearOverYear}
+					lastIngestionTime={lastIngestionTime}
+				/>
+			</div>
 		)
 	}
 
-	<!-- What is AQI Section -->
-	<section class="aqi-explainer">
-		<h2>The Air You're Breathing (Whether You Like It Or Not)</h2>
+	<!-- Air Quality Explainer — Redesigned -->
+	<section class="air-explainer" data-animate>
+		<header class="explainer-header">
+			<span class="explainer-eyebrow">Understanding the Poison</span>
+			<h2 class="explainer-title">What You're Actually Inhaling</h2>
+			<p class="explainer-subtitle">The science is clear. The policy isn't.</p>
+		</header>
 
-		<div class="explainer-grid">
-			<div class="explainer-card">
-				<h3>What is PM2.5?</h3>
-				<p>
-					Particles so small (2.5 micrometers) they pass through your
-					lungs straight into your bloodstream. They reach your brain.
-					Your heart. Every organ. Invisible. Tasteless. Currently
-					inside you.
-				</p>
-				<p class="card-kicker">
-					Think of it as unwanted guests who bypass security and make
-					themselves at home.
-				</p>
-			</div>
-
-			<div class="explainer-card">
-				<h3>What's "safe" anyway?</h3>
-				<div class="safety-scale">
-					<div class="scale-item good">
-						<span class="scale-value">0-5</span>
-						<span class="scale-label">WHO guideline</span>
-						<span class="scale-note"
-							>What human lungs were designed for</span
-						>
+		<div class="explainer-content">
+			<!-- PM2.5 Definition -->
+			<div class="explainer-block pm25-block">
+				<div class="block-visual">
+					<div class="particle-demo">
+						<span class="particle-dot"></span>
+						<span class="particle-label">2.5µm</span>
 					</div>
-					<div class="scale-item moderate">
-						<span class="scale-value">5-12</span>
-						<span class="scale-label">US EPA limit</span>
-						<span class="scale-note"
-							>"Acceptable" if you're American</span
-						>
-					</div>
-					<div class="scale-item bad">
-						<span class="scale-value">12-35</span>
-						<span class="scale-label">Unhealthy</span>
-						<span class="scale-note"
-							>Children & elderly: stay inside</span
-						>
-					</div>
-					<div class="scale-item terrible">
-						<span class="scale-value">35+</span>
-						<span class="scale-label">Dangerous</span>
-						<span class="scale-note"
-							>Everyone: reconsider life choices</span
-						>
+					<div class="hair-compare">
+						<div class="hair-line"></div>
+						<span class="hair-label">Human hair: 70µm</span>
 					</div>
 				</div>
-				<p class="current-context">
-					India's cities average <strong
-						>{nationalAvgPm25?.toFixed(0)} µg/m³</strong
-					>. Our official "acceptable" limit is 40 µg/m³. Convenient,
-					no?
+				<div class="block-text">
+					<h3>PM2.5: The Invisible Killer</h3>
+					<p>Particles 30× smaller than a human hair. They bypass your nose, slip past your lungs, enter your bloodstream. They reach your brain. Your heart. Every organ.</p>
+					<p class="block-kicker">Currently inside you. Right now.</p>
+				</div>
+			</div>
+
+			<!-- Safety Scale -->
+			<div class="explainer-block scale-block">
+				<h3>The Safety Spectrum</h3>
+				<div class="pm-scale">
+					<div class="scale-track">
+						<div class="scale-zone zone-who" style="width: 5%"></div>
+						<div class="scale-zone zone-us" style="width: 7%"></div>
+						<div class="scale-zone zone-unhealthy" style="width: 23%"></div>
+						<div class="scale-zone zone-danger" style="width: 65%"></div>
+					</div>
+					<div class="scale-labels">
+						<div class="scale-point" style="left: 0%">
+							<span class="point-value">0</span>
+						</div>
+						<div class="scale-point" style="left: 5%">
+							<span class="point-value">5</span>
+							<span class="point-label">WHO</span>
+						</div>
+						<div class="scale-point" style="left: 12%">
+							<span class="point-value">12</span>
+							<span class="point-label">US EPA</span>
+						</div>
+						<div class="scale-point" style="left: 35%">
+							<span class="point-value">35</span>
+							<span class="point-label">Unhealthy</span>
+						</div>
+						<div class="scale-point india-marker" style={`left: ${Math.min((nationalAvgPm25 || 60) / 100, 1) * 100}%`}>
+							<span class="point-arrow">▼</span>
+							<span class="point-value india">{nationalAvgPm25?.toFixed(0)}</span>
+							<span class="point-label">India now</span>
+						</div>
+					</div>
+				</div>
+				<p class="scale-context">
+					India's official "acceptable" limit: 40 µg/m³. Eight times the WHO guideline. <em>Convenient.</em>
 				</p>
 			</div>
 
-			<div class="explainer-card">
-				<h3>Why care? You can't see it.</h3>
-				<p>
-					Every breath deposits particles your body can never fully
-					clear. They trigger inflammation. Age your arteries. Cross
-					the blood-brain barrier.
-				</p>
-				<p>
-					The damage is cumulative, silent, and irreversible. By the
-					time you notice, years are already gone. Not someday. Now.
-					While you're reading this.
-				</p>
-				<p class="card-kicker">
-					You've been breathing it in since you started this page.
-				</p>
+			<!-- Why Care -->
+			<div class="explainer-block damage-block">
+				<h3>The Damage Report</h3>
+				<div class="damage-list">
+					<div class="damage-item">
+						<div class="damage-icon">
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+							</svg>
+						</div>
+						<div class="damage-text">
+							<strong>Inflammation cascade</strong>
+							<span>Particles trigger immune response. Your body attacks itself.</span>
+						</div>
+					</div>
+					<div class="damage-item">
+						<div class="damage-icon">
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+							</svg>
+						</div>
+						<div class="damage-text">
+							<strong>Arterial aging</strong>
+							<span>Your blood vessels harden years before their time.</span>
+						</div>
+					</div>
+					<div class="damage-item">
+						<div class="damage-icon">
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<circle cx="12" cy="12" r="10"/>
+								<path d="M12 6v6l4 2"/>
+							</svg>
+						</div>
+						<div class="damage-text">
+							<strong>Cumulative, irreversible</strong>
+							<span>The clock doesn't reset. Every breath adds to the toll.</span>
+						</div>
+					</div>
+				</div>
+				<p class="damage-kicker">You've been breathing it in since you started this page.</p>
 			</div>
 
-			<div class="explainer-card">
-				<h3>Your Options (All Bad)</h3>
-				<ul class="action-list">
-					<li>
-						<strong>Check the AQI daily.</strong> Like checking the weather,
-						but for your lifespan.
-					</li>
-					<li>
-						<strong>Buy N95 masks.</strong> Fashion accessory of the apocalypse.
-						Cloth masks are just vibes.
-					</li>
-					<li>
-						<strong>Get a HEPA purifier.</strong> Create a tiny bubble
-						of first-world air in your bedroom.
-					</li>
-					<li>
-						<strong>Move abroad.</strong> Just kidding. Or are we?
-					</li>
-					<li>
-						<strong>Vote angry.</strong> Stubble burning didn't vote itself
-						into policy.
-					</li>
-				</ul>
+			<!-- Options -->
+			<div class="explainer-block options-block">
+				<h3>Your Options <span class="options-aside">(All Imperfect)</span></h3>
+				<div class="options-grid">
+					<div class="option-item">
+						<span class="option-action">Check AQI daily</span>
+						<span class="option-note">Weather forecasts for your lifespan</span>
+					</div>
+					<div class="option-item">
+						<span class="option-action">N95 masks</span>
+						<span class="option-note">Cloth masks are aesthetic only</span>
+					</div>
+					<div class="option-item">
+						<span class="option-action">HEPA purifiers</span>
+						<span class="option-note">First-world air in one room</span>
+					</div>
+					<div class="option-item">
+						<span class="option-action">Vote angry</span>
+						<span class="option-note">Policy didn't write itself</span>
+					</div>
+				</div>
 			</div>
 		</div>
 	</section>
@@ -463,11 +502,18 @@ function getColorForPm25(pm25: number | null): string {
 		)
 	}
 
+	<!-- India Map Visualization -->
+	<div data-animate="scale">
+		<IndiaMap cities={citiesData} />
+	</div>
+
 	<!-- City Ranking Chart -->
-	<CityRankingChart cities={citiesData} />
+	<div data-animate>
+		<CityRankingChart cities={citiesData} />
+	</div>
 
 	<!-- City Grid -->
-	<section class="cities-section">
+	<section class="cities-section" data-animate>
 		<h2>Major Cities</h2>
 		<p class="section-intro">
 			Click any city for detailed air quality data and health impact
@@ -603,11 +649,812 @@ function getColorForPm25(pm25: number | null): string {
 </CityLayout>
 
 <style>
+	/* ========== HERO SECTION - REDESIGNED ========== */
 	.india-hero {
 		text-align: center;
+		margin-bottom: 2rem;
+		padding: 3rem 1.5rem 2.5rem;
+		background: linear-gradient(180deg, #fef2f2 0%, #fee2e2 30%, #fff 100%);
+		border-radius: 16px;
+		position: relative;
+	}
+
+	/* Eyebrow */
+	.hero-eyebrow {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-bottom: 1.25rem;
+	}
+
+	.eyebrow-dot {
+		width: 8px;
+		height: 8px;
+		background: #dc2626;
+		border-radius: 50%;
+		animation: pulse 2s ease-in-out infinite;
+	}
+
+	@keyframes pulse {
+		0%, 100% { opacity: 1; transform: scale(1); }
+		50% { opacity: 0.6; transform: scale(0.9); }
+	}
+
+	.eyebrow-text {
+		font-size: 0.6875rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.12em;
+		color: var(--text-light);
+	}
+
+	/* Statement */
+	.hero-statement {
+		font-size: 1.25rem;
+		color: var(--text-secondary);
+		margin: 0 0 0.5rem 0;
+		line-height: 1.4;
+	}
+
+	/* Number Block */
+	.hero-number-block {
+		margin-bottom: 1.25rem;
+	}
+
+	.hero-number {
+		font-family: 'Playfair Display', Georgia, serif;
+		font-size: clamp(6rem, 22vw, 12rem);
+		font-weight: 400;
+		letter-spacing: -0.04em;
+		line-height: 0.85;
+		display: inline-block;
+		animation: numberIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s backwards;
+	}
+
+	@keyframes numberIn {
+		from { opacity: 0; transform: scale(0.9) translateY(20px); }
+		to { opacity: 1; transform: scale(1) translateY(0); }
+	}
+
+	.hero-number-context {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.context-word {
+		font-family: 'Playfair Display', Georgia, serif;
+		font-size: clamp(1.5rem, 5vw, 2.5rem);
+		font-style: italic;
+		color: var(--text-secondary);
+		line-height: 1.2;
+	}
+
+	.context-period {
+		font-size: 0.75rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.15em;
+		color: var(--text-light);
+		margin-top: 0.25rem;
+	}
+
+	/* Cigarette Row */
+	.hero-cig-row {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		gap: 6px;
+		margin-bottom: 1.5rem;
+		padding: 1rem 0;
+	}
+
+	.hero-cig {
+		display: flex;
+		height: 10px;
+		border-radius: 1px;
+		overflow: hidden;
+		animation: cigAppear 0.4s ease-out backwards;
+		box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+	}
+
+	@keyframes cigAppear {
+		from { opacity: 0; transform: translateY(-8px) scale(0.8); }
+		to { opacity: 1; transform: translateY(0) scale(1); }
+	}
+
+	.hcig-filter {
+		width: 14px;
+		background: linear-gradient(180deg, #e8d4a8 0%, #c9a86c 50%, #e8d4a8 100%);
+		border-radius: 1px 0 0 1px;
+	}
+
+	.hcig-paper {
+		width: 36px;
+		background: linear-gradient(180deg, #fefefe 0%, #f5f3f0 50%, #fefefe 100%);
+	}
+
+	.hcig-ember {
+		width: 5px;
+		background: linear-gradient(90deg, #888 0%, #ff6b35 50%, #ff4500 100%);
+		border-radius: 0 1px 1px 0;
+		animation: emberGlow 1.5s ease-in-out infinite;
+	}
+
+	@keyframes emberGlow {
+		0%, 100% { opacity: 0.8; }
+		50% { opacity: 1; }
+	}
+
+	.hero-cig-more {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--text-light);
+		margin-left: 0.5rem;
+	}
+
+	/* Punchline */
+	.hero-punchline {
+		font-family: 'Playfair Display', Georgia, serif;
+		font-size: 1.375rem;
+		font-weight: 400;
+		color: var(--text);
+		margin: 0 0 2rem 0;
+		animation: fadeUp 0.6s ease-out 0.6s backwards;
+	}
+
+	@keyframes fadeUp {
+		from { opacity: 0; transform: translateY(12px); }
+		to { opacity: 1; transform: translateY(0); }
+	}
+
+	/* Stats Strip */
+	.hero-stats-strip {
+		display: inline-flex;
+		align-items: center;
+		gap: 1.5rem;
+		padding: 1rem 2rem;
+		background: #f8f7f5;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		margin-bottom: 1.5rem;
+	}
+
+	.hstat {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		min-width: 60px;
+	}
+
+	.hstat-value {
+		font-family: 'Playfair Display', Georgia, serif;
+		font-size: 1.5rem;
+		font-weight: 500;
+		color: var(--text);
+		line-height: 1;
+	}
+
+	.hstat-value.danger {
+		color: #dc2626;
+	}
+
+	.hstat-unit {
+		font-size: 0.875rem;
+		color: var(--text-muted);
+		margin-left: 0.125rem;
+	}
+
+	.hstat-label {
+		font-size: 0.5625rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--text-light);
+		margin-top: 0.25rem;
+	}
+
+	.hstat-divider {
+		width: 1px;
+		height: 32px;
+		background: var(--border);
+	}
+
+	/* Bottom Line */
+	.hero-bottom-line {
+		font-size: 0.8125rem;
+		color: var(--text-light);
+		margin: 0;
+	}
+
+	/* Mobile Hero */
+	@media (max-width: 600px) {
+		.india-hero {
+			padding: 2rem 1rem;
+		}
+
+		.hero-statement {
+			font-size: 1.0625rem;
+		}
+
+		.hero-cig-row {
+			flex-wrap: wrap;
+			gap: 4px;
+			padding: 0.75rem 0;
+		}
+
+		.hero-cig {
+			height: 8px;
+		}
+
+		.hcig-filter { width: 10px; }
+		.hcig-paper { width: 26px; }
+		.hcig-ember { width: 4px; }
+
+		.hero-punchline {
+			font-size: 1.125rem;
+			margin-bottom: 1.5rem;
+		}
+
+		.hero-stats-strip {
+			width: 100%;
+			justify-content: space-between;
+			padding: 0.875rem 1rem;
+			gap: 0.5rem;
+		}
+
+		.hstat-divider {
+			display: none;
+		}
+
+		.hstat-value {
+			font-size: 1.25rem;
+		}
+
+		.hstat-label {
+			font-size: 0.5rem;
+		}
+	}
+
+	/* ========== AIR EXPLAINER SECTION ========== */
+	.air-explainer {
+		background: white;
+		border: 1px solid var(--border);
+		border-radius: 16px;
+		padding: 2.5rem 2rem;
 		margin-bottom: 2.5rem;
-		padding-bottom: 2.5rem;
-		border-bottom: 1px solid var(--border);
+	}
+
+	.explainer-header {
+		text-align: center;
+		margin-bottom: 2.5rem;
+	}
+
+	.explainer-eyebrow {
+		display: block;
+		font-size: 0.625rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.15em;
+		color: var(--text-light);
+		margin-bottom: 0.5rem;
+	}
+
+	.explainer-title {
+		font-family: 'Playfair Display', Georgia, serif;
+		font-size: 2rem;
+		font-weight: 400;
+		color: var(--text);
+		margin: 0 0 0.5rem 0;
+	}
+
+	.explainer-subtitle {
+		font-size: 1rem;
+		color: var(--text-muted);
+		font-style: italic;
+		margin: 0;
+	}
+
+	.explainer-content {
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
+	}
+
+	.explainer-block {
+		padding: 1.5rem;
+		background: #fafafa;
+		border-radius: 12px;
+		border: 1px solid var(--border);
+	}
+
+	.explainer-block h3 {
+		font-family: 'Inter', sans-serif;
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--text);
+		margin: 0 0 1rem 0;
+	}
+
+	/* PM2.5 Block */
+	.pm25-block {
+		display: grid;
+		grid-template-columns: 140px 1fr;
+		gap: 2rem;
+		align-items: center;
+	}
+
+	.block-visual {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1.5rem;
+	}
+
+	.particle-demo {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.particle-dot {
+		width: 6px;
+		height: 6px;
+		background: #dc2626;
+		border-radius: 50%;
+		box-shadow: 0 0 8px rgba(220, 38, 38, 0.4);
+	}
+
+	.particle-label {
+		font-size: 0.6875rem;
+		font-weight: 700;
+		color: #dc2626;
+	}
+
+	.hair-compare {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.375rem;
+	}
+
+	.hair-line {
+		width: 70px;
+		height: 2px;
+		background: var(--text-muted);
+		border-radius: 1px;
+	}
+
+	.hair-label {
+		font-size: 0.625rem;
+		color: var(--text-light);
+	}
+
+	.block-text p {
+		font-size: 0.9375rem;
+		color: var(--text-secondary);
+		line-height: 1.6;
+		margin: 0 0 0.75rem 0;
+	}
+
+	.block-text p:last-child {
+		margin-bottom: 0;
+	}
+
+	.block-kicker {
+		font-style: italic;
+		color: #dc2626 !important;
+		font-weight: 500;
+	}
+
+	/* Scale Block */
+	.pm-scale {
+		margin-bottom: 1rem;
+	}
+
+	.scale-track {
+		display: flex;
+		height: 12px;
+		border-radius: 6px;
+		overflow: hidden;
+		margin-bottom: 0.75rem;
+	}
+
+	.scale-zone {
+		height: 100%;
+	}
+
+	.zone-who { background: #22c55e; }
+	.zone-us { background: #84cc16; }
+	.zone-unhealthy { background: #eab308; }
+	.zone-danger { background: linear-gradient(90deg, #f97316 0%, #dc2626 100%); }
+
+	.scale-labels {
+		position: relative;
+		height: 50px;
+	}
+
+	.scale-point {
+		position: absolute;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		transform: translateX(-50%);
+	}
+
+	.point-value {
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: var(--text);
+	}
+
+	.point-value.india {
+		color: #dc2626;
+		font-size: 0.875rem;
+	}
+
+	.point-label {
+		font-size: 0.5625rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--text-light);
+		margin-top: 0.125rem;
+	}
+
+	.india-marker {
+		z-index: 1;
+	}
+
+	.india-marker .point-arrow {
+		color: #dc2626;
+		font-size: 0.75rem;
+		line-height: 1;
+	}
+
+	.scale-context {
+		font-size: 0.875rem;
+		color: var(--text-muted);
+		margin: 0;
+		padding-top: 1rem;
+		border-top: 1px solid var(--border);
+	}
+
+	.scale-context em {
+		color: var(--text-secondary);
+	}
+
+	/* Damage Block */
+	.damage-list {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.damage-item {
+		display: flex;
+		gap: 1rem;
+		align-items: flex-start;
+	}
+
+	.damage-icon {
+		flex-shrink: 0;
+		width: 36px;
+		height: 36px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(220, 38, 38, 0.1);
+		border-radius: 8px;
+		color: #dc2626;
+	}
+
+	.damage-text {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+	}
+
+	.damage-text strong {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--text);
+	}
+
+	.damage-text span {
+		font-size: 0.8125rem;
+		color: var(--text-muted);
+	}
+
+	.damage-kicker {
+		font-size: 0.875rem;
+		font-style: italic;
+		color: var(--text-secondary);
+		margin: 1rem 0 0 0;
+		padding-top: 1rem;
+		border-top: 1px dashed var(--border);
+	}
+
+	/* Options Block */
+	.options-aside {
+		font-weight: 400;
+		color: var(--text-light);
+		font-size: 0.875rem;
+	}
+
+	.options-grid {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 0.75rem;
+	}
+
+	.option-item {
+		display: flex;
+		flex-direction: column;
+		padding: 1rem;
+		background: white;
+		border: 1px solid var(--border);
+		border-radius: 8px;
+	}
+
+	.option-action {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--text);
+		margin-bottom: 0.25rem;
+	}
+
+	.option-note {
+		font-size: 0.75rem;
+		color: var(--text-muted);
+	}
+
+	/* Mobile Explainer */
+	@media (max-width: 768px) {
+		.air-explainer {
+			padding: 1.5rem 1.25rem;
+		}
+
+		.explainer-title {
+			font-size: 1.5rem;
+		}
+
+		.pm25-block {
+			grid-template-columns: 1fr;
+			gap: 1.5rem;
+		}
+
+		.block-visual {
+			flex-direction: row;
+			justify-content: center;
+			gap: 2rem;
+		}
+
+		.options-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	/* ========== OLD HERO CSS (keeping for compatibility) ========== */
+	.context-item {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.context-value {
+		font-family: "Playfair Display", Georgia, serif;
+		font-size: 1.75rem;
+		font-weight: 500;
+		line-height: 1.1;
+	}
+
+	.context-unit {
+		font-size: 0.6875rem;
+		color: #888;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.context-desc {
+		font-size: 0.625rem;
+		color: #999;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		margin-top: 0.125rem;
+	}
+
+	.context-arrow {
+		font-size: 1rem;
+		color: #ccc;
+	}
+
+	/* Hero Tagline */
+	.hero-tagline {
+		font-size: 1rem;
+		color: #888;
+		max-width: 480px;
+		margin: 0 auto 2rem;
+		line-height: 1.6;
+	}
+
+	/* Quick Stats */
+	.hero-quick-stats {
+		display: flex;
+		justify-content: center;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		max-width: 700px;
+		margin: 0 auto;
+	}
+
+	.quick-stat {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: 1rem 1.5rem;
+		background: white;
+		border: 1px solid #e5e5e5;
+		border-radius: 8px;
+		min-width: 140px;
+		flex: 1;
+		transition: all 0.2s ease;
+	}
+
+	.quick-stat:hover {
+		border-color: #ccc;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+	}
+
+	.quick-stat.danger {
+		background: #fef2f2;
+		border-color: #fecaca;
+	}
+
+	.quick-stat .stat-number {
+		font-family: "Playfair Display", Georgia, serif;
+		font-size: 1.5rem;
+		font-weight: 500;
+		color: #222;
+		line-height: 1;
+	}
+
+	.quick-stat.danger .stat-number {
+		color: #b91c1c;
+	}
+
+	.quick-stat .stat-label {
+		font-size: 0.625rem;
+		color: #888;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		text-align: center;
+		margin-top: 0.375rem;
+		line-height: 1.4;
+	}
+
+	@media (max-width: 600px) {
+		.india-hero {
+			padding: 2rem 1rem;
+		}
+
+		.impact-highlight {
+			flex-direction: column;
+			gap: 0.25rem;
+		}
+
+		.impact-label {
+			text-align: center;
+		}
+
+		.cig-icon {
+			font-size: 2rem;
+		}
+
+		.hero-context-strip {
+			padding: 0.75rem 1rem;
+			gap: 0.75rem;
+		}
+
+		.context-value {
+			font-size: 1.375rem;
+		}
+
+		.hero-quick-stats {
+			flex-direction: column;
+			gap: 0.5rem;
+		}
+
+		.quick-stat {
+			flex-direction: row;
+			justify-content: space-between;
+			padding: 0.875rem 1rem;
+		}
+
+		.quick-stat .stat-label {
+			text-align: right;
+			max-width: 55%;
+		}
+	}
+
+	.last-updated {
+		text-align: center;
+		font-size: 0.75rem;
+		color: #999;
+		margin-top: 2rem;
+		margin-bottom: 1rem;
+	}
+		.impact-unit {
+		font-family: "Playfair Display", Georgia, serif;
+		font-size: clamp(2rem, 5vw, 3.5rem);
+		font-style: italic;
+		color: var(--text-secondary);
+		line-height: 1;
+	}
+
+	.impact-period {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--text-light);
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		display: block;
+		width: 100%;
+		margin-top: 0.25rem;
+	}
+
+	.impact-kicker {
+		font-family: "Playfair Display", Georgia, serif;
+		font-size: 1.5rem;
+		font-weight: 400;
+		color: var(--text);
+		margin: 1rem 0 0 0;
+		letter-spacing: -0.01em;
+	}
+
+	/* Hero Context - The Reality Check */
+	.hero-context {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 1rem;
+		flex-wrap: wrap;
+		margin-bottom: 1.5rem;
+		padding: 1.25rem;
+		background: var(--bg-paper);
+		border-radius: 8px;
+		border: 1px solid var(--border);
+	}
+
+	.context-stat {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		min-width: 80px;
+	}
+
+	.context-number {
+		font-family: "Playfair Display", Georgia, serif;
+		font-size: 2rem;
+		font-weight: 500;
+		line-height: 1;
+		letter-spacing: -0.02em;
+	}
+
+	.context-label {
+		font-size: 0.6875rem;
+		color: var(--text-light);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		margin-top: 0.25rem;
+	}
+
+	.context-divider {
+		font-size: 1.25rem;
+		color: var(--text-light);
+		opacity: 0.5;
 	}
 
 	.last-updated {
@@ -653,6 +1500,11 @@ function getColorForPm25(pm25: number | null): string {
 		display: none;
 	}
 
+	.pill-icon {
+		font-size: 1.25rem;
+		margin-bottom: 0.25rem;
+	}
+
 	.pill-value {
 		font-family: inherit;
 		font-size: 1.25rem;
@@ -663,7 +1515,8 @@ function getColorForPm25(pm25: number | null): string {
 	}
 
 	.pill-label {
-		font-size: 0.75rem;
+		font-family: inherit;
+		font-size: 0.6875rem;
 		color: #666;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
@@ -671,14 +1524,13 @@ function getColorForPm25(pm25: number | null): string {
 		font-weight: 500;
 	}
 
-	.pill-label {
-		font-family: inherit; /* Reset font */
-		font-size: 0.8125rem;
-		color: #666;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		text-align: center;
-		font-weight: 500;
+	.stat-pill-danger {
+		background: rgba(185, 28, 28, 0.04);
+		border-color: rgba(185, 28, 28, 0.2);
+	}
+
+	.stat-pill-danger .pill-value {
+		color: var(--accent);
 	}
 
 	@media (max-width: 768px) {
@@ -891,9 +1743,10 @@ function getColorForPm25(pm25: number | null): string {
 	}
 
 	.city-card:hover {
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-		transform: translateY(-2px);
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(153, 27, 27, 0.08);
+		transform: translateY(-6px) scale(1.02);
 		text-decoration: none;
+		border-color: rgba(153, 27, 27, 0.3);
 	}
 
 	.city-card.no-data {

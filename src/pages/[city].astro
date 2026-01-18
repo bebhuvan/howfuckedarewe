@@ -23,11 +23,25 @@ import DataQualityBadge from '../components/ui/DataQualityBadge.astro';
 import CityVariance from '../components/cards/CityVariance.astro';
 import GlobalComparison from '../components/cards/GlobalComparison.astro';
 import DominantPollutant from '../components/cards/DominantPollutant.astro';
+import WeatherContext from '../components/cards/WeatherContext.astro';
+import PageTOC from '../components/ui/PageTOC.astro';
+import CollapsibleSection from '../components/ui/CollapsibleSection.astro';
+
+// Define page sections for navigation
+const pageSections = [
+  { id: 'hero', label: 'Overview' },
+  { id: 'damage', label: 'Damage' },
+  { id: 'death-toll', label: 'Deaths' },
+  { id: 'risk', label: 'Risk' },
+  { id: 'forecast', label: 'Forecast' },
+  { id: 'areas', label: 'Areas' },
+];
 
 import { ALL_CITIES, getCityBySlug } from '../lib/cities';
 import { fetchCityData } from '../lib/waqi';
 import { getCitySnapshot } from '../lib/db';
 import { estimateAnnualDeaths } from '../lib/calculations';
+import { DATA_QUALITY } from '../lib/constants';
 import type { CityConfig, CitySnapshot } from '../lib/types';
 
 // SSR: No prerendering, but D1 is fast enough
@@ -41,19 +55,25 @@ if (!cityConfig) {
   return Astro.redirect('/404');
 }
 
-// WAQI token with fallback for dev
+// WAQI token from environment/secret
 const WAQI_TOKEN = import.meta.env.WAQI_API_TOKEN || 
-  Astro.locals.runtime?.env?.WAQI_API_TOKEN ||
-  "f9c3a63cafeffbe1bae0286e46e8df56c80f87a6";
+  Astro.locals.runtime?.env?.WAQI_API_TOKEN;
 
 // D1-first: Try cached data for speed
 const db = Astro.locals.runtime?.env?.DB;
 let snapshot: CitySnapshot | null = null;
+let d1Snapshot: CitySnapshot | null = null;
+let d1SnapshotIsStale = false;
 
 if (db && !import.meta.env.DEV) {
   try {
-    snapshot = await getCitySnapshot(db, citySlug!);
-    if (snapshot) {
+    d1Snapshot = await getCitySnapshot(db, citySlug!);
+    if (d1Snapshot) {
+      const hoursOld = (Date.now() - new Date(d1Snapshot.timestamp).getTime()) / (1000 * 60 * 60);
+      d1SnapshotIsStale = hoursOld > DATA_QUALITY.STALE_THRESHOLD_HOURS;
+      if (!d1SnapshotIsStale) {
+        snapshot = d1Snapshot;
+      }
       console.log(`[${citySlug}] Got snapshot from D1`);
     }
   } catch (e) {
@@ -61,10 +81,15 @@ if (db && !import.meta.env.DEV) {
   }
 }
 
-// Fallback to live API (dev mode or D1 miss)
-if (!snapshot && WAQI_TOKEN) {
+// Fallback to live API (dev mode or D1 stale/miss)
+if ((!snapshot || d1SnapshotIsStale) && WAQI_TOKEN) {
   console.log(`[${citySlug}] Fetching from WAQI API...`);
   snapshot = await fetchCityData(cityConfig, WAQI_TOKEN);
+}
+
+// If WAQI is unavailable, fall back to stale D1 data when present
+if (!snapshot && d1Snapshot) {
+  snapshot = d1Snapshot;
 }
 
 // Handle complete failure
@@ -82,6 +107,7 @@ if (!snapshot) {
     pollutants: { pm25: null, pm10: null, o3: null, no2: null, so2: null, co: null },
     dominantPollutant: null,
     forecast: [],
+    weather: null,
     dataQuality: 'unavailable',
   };
 }
@@ -117,78 +143,120 @@ function formatTime(iso: string): string {
 ---
 
 <CityLayout title={title} description={description} currentSlug={cityConfig.slug}>
+  <!-- Page Navigation (desktop only) -->
+  <PageTOC sections={pageSections} />
+
   {snapshot.metrics && snapshot.avgPm25 ? (
     <>
       <!-- The Gut Punch -->
-      <CigaretteHero
-        metrics={snapshot.metrics}
-        cityName={cityConfig.name}
-        pm25={snapshot.avgPm25}
-      />
+      <section id="hero" data-animate="fade">
+        <CigaretteHero
+          metrics={snapshot.metrics}
+          cityName={cityConfig.name}
+          pm25={snapshot.avgPm25}
+        />
+      </section>
 
       <!-- The Arithmetic -->
-      <DamageCard metrics={snapshot.metrics} />
+      <section id="damage" data-animate>
+        <DamageCard metrics={snapshot.metrics} />
+      </section>
 
       <!-- The Fucked Index -->
-      <FuckedMeter metrics={snapshot.metrics} cityName={cityConfig.name} />
+      <div data-animate>
+        <FuckedMeter metrics={snapshot.metrics} cityName={cityConfig.name} />
+      </div>
+
+      <!-- Weather Context (if available) -->
+      {snapshot.weather && (
+        <div data-animate>
+          <WeatherContext weather={snapshot.weather} avgPm25={snapshot.avgPm25} />
+        </div>
+      )}
 
       <!-- Hard Stats: Population, Deaths, Violations -->
-      <HardStats
-        metrics={snapshot.metrics}
-        cityName={cityConfig.name}
-        population={cityConfig.population}
-        annualDeaths={annualDeaths}
-      />
+      <div data-animate>
+        <HardStats
+          metrics={snapshot.metrics}
+          cityName={cityConfig.name}
+          population={cityConfig.population}
+          annualDeaths={annualDeaths}
+        />
+      </div>
 
       <!-- The Death Toll -->
-      <LiveDeathCounter
-        cityName={cityConfig.name}
-        cityDeathsPerYear={annualDeaths ?? undefined}
-      />
+      <section id="death-toll" data-animate>
+        <LiveDeathCounter
+          cityName={cityConfig.name}
+          cityDeathsPerYear={annualDeaths ?? undefined}
+        />
+      </section>
 
       <!-- What's In The Air (Live Data) -->
-      <LivePollutantCocktail
-        pollutants={snapshot.pollutants}
-        dominantPollutant={snapshot.dominantPollutant}
-      />
+      <div data-animate>
+        <LivePollutantCocktail
+          pollutants={snapshot.pollutants}
+          dominantPollutant={snapshot.dominantPollutant}
+        />
+      </div>
 
       <!-- Today's Villain -->
-      <DominantPollutant
-        pollutant={snapshot.dominantPollutant}
-        cityName={cityConfig.name}
-      />
+      <div data-animate="slide-left">
+        <DominantPollutant
+          pollutant={snapshot.dominantPollutant}
+          cityName={cityConfig.name}
+        />
+      </div>
 
-      <!-- Who's At Risk -->
-      <RiskContext
-        pm25={snapshot.avgPm25}
-        cityName={cityConfig.name}
-      />
+      <!-- Who's At Risk (Collapsible on mobile) -->
+      <section id="risk" data-animate>
+        <CollapsibleSection title="Who Should Probably Stay Indoors" id="risk-section">
+          <RiskContext
+            pm25={snapshot.avgPm25}
+            cityName={cityConfig.name}
+          />
+        </CollapsibleSection>
+      </section>
 
       <!-- The Lung Visual -->
-      <LungDamage />
+      <div data-animate="scale">
+        <LungDamage />
+      </div>
 
       <!-- Your Scheduled Damage -->
       {snapshot.forecast.length > 0 && (
-        <ScheduledDamage forecast={snapshot.forecast} />
+        <section id="forecast" data-animate>
+          <ScheduledDamage forecast={snapshot.forecast} />
+        </section>
       )}
 
-      <!-- Global Context -->
-      <GlobalComparison
-        pm25={snapshot.avgPm25}
-        cityName={cityConfig.name}
-      />
+      <!-- Global Context (Collapsible on mobile) -->
+      <div data-animate>
+        <CollapsibleSection title="How You Compare Globally" id="global-section">
+          <GlobalComparison
+            pm25={snapshot.avgPm25}
+            cityName={cityConfig.name}
+          />
+        </CollapsibleSection>
+      </div>
 
-      <!-- Area Breakdown -->
-      <AreaBreakdown stations={snapshot.stations} cityName={cityConfig.name} />
+      <!-- Area Breakdown (Collapsible on mobile) -->
+      <section id="areas" data-animate>
+        <CollapsibleSection title="Area by Area Breakdown" id="areas-section">
+          <AreaBreakdown stations={snapshot.stations} cityName={cityConfig.name} />
+        </CollapsibleSection>
+      </section>
 
       <!-- City Variance (Lung Lottery) -->
       {minPm25 !== null && maxPm25 !== null && snapshot.avgPm25 && minPm25 !== maxPm25 && (
-        <CityVariance
-          minPm25={minPm25}
-          maxPm25={maxPm25}
-          avgPm25={snapshot.avgPm25}
-          cityName={cityConfig.name}
-        />
+        <div data-animate="slide-right">
+          <CityVariance
+            minPm25={minPm25}
+            maxPm25={maxPm25}
+            avgPm25={snapshot.avgPm25}
+            cityName={cityConfig.name}
+          />
+        </div>
       )}
 
       <!-- Data Quality Note -->

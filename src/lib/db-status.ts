@@ -43,12 +43,17 @@ export async function getCityStatuses(db: D1Database): Promise<CityStatus[]> {
         SELECT 
             c.slug, 
             c.name, 
-            MAX(cs.recorded_at) as last_update,
+            cs.recorded_at as last_update,
             cs.avg_pm25,
             cs.valid_stations
         FROM cities c
-        LEFT JOIN city_snapshots cs ON c.id = cs.city_id
-        GROUP BY c.id
+        LEFT JOIN city_snapshots cs 
+          ON cs.city_id = c.id
+         AND cs.recorded_at = (
+           SELECT MAX(recorded_at)
+           FROM city_snapshots
+           WHERE city_id = c.id
+         )
     `).all<any>();
 
     if (!results.results) return [];

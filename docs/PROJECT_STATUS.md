@@ -34,8 +34,8 @@ docs/                     - Documentation
 
 ### Environment
 ```bash
-WAQI_API_TOKEN=f9c3a63cafeffbe1bae0286e46e8df56c80f87a6
-OPENAQ_API_KEY=fd1f448933e016f1681815e31b60a150ca7d92925baed9716f7bc2c785ce3bf0
+WAQI_API_TOKEN=your_token_here
+OPENAQ_API_KEY=your_key_here
 ```
 
 ## Data Source Decision
